@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>员工管理系统一期开发任务清单与计划</title>
+<style>
+  body { font-family: "宋体", "SimSun", serif; font-size: 11pt; line-height: 1.65; color: #333; }
+  h1 { font-family: "黑体", sans-serif; font-size: 22pt; color: #1a3a6b; text-align: center; border-bottom: 2px solid #1a3a6b; padding-bottom: 12pt; }
+  h2 { font-family: "黑体", sans-serif; font-size: 16pt; color: #1a3a6b; margin-top: 18pt; }
+  h3 { font-family: "黑体", sans-serif; font-size: 13pt; color: #2c5aa0; margin-top: 14pt; }
+  h4 { font-family: "黑体", sans-serif; font-size: 12pt; color: #444; }
+  table { border-collapse: collapse; width: 100%; margin: 10pt 0; }
+  th, td { border: 1px solid #999; padding: 6pt 8pt; font-size: 10pt; text-align: left; vertical-align: top; }
+  th { background: #e8eef7; font-weight: bold; }
+  .meta { text-align: center; color: #666; margin: 6pt 0; }
+  code { background: #f4f4f4; padding: 1px 4px; border-radius: 3px; font-family: Consolas, monospace; font-size: 9.5pt; }
+  pre { background: #f8f8f8; border: 1px solid #ddd; padding: 8pt; font-family: Consolas, monospace; font-size: 9pt; line-height: 1.4; }
+  ul, ol { margin: 6pt 0 6pt 20pt; }
+  li { margin: 3pt 0; }
+  .tag-p0 { background: #d32f2f; color: white; padding: 1px 6px; border-radius: 3px; font-size: 9pt; }
+  .tag-p1 { background: #f57c00; color: white; padding: 1px 6px; border-radius: 3px; font-size: 9pt; }
+  .tag-p2 { background: #388e3c; color: white; padding: 1px 6px; border-radius: 3px; font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<h1>员工管理系统一期<br>开发任务清单与详细计划</h1>
+<p class="meta">版本：V1.0　|　日期：2026-08-23　|　开发模式：AI Coding（Kimi Code 等）</p>
+<p class="meta">关联文档：《需求文档 V1.0》《PRD V1.0》　|　参考项目：<code>C:/Users/fmmf/Kimi/recruiting-system/</code></p>
+
+<h2>一、AI Coding 开发原则</h2>
+
+<p>本项目采用 AI Coding 模式（Kimi Code / Cursor / Copilot Workspace 等），与传
+统人工开发相比有以下特性，任务拆分必须适配：</p>
+
+<table>
+  <tr><th>特性</th><th>对任务拆分的要求</th><th>具体做法</th></tr>
+  <tr><td>上下文窗口有限</td><td>每个任务的上下文必须自包含</td><td>每个任务附带"上下文包"：相关 PRD 章节 + 数据模型 + 接口契约 + 现有代码引用</td></tr>
+  <tr><td>擅长小步迭代</td><td>任务粒度 ≤ 一个会话能完成</td><td>单任务 ≤ 200 行核心代码 / ≤ 2 小时 AI 生成量；大功能拆成"模型→迁移→服务→接口→页面"5 步</td></tr>
+  <tr><td>容易"看着对、其实错"</td><td>测试必须前置且可机械校验</td><td>每个任务带 acceptance criteria（API 响应示例 / SQL 校验 / 页面截图点）</td></tr>
+  <tr><td>风格易漂移</td><td>强结构化约定 + 复用现有模板</td><td>复制招聘系统的目录结构、ESLint 配置、Prisma 模板、Vue 组件库</td></tr>
+  <tr><td>不擅长跨文件一致性</td><td>显式声明依赖关系</td><td>每个任务标注"前置任务"和"被依赖任务"，避免并行冲突</td></tr>
+  <tr><td>对领域规则易遗漏</td><td>业务规则显式化、配置化</td><td>薪酬/绩效/考勤规则全部走配置表，不写死在代码里</td></tr>
+  <tr><td>重构能力强</td><td>先跑通再优化，不一开始追求完美</td><td>一期先垂直切片（一个模块端到端跑通）再横向扩展</td></tr>
+</table>
+
+<h2>二、整体分期策略</h2>
+
+<h3>2.1 阶段划分</h3>
+
+<table>
+  <tr><th>阶段</th><th>周期</th><th>核心目标</th><th>交付物</th></tr>
+  <tr><td><b>M0 脚手架</b></td><td>第 1 周</td><td>项目骨架 + 基础设施</td><td>可登录、可连库、可部署的空壳系统</td></tr>
+  <tr><td><b>M1 组织人事</b></td><td>第 2-4 周</td><td>模块 A 完整落地</td><td>组织架构 + 员工档案 + 入转调离 + 合同管理可用</td></tr>
+  <tr><td><b>M2 考勤假勤</b></td><td>第 5-7 周</td><td>模块 B 完整落地</td><td>打卡 + 排班 + 请假/加班/出差 + 月度汇总可用</td></tr>
+  <tr><td><b>M3 绩效管理</b></td><td>第 8-10 周</td><td>模块 D 完整落地</td><td>KPI+OKR 考核 + 系数配置 + 五档评分可用</td></tr>
+  <tr><td><b>M4 薪酬核算</b></td><td>第 11-14 周</td><td>模块 C 完整落地</td><td>自动核算 + 社保三地 + 个税 + 工资条可用</td></tr>
+  <tr><td><b>M5 联调上线</b></td><td>第 15-17 周</td><td>集成测试 + 数据迁移 + 试运行</td><td>正式上线</td></tr>
+</table>
+
+<p class="meta">总计 17 周（含 2 周并行试运行）。M3 绩效在 M4 薪酬之前，因为薪酬依赖绩效系数。</p>
+
+<h3>2.2 垂直切片策略（关键）</h3>
+
+<p>不采用"先全部后端再全部前端"的横向切法，而是按<b>垂直切片</b>（每个切片包含 模型→API→页面 完整链路）：</p>
+
+<ul>
+  <li>每个切片独立可演示、可测试</li>
+  <li>AI 单次会话能完成一个切片</li>
+  <li>失败影响面小，回滚成本低</li>
+  <li>早期就能让 HR 看到真东西，及时纠偏</li>
+</ul>
+
+<h2>三、M0 脚手架阶段（第 1 周）</h2>
+
+<h3>3.1 任务清单</h3>
+
+<table>
+  <tr><th>#</th><th>任务</th><th>优先级</th><th>工时</th><th>验收标准</th></tr>
+  <tr><td>M0-01</td><td>初始化 pnpm monorepo（client / server / mobile 三端）</td><td><span class="tag-p0">P0</span></td><td>0.5d</td><td><code>pnpm dev</code> 能同时启动三端</td></tr>
+  <tr><td>M0-02</td><td>复制招聘系统 ESLint / Prettier / tsconfig / vitest 配置</td><td><span class="tag-p0">P0</span></td><td>0.5d</td><td><code>pnpm lint</code> 全通过</td></tr>
+  <tr><td>M0-03</td><td>PostgreSQL + Redis docker-compose 编排</td><td><span class="tag-p0">P0</span></td><td>0.5d</td><td><code>docker-compose up -d</code> 启动成功</td></tr>
+  <tr><td>M0-04</td><td>Prisma schema 骨架（users / roles / companies / departments / employees 5 张基础表）</td><td><span class="tag-p0">P0</span></td><td>1d</td><td><code>prisma migrate dev</code> 成功</td></tr>
+  <tr><td>M0-05</td><td>Express + JWT 登录/刷新/登出接口</td><td><span class="tag-p0">P0</span></td><td>1d</td><td>Postman 调通 3 个接口</td></tr>
+  <tr><td>M0-06</td><td>Vue3 登录页 + 路由守卫 + axios 拦截器</td><td><span class="tag-p0">P0</span></td><td>1d</td><td>浏览器登录跳转工作台</td></tr>
+  <tr><td>M0-07</td><td>RBAC 权限中间件（角色-权限-资源三级）</td><td><span class="tag-p0">P0</span></td><td>1d</td><td>未授权接口返回 403</td></tr>
+  <tr><td>M0-08</td><td>审计日志中间件（操作人/时间/对象/前后值/IP）</td><td><span class="tag-p1">P1</span></td><td>0.5d</td><td>日志表写入正确</td></tr>
+  <tr><td>M0-09</td><td>Nginx 反代 + Dockerfile + 云端一键部署脚本</td><td><span class="tag-p1">P1</span></td><td>1d</td><td>云端访问登录页</td></tr>
+</table>
+
+<h3>3.2 AI Coding 关键提示</h3>
+
+<pre>
+M0-04 Prisma schema 任务的 Prompt 模板：
+
+"请参考 C:/Users/fmmf/Kimi/recruiting-system/server/prisma/schema.prisma 的写法，
+为员工管理系统创建以下 5 张表：
+- users（系统账号）
+- roles（角色）
+- companies（法人公司）
+- departments（部门，支持父子层级）
+- employees（员工基础信息，含 user_id / company_id / department_id 外键）
+
+要求：
+1. 所有表含 id (uuid) / created_at / updated_at / deleted_at 软删除字段
+2. 字段命名 snake_case，Prisma model 名 PascalCase
+3. 在 schema 末尾写 5 条 seed 数据
+4. 文件路径：server/prisma/schema.prisma"
+</pre>
+
+<h2>四、M1 组织人事模块（第 2-4 周）</h2>
+
+<h3>4.1 垂直切片划分</h3>
+
+<table>
+  <tr><th>切片</th><th>范围</th><th>子任务数</th><th>工时</th></tr>
+  <tr><td>A1</td><td>组织架构 CRUD（法人 + 部门树）</td><td>5</td><td>3d</td></tr>
+  <tr><td>A2</td><td>员工档案 CRUD（8 类 60 字段）</td><td>7</td><td>4d</td></tr>
+  <tr><td>A3</td><td>入职流程（含工号自动生成）</td><td>4</td><td>2d</td></tr>
+  <tr><td>A4</td><td>转正流程</td><td>3</td><td>1.5d</td></tr>
+  <tr><td>A5</td><td>调动流程（含权限/薪酬联动）</td><td>4</td><td>2d</td></tr>
+  <tr><td>A6</td><td>离职流程（含档案归档）</td><td>4</td><td>2d</td></tr>
+  <tr><td>A7</td><td>合同管理（模板 + 到期预警）</td><td>4</td><td>2d</td></tr>
+</table>
+
+<h3>4.2 切片内任务标准结构（以 A1 为例）</h3>
+
+<table>
+  <tr><th>#</th><th>子任务</th><th>类型</th><th>AI 上下文包</th></tr>
+  <tr><td>A1-1</td><td>Prisma model：Company + Department</td><td>数据层</td><td>需求文档 §3.1 + M0 现有 schema</td></tr>
+  <tr><td>A1-2</td><td>migration + seed 数据（西安/北京/四川 3 法人 + 示例部门）</td><td>数据层</td><td>A1-1 产物</td></tr>
+  <tr><td>A1-3</td><td>Service：company.service.ts / department.service.ts（CRUD + 树查询）</td><td>业务层</td><td>A1-1 schema + 招聘系统 service 模板</td></tr>
+  <tr><td>A1-4</td><td>Controller + Routes：6 个 REST 接口</td><td>接口层</td><td>A1-3 service + PRD §4.1.1 接口契约</td></tr>
+  <tr><td>A1-5</td><td>Vue 页面：组织架构树 + 部门编辑抽屉</td><td>表现层</td><td>A1-4 接口 + Element Plus Tree 组件用法</td></tr>
+</table>
+
+<h3>4.3 关键业务规则配置化（避免 AI 写死）</h3>
+
+<p>以下规则必须放配置表，<b>不允许写在代码里</b>：</p>
+
+<table>
+  <tr><th>规则</th><th>配置表</th><th>说明</th></tr>
+  <tr><td>工号生成规则</td><td><code>configs</code></td><td>"{company_code}{year}{seq:4}"</td></tr>
+  <tr><td>合同到期预警天数</td><td><code>configs</code></td><td>[30, 15, 7]</td></tr>
+  <tr><td>试用期时长</td><td><code>configs</code></td><td>默认 3 个月</td></tr>
+  <tr><td>转正提前提醒天数</td><td><code>configs</code></td><td>15 天</td></tr>
+  <tr><td>离职档案保留年限</td><td><code>configs</code></td><td>5 年</td></tr>
+</table>
+
+<h2>五、M2 考勤假勤模块（第 5-7 周）</h2>
+
+<h3>5.1 垂直切片</h3>
+
+<table>
+  <tr><th>切片</th><th>范围</th><th>工时</th></tr>
+  <tr><td>B1</td><td>班次与排班（班次定义 + 月排班）</td><td>3d</td></tr>
+  <tr><td>B2</td><td>打卡（WiFi + GPS + 补卡申请）</td><td>4d</td></tr>
+  <tr><td>B3</td><td>请假（8 类假期 + 额度管理）</td><td>3d</td></tr>
+  <tr><td>B4</td><td>加班（申请 + 补偿二选一）</td><td>2d</td></tr>
+  <tr><td>B5</td><td>出差（含差旅补助联动）</td><td>2d</td></tr>
+  <tr><td>B6</td><td>月度考勤汇总（含员工确认 + HR 锁定）</td><td>3d</td></tr>
+</table>
+
+<h3>5.2 关键约束</h3>
+
+<ul>
+  <li>GPS 打卡必须记录经纬度 + 地址反解析（腾讯地图 API）+ 拍照上传（可选，二期）</li>
+  <li>假期额度计算放在 service 层单独函数 <code>calculateLeaveBalance(employeeId, leaveType, year)</code>，便于单元测试</li>
+  <li>考勤异常识别用<b>定时任务</b>（node-cron 每日 02:00 跑），不在打卡接口里实时算</li>
+</ul>
+
+<h2>六、M3 绩效管理模块（第 8-10 周）</h2>
+
+<h3>6.1 垂直切片</h3>
+
+<table>
+  <tr><th>切片</th><th>范围</th><th>工时</th></tr>
+  <tr><td>D1</td><td>考核方案配置（KPI+OKR 指标库 + 周期定义）</td><td>3d</td></tr>
+  <tr><td>D2</td><td>考核流程（自评→上级→校准→HR→总经理 5 级审批）</td><td>4d</td></tr>
+  <tr><td>D3</td><td>五档评分 + 系数配置（S/A/B/C/D 后台可调）</td><td>2d</td></tr>
+  <tr><td>D4</td><td>绩效兑现（双轨制：直乘 vs 部门池，后台切换）</td><td>3d</td></tr>
+  <tr><td>D5</td><td>销售提成（回款触发 + 比例配置）</td><td>2d</td></tr>
+  <tr><td>D6</td><td>结果应用（调薪/晋升/PIP 触发）</td><td>2d</td></tr>
+</table>
+
+<h3>6.2 系数配置表设计</h3>
+
+<pre>
+performance_coefficients
+- id (uuid)
+- grade (S/A/B/C/D)
+- coefficient (decimal)
+- effective_from (date)
+- effective_to (date, null = 当前生效)
+- created_by / created_at
+</pre>
+
+<p>历史系数保留，便于追溯"某月工资按当时系数核算"。</p>
+
+<h2>七、M4 薪酬核算模块（第 11-14 周）</h2>
+
+<p><b>这是复杂度最高的模块，工时最长，务必在 M1-M3 稳定后再启动。</b></p>
+
+<h3>7.1 垂直切片</h3>
+
+<table>
+  <tr><th>切片</th><th>范围</th><th>工时</th></tr>
+  <tr><td>C1</td><td>薪级薪档配置 + 员工薪酬方案</td><td>2d</td></tr>
+  <tr><td>C2</td><td>社保公积金方案（西安/北京/四川三地）</td><td>2d</td></tr>
+  <tr><td>C3</td><td>个税引擎（工资薪金累计预扣 + 年终奖 + 劳务报酬）</td><td>3d</td></tr>
+  <tr><td>C4</td><td>薪酬核算主流程（应发-应扣-实发）</td><td>4d</td></tr>
+  <tr><td>C5</td><td>劳务费结算通道（独立）</td><td>2d</td></tr>
+  <tr><td>C6</td><td>工资条生成 + 银行代发文件</td><td>2d</td></tr>
+  <tr><td>C7</td><td>薪酬审批流（HR→财务→总经理）</td><td>2d</td></tr>
+  <tr><td>C8</td><td>薪酬数据加密 + 二次授权</td><td>2d</td></tr>
+</table>
+
+<h3>7.2 测试前置（关键）</h3>
+
+<p>薪酬模块必须先写<b>测试用例库</b>，再写实现：</p>
+
+<table>
+  <tr><th>#</th><th>测试场景</th><th>输入</th><th>期望输出</th></tr>
+  <tr><td>T1</td><td>标准月：技术序列、B 档、无请假无加班</td><td>基本工资 8000、绩效基数 2000、系数 1.0</td><td>应发 10000</td></tr>
+  <tr><td>T2</td><td>S 档绩效</td><td>系数 1.5</td><td>绩效工资 3000</td></tr>
+  <tr><td>T3</td><td>事假 2 天</td><td>日工资 = 月薪/21.75</td><td>扣款 = 日工资 × 2</td></tr>
+  <tr><td>T4</td><td>跨月累计预扣个税</td><td>1-3 月各 15000</td><td>3 月个税按累计应纳税所得额计算</td></tr>
+  <tr><td>T5</td><td>西安 vs 北京社保基数差异</td><td>同工资 10000</td><td>个人部分应发不同</td></tr>
+  <tr><td>T6</td><td>销售回款 100 万 × 5% 提成</td><td>—</td><td>提成 5 万</td></tr>
+  <tr><td>T7</td><td>年终奖 5 万单独计税</td><td>—</td><td>个税按年终奖税率表</td></tr>
+  <tr><td>T8</td><td>实习生劳务费 3000</td><td>—</td><td>预扣税 = (3000-800) × 20%</td></tr>
+  <tr><td>T9</td><td>部门绩效池二次分配</td><td>部门池 10 万、3 人系数 1.5/1.2/1.0</td><td>按比例分配</td></tr>
+  <tr><td>T10</td><td>前两月预支 1.0 + 季度末清算</td><td>Q1 三月系数 1.0/1.0/1.2</td><td>3 月补差 0.2 × 基数</td></tr>
+</table>
+
+<p>每个测试用例对应一个 vitest 文件，<b>AI 生成代码必须通过全部 50+ 测试用例才算完成</b>。</p>
+
+<h2>八、M5 联调上线（第 15-17 周）</h2>
+
+<table>
+  <tr><th>#</th><th>任务</th><th>工时</th></tr>
+  <tr><td>M5-01</td><td>接口联调 + Postman 集合全覆盖</td><td>3d</td></tr>
+  <tr><td>M5-02</td><td>Playwright E2E 测试（登录/打卡/请假/算薪/绩效 5 条主流程）</td><td>3d</td></tr>
+  <tr><td>M5-03</td><td>40 名员工数据迁移脚本（Excel → PostgreSQL）</td><td>2d</td></tr>
+  <tr><td>M5-04</td><td>渗透测试 + 安全加固</td><td>2d</td></tr>
+  <tr><td>M5-05</td><td>100 并发压测（k6 或 Artillery）</td><td>1d</td></tr>
+  <tr><td>M5-06</td><td>用户培训（HR + 部门负责人 + 员工 3 场）</td><td>2d</td></tr>
+  <tr><td>M5-07</td><td>并行手工核算 2 个月（与系统对账）</td><td>—</td></tr>
+  <tr><td>M5-08</td><td>正式上线 + 切换</td><td>1d</td></tr>
+</table>
+
+<h2>九、AI Coding 实操工作流</h2>
+
+<h3>9.1 单任务标准 Prompt 模板</h3>
+
+<pre>
+【任务 ID】A1-3
+【任务目标】实现 company.service.ts 和 department.service.ts
+
+【上下文】
+- 项目位置：D:/projects/hrms/
+- 参考项目：C:/Users/fmmf/Kimi/recruiting-system/server/src/services/
+- Prisma schema：server/prisma/schema.prisma（已存在，含 Company / Department 模型）
+- 业务规则：PRD §4.1.1（部门最多 4 级、合并/撤销需双审批、超编 10% 预警）
+
+【要求】
+1. 严格遵循招聘系统 service 层的写法（class + 静态方法）
+2. 所有方法含 JSDoc 注释（参数、返回、异常）
+3. 错误统一抛 BusinessError（参考招聘系统的 lib/errors.ts）
+4. 树查询用 recursive CTE（PostgreSQL 原生支持）
+5. 不实现 controller，只做 service
+
+【验收】
+- pnpm vitest run tests/services/department.test.ts 全通过
+- 至少 8 个测试用例（CRUD 各 1 + 树查询 1 + 边界 3）
+
+【输出】
+- server/src/services/company.service.ts
+- server/src/services/department.service.ts
+- server/tests/services/company.test.ts
+- server/tests/services/department.test.ts
+</pre>
+
+<h3>9.2 上下文管理</h3>
+
+<ul>
+  <li><b>项目级</b>：维护 <code>AGENTS.md</code> 在项目根，描述项目结构、技术栈、命名规范、参考项目路径</li>
+  <li><b>模块级</b>：每个模块目录下放 <code>README.md</code>，说明本模块的业务规则与依赖</li>
+  <li><b>任务级</b>：每个任务的 Prompt 显式列出"需要读哪些文件"，不让 AI 自己猜</li>
+</ul>
+
+<h3>9.3 代码评审</h3>
+
+<p>AI 生成的代码必须经人工评审，重点检查：</p>
+
+<ul>
+  <li>业务规则是否漏掉（如"超过 3 天请假要总经理审批"）</li>
+  <li>边界条件是否处理（空值、并发、事务）</li>
+  <li>敏感字段是否加密（身份证、银行卡、薪资）</li>
+  <li>审计日志是否记录（增删改操作）</li>
+  <li>SQL 注入 / XSS / CSRF 风险</li>
+</ul>
+
+<h3>9.4 测试策略</h3>
+
+<table>
+  <tr><th>层级</th><th>工具</th><th>覆盖率目标</th></tr>
+  <tr><td>单元测试</td><td>Vitest</td><td>Service 层 ≥80%</td></tr>
+  <tr><td>接口测试</td><td>Supertest</td><td>所有 REST 接口 100%</td></tr>
+  <tr><td>E2E 测试</td><td>Playwright</td><td>5 条主流程</td></tr>
+  <tr><td>薪酬测试用例库</td><td>Vitest</td><td>≥50 个场景</td></tr>
+</table>
+
+<h2>十、风险与缓解（AI Coding 特有）</h2>
+
+<table>
+  <tr><th>风险</th><th>等级</th><th>缓解</th></tr>
+  <tr><td>AI 生成代码业务规则遗漏</td><td>高</td><td>业务规则全部进 PRD 配置表，Prompt 强制引用</td></tr>
+  <tr><td>跨文件不一致（类型/命名漂移）</td><td>高</td><td>统一 types 目录 + 强 TypeScript 严格模式 + ESLint 强约束</td></tr>
+  <tr><td>上下文超限导致 AI 幻觉</td><td>中</td><td>任务粒度 ≤200 行；大任务先拆再生成；每任务新会话</td></tr>
+  <tr><td>薪酬核算逻辑错误且难发现</td><td>高</td><td>测试用例库前置 + 与手工核算并行 2 个月</td></tr>
+  <tr><td>AI 生成的代码评审成本高</td><td>中</td><td>小步提交（每切片一个 PR）+ 评审 checklist</td></tr>
+  <tr><td>依赖库版本漂移</td><td>低</td><td>锁定 package.json + pnpm-lock.yaml 进 git</td></tr>
+</table>
+
+<h2>十一、人工 + AI 协作分工</h2>
+
+<table>
+  <tr><th>工作</th><th>谁做</th><th>说明</th></tr>
+  <tr><td>业务规则梳理</td><td>人工</td><td>必须 HR + 财务 + 总经理确认</td></tr>
+  <tr><td>架构决策</td><td>人工</td><td>技术栈、数据模型、模块边界</td></tr>
+  <tr><td>代码生成</td><td>AI</td><td>按 Prompt 模板批量产出</td></tr>
+  <tr><td>代码评审</td><td>人工</td><td>重点看业务规则、边界、安全</td></tr>
+  <tr><td>测试用例设计</td><td>人工 + AI</td><td>人工列场景，AI 写代码</td></tr>
+  <tr><td>Bug 修复</td><td>AI 主导</td><td>人工描述问题，AI 给修复方案</td></tr>
+  <tr><td>数据迁移</td><td>AI + 人工</td><td>AI 写脚本，人工校验结果</td></tr>
+  <tr><td>用户培训</td><td>人工</td><td>—</td></tr>
+  <tr><td>上线决策</td><td>人工</td><td>必须总经理签字</td></tr>
+</table>
+
+<h2>十二、交付清单（一期结束时应交付）</h2>
+
+<ul>
+  <li>源代码（GitHub/Gitee 私有仓库，含完整 commit 历史）</li>
+  <li>部署文档（docker-compose + Nginx 配置 + 环境变量说明）</li>
+  <li>数据库 schema + migration 历史</li>
+  <li>API 文档（Swagger 自动生成）</li>
+  <li>测试报告（单元 + 接口 + E2E + 压测）</li>
+  <li>用户手册（HR / 部门负责人 / 员工 3 个角色版本）</li>
+  <li>运维手册（备份/恢复/日志查看/常见问题）</li>
+  <li>薪酬测试用例库（≥50 个场景，含期望结果）</li>
+</ul>
+
+<h2>十三、第 1 周启动清单</h2>
+
+<p>下周一开工前请准备：</p>
+
+<ol>
+  <li>选定云平台（阿里云 / 腾讯云），开通 1 台 4C8G 服务器 + PostgreSQL RDS + Redis</li>
+  <li>注册域名 + 备案（如果用国内云）</li>
+  <li>申请 SSL 证书</li>
+  <li>开通腾讯云短信 / 阿里云短信</li>
+  <li>开通腾讯地图开发者账号（GPS 打卡用）</li>
+  <li>确认 PRD 中所有业务规则（特别是薪酬/绩效/考勤规则）</li>
+  <li>整理现有 40 名员工数据为 Excel（按员工档案字段模板）</li>
+  <li>选定 Git 托管平台（GitHub 私有仓库 / Gitee / 自建 GitLab）</li>
+</ol>
+
+</body>
+</html>
