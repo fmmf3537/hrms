@@ -1,0 +1,56 @@
+# M0-03: dev infrastructure compose | adapted from recruiting-system | 2026-08-23
+# 仅用于本地开发：启动 PostgreSQL + Redis
+# server / client 由 pnpm dev 在本地启动，不进容器
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: hrms_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-hrms}
+      # 强制 UTF-8 + 中国时区
+      LANG: C.UTF-8
+      TZ: Asia/Shanghai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-hrms}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hrms_network
+
+  # Redis（BullMQ 队列 + JWT refresh token 黑名单 + 缓存）
+  redis:
+    image: redis:7-alpine
+    container_name: hrms_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hrms_network
+
+volumes:
+  postgres_data:
+    name: hrms_postgres_data
+  redis_data:
+    name: hrms_redis_data
+
+networks:
+  hrms_network:
+    name: hrms_network
+    driver: bridge

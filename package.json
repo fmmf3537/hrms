@@ -1,0 +1,24 @@
+{
+  "name": "hrms",
+  "version": "0.1.0",
+  "private": true,
+  "description": "西安辰航卓越科技有限公司员工管理系统（HRMS）",
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:server\" \"pnpm dev:client\"",
+    "dev:client": "pnpm --filter hrms-client dev",
+    "dev:server": "pnpm --filter hrms-server dev",
+    "dev:mobile": "pnpm --filter hrms-mobile dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
+}

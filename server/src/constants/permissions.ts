@@ -1,0 +1,115 @@
+// M0-07: RBAC 权限点常量（唯一真相源） | HRMS | 2026-08-24
+// seed.ts 与后端中间件统一引用本文件，禁止在别处重复硬编码权限数组
+
+/** 通配权限：拥有全部权限 */
+export const WILDCARD = '*';
+
+/**
+ * 系统全部权限点
+ */
+export const PERMISSIONS = {
+  // 组织人事
+  EMPLOYEE_READ: 'employee:read',
+  EMPLOYEE_WRITE: 'employee:write',
+  EMPLOYEE_READ_SELF_DEPT: 'employee:read:self-dept',
+  DEPARTMENT_READ: 'department:read',
+  DEPARTMENT_WRITE: 'department:write',
+
+  // 考勤
+  ATTENDANCE_READ: 'attendance:read',
+  ATTENDANCE_WRITE: 'attendance:write',
+  ATTENDANCE_READ_SELF_DEPT: 'attendance:read:self-dept',
+  ATTENDANCE_READ_SELF: 'attendance:read:self',
+  ATTENDANCE_WRITE_SELF: 'attendance:write:self',
+  ATTENDANCE_APPROVE: 'attendance:approve',
+
+  // 薪酬
+  SALARY_READ: 'salary:read',
+  SALARY_WRITE: 'salary:write',
+  SALARY_READ_SELF: 'salary:read:self',
+  SALARY_APPROVE: 'salary:approve',
+
+  // 绩效
+  PERFORMANCE_READ: 'performance:read',
+  PERFORMANCE_WRITE: 'performance:write',
+  PERFORMANCE_READ_SELF_DEPT: 'performance:read:self-dept',
+  PERFORMANCE_WRITE_SELF_DEPT: 'performance:write:self-dept',
+  PERFORMANCE_READ_SELF: 'performance:read:self',
+  PERFORMANCE_WRITE_SELF: 'performance:write:self',
+  PERFORMANCE_APPROVE: 'performance:approve',
+
+  // 合同
+  CONTRACT_READ: 'contract:read',
+  CONTRACT_WRITE: 'contract:write',
+
+  // 假勤
+  LEAVE_APPLY: 'leave:apply',
+  LEAVE_APPROVE: 'leave:approve',
+  OVERTIME_APPLY: 'overtime:apply',
+  OVERTIME_APPROVE: 'overtime:approve',
+
+  // 报表
+  REPORT_READ: 'report:read',
+
+  // 个人中心
+  PROFILE_READ_SELF: 'profile:read:self',
+  PROFILE_WRITE_SELF: 'profile:write:self',
+
+  // 审计日志（M0-08）
+  AUDIT_READ: 'audit:read',
+} as const;
+
+/** 权限点字面量联合类型 */
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+/**
+ * 角色 code → 权限点数组 映射
+ * admin 为 ['*'] 通配
+ */
+export const ROLE_PERMISSIONS: Record<string, string[]> = {
+  admin: [WILDCARD],
+  hr: [
+    PERMISSIONS.EMPLOYEE_READ,
+    PERMISSIONS.EMPLOYEE_WRITE,
+    PERMISSIONS.DEPARTMENT_READ,
+    PERMISSIONS.DEPARTMENT_WRITE,
+    PERMISSIONS.ATTENDANCE_READ,
+    PERMISSIONS.ATTENDANCE_WRITE,
+    PERMISSIONS.SALARY_READ,
+    PERMISSIONS.SALARY_WRITE,
+    PERMISSIONS.PERFORMANCE_READ,
+    PERMISSIONS.PERFORMANCE_WRITE,
+    PERMISSIONS.CONTRACT_READ,
+    PERMISSIONS.CONTRACT_WRITE,
+    PERMISSIONS.AUDIT_READ,
+  ],
+  dept_head: [
+    PERMISSIONS.EMPLOYEE_READ_SELF_DEPT,
+    PERMISSIONS.ATTENDANCE_READ_SELF_DEPT,
+    PERMISSIONS.ATTENDANCE_APPROVE,
+    PERMISSIONS.PERFORMANCE_READ_SELF_DEPT,
+    PERMISSIONS.PERFORMANCE_WRITE_SELF_DEPT,
+    PERMISSIONS.LEAVE_APPROVE,
+    PERMISSIONS.OVERTIME_APPROVE,
+  ],
+  executive: [
+    PERMISSIONS.EMPLOYEE_READ,
+    PERMISSIONS.DEPARTMENT_READ,
+    PERMISSIONS.SALARY_READ,
+    PERMISSIONS.SALARY_APPROVE,
+    PERMISSIONS.PERFORMANCE_READ,
+    PERMISSIONS.PERFORMANCE_APPROVE,
+    PERMISSIONS.REPORT_READ,
+  ],
+  employee: [
+    PERMISSIONS.PROFILE_READ_SELF,
+    PERMISSIONS.PROFILE_WRITE_SELF,
+    PERMISSIONS.ATTENDANCE_READ_SELF,
+    PERMISSIONS.ATTENDANCE_WRITE_SELF,
+    PERMISSIONS.LEAVE_APPLY,
+    PERMISSIONS.OVERTIME_APPLY,
+    PERMISSIONS.SALARY_READ_SELF,
+    PERMISSIONS.PERFORMANCE_READ_SELF,
+    PERMISSIONS.PERFORMANCE_WRITE_SELF,
+  ],
+};

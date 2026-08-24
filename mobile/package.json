@@ -1,0 +1,12 @@
+{
+  "name": "hrms-mobile",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo 'mobile - reserved for phase 2'",
+    "build": "echo 'mobile - reserved'",
+    "lint": "echo 'placeholder'",
+    "format": "echo 'placeholder'",
+    "test": "echo 'placeholder'"
+  }
+}
