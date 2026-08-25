@@ -99,6 +99,11 @@ export const PERMISSIONS = {
   // M1-A4 转正流程
   REGULARIZATION_READ: 'regularization:read',
   REGULARIZATION_WRITE: 'regularization:write',
+
+  // M1-A6 离职流程
+  OFFBOARDING_READ: 'offboarding:read',
+  OFFBOARDING_WRITE: 'offboarding:write',
+  OFFBOARDING_CERTIFICATE: 'offboarding:certificate',
 } as const;
 
 /** 权限点字面量联合类型 */
@@ -151,6 +156,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.ONBOARDING_CONFIRM,
     PERMISSIONS.REGULARIZATION_READ,
     PERMISSIONS.REGULARIZATION_WRITE,
+    PERMISSIONS.OFFBOARDING_READ,
+    PERMISSIONS.OFFBOARDING_WRITE,
+    PERMISSIONS.OFFBOARDING_CERTIFICATE,
   ],
   dept_head: [
     PERMISSIONS.EMPLOYEE_READ_SELF_DEPT,
@@ -163,6 +171,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.APPROVAL_INSTANCE_ACT,
     PERMISSIONS.ONBOARDING_READ,
     PERMISSIONS.REGULARIZATION_READ,
+    PERMISSIONS.OFFBOARDING_READ,
   ],
   executive: [
     PERMISSIONS.EMPLOYEE_READ,

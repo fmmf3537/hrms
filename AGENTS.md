@@ -97,7 +97,14 @@ V1.2 之前的 6 个严重项全部修复：
   + 状态机 + 3 级审批流（部门负责人 → HR → 总经理）
   + 转正后 employee.status probation → active + 薪资历史写入
   + listUpcomingRegularizations 给 BullMQ 调用 + 4 个新端点 + 18 个新单测（195 → 213）
-- 后续：A6（离职）→ A5（调动）→ A7（合同）
+- **A6 离职流程（已完成）**：offboarding_records + handover_tasks 2 张表
+  + 7 步流程（V1.2 §二.2.3）+ 2 级审批流（HR → 总经理）
+  + 工作交接清单（5 项模板，configs.offboarding.handover_template）
+  + 账号禁用（configs.offboarding.account_disable_strategy）
+  + 离职证明 mock PDF（HTML + 水印，configs.offboarding.certificate_*）
+  + 档案 1 年后访问 RBAC（configs.offboarding.archive_access_after_1y）
+  + 6 个新端点 + 21 个新单测（213 → 234）
+- 后续：A5（调动）→ A7（合同）
 
 ### 工程强约束（V1.2 时代）
 

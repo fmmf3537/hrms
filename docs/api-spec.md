@@ -676,6 +676,17 @@
 | GET | `/regularizations/:id` | 是 | 转正详情（含 employee 关联信息） |
 | POST | `/regularizations/:id/cancel` | 是 | 撤回/取消（draft 直接；submitted 调 approval.withdraw） |
 
+### 3.10 Offboarding API（M1-A6）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/offboarding` | 是 | 提交离职申请（→ handover_pending + 5 交接任务） |
+| GET | `/offboarding` | 是 | 离职列表（分页 + 状态/公司/部门过滤） |
+| GET | `/offboarding/:id` | 是 | 离职详情（含 employee + tasks） |
+| POST | `/offboarding/:id/confirm-handover` | 是 | 确认交接并提交审批 |
+| POST | `/offboarding/:id/cancel` | 是 | 撤回/取消 |
+| POST | `/offboarding/:id/issue-certificate` | 是 | 签发离职证明（mock HTML PDF） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

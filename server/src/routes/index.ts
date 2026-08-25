@@ -11,6 +11,7 @@ import employeeRoutes from './employee';
 import encryptedFieldRoutes from './encryptedField';
 import integrationRoutes from './integration';
 import notificationRoutes from './notification';
+import offboardingRoutes from './offboarding';
 import onboardingRoutes from './onboarding';
 import regularizationRoutes from './regularization';
 
@@ -49,5 +50,6 @@ router.use('/departments', departmentRoutes);
 router.use('/employees', employeeRoutes);
 router.use('/onboarding', onboardingRoutes);
 router.use('/regularizations', regularizationRoutes);
+router.use('/offboarding', offboardingRoutes);
 
 export default router;

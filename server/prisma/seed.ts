@@ -114,6 +114,49 @@ const DEFAULT_CONFIGS: Array<{
     value: ['department_leader', 'hr', 'ceo'],
     remark: '转正审批节点',
   },
+  // M1-A6 离职流程
+  {
+    category: 'offboarding',
+    key: 'handover_template',
+    value: ['工作文档交接', '客户/项目交接', '财务/物资交接', '系统账号交接', '未了事项说明'],
+    remark: '工作交接清单模板',
+  },
+  {
+    category: 'offboarding',
+    key: 'approval_flow_key',
+    value: 'offboarding:offboarding_approval',
+    remark: '离职审批流 flowKey',
+  },
+  {
+    category: 'offboarding',
+    key: 'account_disable_strategy',
+    value: 'on_resignation_date',
+    remark: '账号禁用时机',
+  },
+  {
+    category: 'offboarding',
+    key: 'certificate_number_format',
+    value: 'OFFBOARD-{year}{seq:4}',
+    remark: '离职证明编号格式',
+  },
+  {
+    category: 'offboarding',
+    key: 'certificate_template',
+    value: '/templates/offboarding-certificate.html',
+    remark: '离职证明模板路径',
+  },
+  {
+    category: 'offboarding',
+    key: 'archive_access_after_1y',
+    value: ['admin', 'hr'],
+    remark: '离职1年后档案访问角色',
+  },
+  {
+    category: 'offboarding',
+    key: 'approval_nodes',
+    value: ['hr', 'ceo'],
+    remark: '离职审批节点',
+  },
 ];
 
 async function main() {
@@ -760,6 +803,51 @@ async function main() {
     }
   } else {
     console.log('   ✓ no probation employee, skip regularization seed');
+  }
+
+  console.log('==> Seeding offboarding demo (M1-A6)...');
+  const activeEmp = await prisma.employee.findFirst({
+    where: {
+      companyId: xach.id,
+      status: 'active',
+      deletedAt: null,
+      employeeNo: { not: `XACH${year}0001` },
+    },
+  });
+  if (activeEmp) {
+    const existingOff = await prisma.offboardingRecord.findFirst({
+      where: {
+        employeeId: activeEmp.id,
+        status: { notIn: ['rejected', 'cancelled'] },
+      },
+    });
+    if (!existingOff) {
+      await prisma.offboardingRecord.create({
+        data: {
+          employeeId: activeEmp.id,
+          resignationType: 'employee_initiated',
+          reason: '演示：个人发展原因申请离职',
+          lastWorkingDate: new Date(`${year}-12-31`),
+          status: 'handover_pending',
+          archiveRetentionYears: 5,
+          createdBy: admin.id,
+          tasks: {
+            create: [
+              { name: '工作文档交接', category: 'document', status: 'pending' },
+              { name: '客户/项目交接', category: 'client', status: 'pending' },
+              { name: '财务/物资交接', category: 'finance', status: 'pending' },
+              { name: '系统账号交接', category: 'account', status: 'pending' },
+              { name: '未了事项说明', category: 'misc', status: 'pending' },
+            ],
+          },
+        },
+      });
+      console.log('   ✓ 1 offboarding record + 5 handover tasks');
+    } else {
+      console.log('   ✓ offboarding demo already exists (skip)');
+    }
+  } else {
+    console.log('   ✓ no active employee, skip offboarding seed');
   }
 
   console.log('==> Done.');

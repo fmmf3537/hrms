@@ -53,6 +53,8 @@ tags:
     description: 入职流程（M1-A3）
   - name: Regularization
     description: 转正流程（M1-A4）
+  - name: Offboarding
+    description: 离职流程（M1-A6）
 
 security:
   - BearerAuth: []
@@ -1308,6 +1310,89 @@ paths:
         '200':
           description: 成功
 
+  /offboarding:
+    get:
+      tags: [Offboarding]
+      summary: 离职列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Offboarding]
+      summary: 提交离职申请
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OffboardingCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /offboarding/{id}:
+    get:
+      tags: [Offboarding]
+      summary: 离职详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /offboarding/{id}/confirm-handover:
+    post:
+      tags: [Offboarding]
+      summary: 确认工作交接并提交审批
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /offboarding/{id}/cancel:
+    post:
+      tags: [Offboarding]
+      summary: 撤回/取消离职
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: 成功
+  /offboarding/{id}/issue-certificate:
+    post:
+      tags: [Offboarding]
+      summary: 签发离职证明（mock HTML）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1859,3 +1944,14 @@ components:
         newBaseSalary: { type: number }
         newPerformanceSalary: { type: number }
         newTotalSalary: { type: number }
+
+    OffboardingCreateInput:
+      type: object
+      required: [employeeId, resignationType, lastWorkingDate]
+      properties:
+        employeeId: { type: string, format: uuid }
+        resignationType:
+          type: string
+          enum: [employee_initiated, company_initiated]
+        reason: { type: string }
+        lastWorkingDate: { type: string, format: date }

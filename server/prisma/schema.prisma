@@ -687,3 +687,72 @@ model RegularizationRecord {
   @@index([status, probationEndDate])
   @@map("regularization_records")
 }
+
+// ==================== M1-A6 离职流程 ====================
+// 状态机：draft → handover_pending → submitted → approved
+//                      → certificate_issued / rejected / cancelled
+// 不建 Employee/User 反向关系（避免改 A1-A4 model）
+model OffboardingRecord {
+  id         String @id @default(uuid()) @db.Uuid
+  employeeId String @map("employee_id") @db.Uuid
+  // 离职类型 employee_initiated / company_initiated
+  resignationType String @map("resignation_type") @db.VarChar(20)
+  reason          String? @db.Text
+  lastWorkingDate DateTime @map("last_working_date") @db.Date
+  // 工作交接状态
+  handoverCompleted   Boolean   @default(false) @map("handover_completed")
+  handoverCompletedBy String?   @map("handover_completed_by") @db.Uuid
+  handoverCompletedAt DateTime? @map("handover_completed_at") @db.Timestamptz(6)
+  // 审批流（M0.5-1）
+  approvalInstanceId String? @unique @map("approval_instance_id") @db.Uuid
+  // 离职证明
+  certificateIssued   Boolean   @default(false) @map("certificate_issued")
+  certificateIssuedAt DateTime? @map("certificate_issued_at") @db.Timestamptz(6)
+  certificateIssuedBy String?   @map("certificate_issued_by") @db.Uuid
+  certificateNumber   String?   @unique @map("certificate_number") @db.VarChar(50)
+  certificateUrl      String?   @map("certificate_url") @db.Text
+  // 账号禁用
+  accountDisabled   Boolean   @default(false) @map("account_disabled")
+  accountDisabledAt DateTime? @map("account_disabled_at") @db.Timestamptz(6)
+  // 档案归档
+  archivedAt              DateTime? @map("archived_at") @db.Timestamptz(6)
+  archiveRetentionYears   Int       @default(5) @map("archive_retention_years")
+  // 状态机
+  status String @default("draft") @db.VarChar(20)
+  // 元数据
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  cancelledAt     DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy     String?   @map("cancelled_by") @db.Uuid
+  cancelledReason String?   @map("cancelled_reason") @db.Text
+
+  tasks HandoverTask[]
+
+  @@index([employeeId, status])
+  @@index([status, lastWorkingDate])
+  @@index([createdBy, status])
+  @@map("offboarding_records")
+}
+
+// 工作交接任务（从 configs.offboarding.handover_template 模板生成）
+model HandoverTask {
+  id            String @id @default(uuid()) @db.Uuid
+  offboardingId String @map("offboarding_id") @db.Uuid
+  name          String @db.VarChar(100)
+  // document / client / finance / account / misc
+  category      String  @db.VarChar(50)
+  ownerId       String? @map("owner_id") @db.Uuid
+  status        String  @default("pending") @db.VarChar(20)
+  remark        String? @db.Text
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz(6)
+  completedBy   String?   @map("completed_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  offboarding OffboardingRecord @relation(fields: [offboardingId], references: [id], onDelete: Cascade)
+
+  @@index([offboardingId, status])
+  @@index([ownerId, status])
+  @@map("handover_tasks")
+}

@@ -822,7 +822,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 | A3 | 入职流程（含工号自动生成 + AI OCR 资料收集）（**已实现**）详见 [`server/src/services/onboarding/README.md`](../../server/src/services/onboarding/README.md) | 5 | 2.5d |
 | A4 | 转正流程（**已实现**）详见 [`server/src/services/regularization/README.md`](../../server/src/services/regularization/README.md) | 4 | 1.5d |
 | A5 | 调动流程（含权限/薪酬联动） | 5 | 2.5d |
-| A6 | 离职流程（含档案归档 + **离职证明生成** + 账号生命周期 SOP） | 6 | 3d |
+| A6 | 离职流程（含档案归档 + **离职证明生成** + 账号生命周期 SOP）（**已实现**）详见 [`server/src/services/offboarding/README.md`](../../server/src/services/offboarding/README.md) | 6 | 3d |
 | A7 | 合同管理（模板 + 到期预警 + **电子签**） | 5 | 3d |
 
 **A2 切片内嵌 AI OCR 能力**（M0.5 底座已搭好）：
@@ -1173,6 +1173,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M1.0.1** | **2026-08-25** | **feat(org+employee): M1-A1+A2 组织架构 + 员工档案合并切片（Cursor 交付）<br>**A1**：companies + departments 扩展 + 法人/部门 CRUD + 4 级层级检查 + 编制预警（headcount vs currentCount × warningRatio）<br>**A2**：employees 扩展 + 2 张历史表（位置/薪资） + 工号自动生成 + 合同/资质到期预警 + 敏感字段加密（idCard/bankCard/phone 走 M0.5-3 AES-256-GCM）+ AI OCR 集成 + 25 个新端点 + 38 个新单测（140→178）<br>**依赖**：M0.5-3 加密 + M0.5-6 配置中心 + M0.5-2 通知 + M0.5-4 LLM 网关 | **Cursor + WorkBuddy** |
 | **M1.0.2** | **2026-08-26** | **feat(onboarding): M1-A3 入职流程（Cursor 交付）<br>**范围**：onboarding_records + onboarding_tasks 2 张表 + 状态机 draft→submitted→approved/cancelled + 工号自动生成（与 A2 算法一致）+ AI OCR 三合一（idCard/bankCard/certificate，复用 A2 employeeAI）+ 审批流集成（M0.5-1 submitApproval/withdraw）+ 通知集成（M0.5-2 模板 onboarding_confirmed/rejected）+ 4 个引导任务模板（configs.onboarding.checklist）+ 5 个新端点 + 17 个新单测（178→195）<br>**依赖**：M1-A1+A2 + M0.5-1/2/3/4/5/6/7 全部就绪<br>**强约束**：OCR/审批/通知/加密 全部复用 A1+A2 + M0.5 export 函数，零重写 | **Cursor + WorkBuddy** |
 | **M1.0.3** | **2026-08-27** | **feat(regularization): M1-A4 转正流程（Cursor 交付）<br>**范围**：regularization_records 1 张表 + 状态机 draft→submitted→approved/rejected/cancelled + 3 级审批流（department_leader→hr→ceo）+ 转正后员工状态 probation→active + 薪资历史写入（employee_salary_history，从次月生效）+ listUpcomingRegularizations 给 BullMQ 调用 + 4 个新端点 + 18 个新单测（195→213）<br>**依赖**：M1-A1+A2 + M1-A3 + M0.5 全部 + employee_salary_history 表<br>**强约束**：员工状态/薪资历史走 prisma 直接操作（不调 employee.service），审批/通知/加密 全部复用既有 export，零重写 | **Cursor + WorkBuddy** |
+| **M1.0.4** | **2026-08-28** | **feat(offboarding): M1-A6 离职流程（Cursor 交付）<br>**范围**：offboarding_records + handover_tasks 2 张表 + 7 步流程 + 状态机 draft→handover_pending→submitted→approved→certificate_issued/rejected/cancelled + 2 级审批流（hr→ceo）+ 工作交接清单（5 项模板）+ 账号禁用（on_resignation_date 策略）+ 离职证明 mock PDF（HTML + 水印，不接 e-签宝）+ 档案 1 年后访问 RBAC + 6 个新端点 + 21 个新单测（213→234）<br>**依赖**：M1-A1+A2+A3+A4 + M0.5 全部 + employee_salary_history / users 表<br>**强约束**：员工状态/账号禁用走 prisma 直接操作（不 import 跨 service），通知 bypassTemplate fallback，离职证明只 mock PDF，e-签宝留 A7 | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 
