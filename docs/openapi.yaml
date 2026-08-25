@@ -1,0 +1,1319 @@
+openapi: 3.0.3
+info:
+  title: HRMS API
+  version: 1.2.0
+  description: |
+    西安辰航卓越科技有限公司 HRMS 一期 API
+
+    涵盖范围：M0（已实现）+ M0.5（5 个公共模块 + AI 底座，将实现）
+
+    配套文档：
+    - [API Spec Markdown](./api-spec.md)
+    - [错误码表](./error-codes.md)
+    - [Mermaid 流程图](./flow-diagrams.md)
+    - [主文档 HRMS-V1.2.md](./HRMS-V1.2.md)
+  contact:
+    name: HRMS Team
+    email: it@chenhang-zhuoyue.com
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:3000/api
+    description: 开发环境
+  - url: https://hrms.your-domain.com/api
+    description: 生产环境（待定）
+
+tags:
+  - name: Health
+    description: 健康检查
+  - name: Auth
+    description: 认证（登录/刷新/登出/当前用户）
+  - name: Audit
+    description: 审计日志查询
+  - name: ApprovalFlow
+    description: 审批流模板管理（M0.5-1）
+  - name: ApprovalInstance
+    description: 审批实例操作（M0.5-1）
+  - name: Notification
+    description: 通知（M0.5-2）
+  - name: EncryptedField
+    description: 字段加密管理（M0.5-3）
+  - name: Integration
+    description: 第三方对接管理（M0.5-4）
+  - name: AI
+    description: AI 底座能力（M0.5-5）
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ============== Health ==============
+  /health:
+    get:
+      tags: [Health]
+      summary: 健康检查
+      security: []
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  # ============== Auth ==============
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: 用户登录
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/InvalidCredentials'
+        '403':
+          $ref: '#/components/responses/AccountDisabled'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: 刷新 accessToken（rotation + reuse 检测）
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          accessToken:
+                            type: string
+                          refreshToken:
+                            type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: 刷新令牌无效 / 过期 / 被重用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 登出（吊销 refreshToken）
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: 登出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: 获取当前登录用户信息
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          user:
+                            $ref: '#/components/schemas/UserInfo'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/AccountDisabled'
+
+  /auth/permission-demo:
+    get:
+      tags: [Auth]
+      summary: 联调演示（需 salary:read 权限）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          userId:
+                            type: string
+                            format: uuid
+                          username:
+                            type: string
+                          permissions:
+                            type: array
+                            items:
+                              type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ============== Audit ==============
+  /audit-logs:
+    get:
+      tags: [Audit]
+      summary: 分页查询审计日志
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - in: query
+          name: userId
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: action
+          schema:
+            type: string
+            enum: [LOGIN, CREATE, UPDATE, DELETE, EXPORT]
+        - in: query
+          name: resourceType
+          schema:
+            type: string
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AuditLog'
+                      total:
+                        type: integer
+                      page:
+                        type: integer
+                      pageSize:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # ============== Approval Flow (M0.5-1) ==============
+  /approval-flows:
+    get:
+      tags: [ApprovalFlow]
+      summary: 列出所有审批流模板
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalFlow'
+    post:
+      tags: [ApprovalFlow]
+      summary: 创建审批流模板
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalFlowInput'
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalFlow'
+
+  /approval-flows/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [ApprovalFlow]
+      summary: 获取单个模板
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalFlow'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [ApprovalFlow]
+      summary: 更新模板
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalFlowInput'
+      responses:
+        '200':
+          description: 更新成功
+    delete:
+      tags: [ApprovalFlow]
+      summary: 删除模板（软删除）
+      responses:
+        '204':
+          description: 删除成功
+
+  /approval-instances:
+    get:
+      tags: [ApprovalInstance]
+      summary: 列出我的审批（待办/已办/我发起）
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, rejected, withdrawn, all]
+            default: pending
+        - in: query
+          name: role
+          schema:
+            type: string
+            enum: [approver, initiator, all]
+            default: approver
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ApprovalInstance'
+    post:
+      tags: [ApprovalInstance]
+      summary: 提交审批
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalInstanceSubmitInput'
+      responses:
+        '201':
+          description: 提交成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApprovalInstance'
+
+  /approval-instances/{id}/approve:
+    post:
+      tags: [ApprovalInstance]
+      summary: 审批通过
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: 审批成功
+
+  /approval-instances/{id}/reject:
+    post:
+      tags: [ApprovalInstance]
+      summary: 审批驳回
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: 驳回成功
+
+  /approval-instances/{id}/transfer:
+    post:
+      tags: [ApprovalInstance]
+      summary: 转交他人
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toUserId]
+              properties:
+                toUserId:
+                  type: string
+                  format: uuid
+                comment:
+                  type: string
+      responses:
+        '200':
+          description: 转交成功
+
+  /approval-instances/{id}/withdraw:
+    post:
+      tags: [ApprovalInstance]
+      summary: 发起人撤回
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 撤回成功
+
+  # ============== Notification (M0.5-2) ==============
+  /notifications:
+    get:
+      tags: [Notification]
+      summary: 我的通知列表
+      parameters:
+        - in: query
+          name: unreadOnly
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: pageSize
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/unread-count:
+    get:
+      tags: [Notification]
+      summary: 未读通知数
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+
+  /notifications/{id}/read:
+    post:
+      tags: [Notification]
+      summary: 标记已读
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+
+  /notifications/read-all:
+    post:
+      tags: [Notification]
+      summary: 全部已读
+      responses:
+        '200':
+          description: 成功
+
+  /notifications/send:
+    post:
+      tags: [Notification]
+      summary: 主动发通知（admin/HR）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationSendInput'
+      responses:
+        '202':
+          description: 已加入发送队列
+
+  # ============== Encrypted Field (M0.5-3) ==============
+  /encrypted-fields:
+    get:
+      tags: [EncryptedField]
+      summary: 列出已加密字段配置（admin）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EncryptedField'
+    post:
+      tags: [EncryptedField]
+      summary: 注册加密字段（admin）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EncryptedFieldInput'
+      responses:
+        '201':
+          description: 创建成功
+
+  /encrypted-fields/{id}/decrypt:
+    post:
+      tags: [EncryptedField]
+      summary: 解密单个字段
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recordId]
+              properties:
+                recordId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  value:
+                    type: string
+                    description: 解密后的明文
+
+  /encrypted-fields/rotate-key:
+    post:
+      tags: [EncryptedField]
+      summary: 触发密钥轮转（admin）
+      responses:
+        '202':
+          description: 轮转已启动
+
+  # ============== Integration (M0.5-4) ==============
+  /integrations:
+    get:
+      tags: [Integration]
+      summary: 列出所有集成（admin）
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Integration'
+
+  /integrations/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Integration]
+      summary: 单个集成详情
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [Integration]
+      summary: 更新配置
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationInput'
+      responses:
+        '200':
+          description: 成功
+    delete:
+      tags: [Integration]
+      summary: 注销集成
+      responses:
+        '204':
+          description: 成功
+
+  /integrations/{id}/sync:
+    post:
+      tags: [Integration]
+      summary: 手动触发同步
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '202':
+          description: 同步已加入队列
+
+  /integrations/{id}/test:
+    post:
+      tags: [Integration]
+      summary: 测试连通性
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: 连通成功
+
+  # ============== AI (M0.5-5) ==============
+  /ai/ocr:
+    post:
+      tags: [AI]
+      summary: OCR 识别（身份证/银行卡/证书）
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, documentType]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                documentType:
+                  type: string
+                  enum: [id_card, bank_card, certificate]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OcrResult'
+
+  /ai/qa:
+    post:
+      tags: [AI]
+      summary: 智能问答（HR Q&A）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiQaInput'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AiQaResult'
+
+  /ai/summarize:
+    post:
+      tags: [AI]
+      summary: 文本摘要（算薪异常摘要等）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, data]
+              properties:
+                type:
+                  type: string
+                  enum: [payroll_diff, performance_summary, contract_renewal]
+                data:
+                  type: object
+      responses:
+        '200':
+          description: 成功
+
+  /ai/score-suggest:
+    post:
+      tags: [AI]
+      summary: 绩效评分建议
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiScoreSuggestInput'
+      responses:
+        '200':
+          description: 成功
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthenticated:
+      description: 未认证
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: 无权限
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InvalidCredentials:
+      description: 用户名或密码错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    AccountDisabled:
+      description: 账号已停用
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    RateLimited:
+      description: 请求过于频繁
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # ============== 通用 ==============
+    SuccessResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+        data: {}
+
+    ErrorResponse:
+      type: object
+      required: [success, error, code]
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: 人类可读错误信息
+        code:
+          type: integer
+          description: 业务错误码（详见 error-codes.md）
+          example: 10110
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              message:
+                type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: integer
+          description: 进程启动秒数
+
+    # ============== 认证 ==============
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 2
+          maxLength: 50
+        password:
+          type: string
+          minLength: 6
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserInfo'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+
+    UserInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [active, disabled]
+        mustChangePassword:
+          type: boolean
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        companyId:
+          type: string
+          format: uuid
+          nullable: true
+        departmentId:
+          type: string
+          format: uuid
+          nullable: true
+        employee:
+          type: object
+          nullable: true
+
+    # ============== 审计 ==============
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        action:
+          type: string
+          enum: [LOGIN, CREATE, UPDATE, DELETE, EXPORT]
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        oldValue:
+          type: object
+          nullable: true
+        newValue:
+          type: object
+          nullable: true
+        ipAddress:
+          type: string
+          nullable: true
+        userAgent:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [SUCCESS, FAILURE]
+        createdAt:
+          type: string
+          format: date-time
+
+    # ============== 审批流 ==============
+    ApprovalFlow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          example: leave
+        key:
+          type: string
+          example: leave_default
+        name:
+          type: string
+        version:
+          type: integer
+        nodes:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApprovalFlowInput:
+      type: object
+      required: [category, key, name, nodes]
+      properties:
+        category:
+          type: string
+        key:
+          type: string
+        name:
+          type: string
+        nodes:
+          type: array
+          items:
+            type: object
+
+    ApprovalInstance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        flowKey:
+          type: string
+        businessType:
+          type: string
+        businessId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        initiatorId:
+          type: string
+          format: uuid
+        currentNodeId:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending, approved, rejected, withdrawn]
+        data:
+          type: object
+        history:
+          type: array
+          items:
+            type: object
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ApprovalInstanceSubmitInput:
+      type: object
+      required: [flowKey, businessType, businessId, title, data]
+      properties:
+        flowKey:
+          type: string
+        businessType:
+          type: string
+        businessId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        data:
+          type: object
+
+    # ============== 通知 ==============
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        templateKey:
+          type: string
+        channel:
+          type: string
+          enum: [in_app, email, sms]
+        title:
+          type: string
+        content:
+          type: string
+        data:
+          type: object
+        read:
+          type: boolean
+        sentAt:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    NotificationSendInput:
+      type: object
+      required: [templateKey, channels, recipients, data]
+      properties:
+        templateKey:
+          type: string
+        channels:
+          type: array
+          items:
+            type: string
+            enum: [in_app, email, sms]
+        recipients:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+                format: uuid
+        data:
+          type: object
+
+    # ============== 加密 ==============
+    EncryptedField:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        tableName:
+          type: string
+        columnName:
+          type: string
+        encryptionAlgo:
+          type: string
+          enum: [aes-256-gcm]
+        keyVersion:
+          type: integer
+        accessRoles:
+          type: array
+          items:
+            type: string
+
+    EncryptedFieldInput:
+      type: object
+      required: [tableName, columnName, accessRoles]
+      properties:
+        tableName:
+          type: string
+        columnName:
+          type: string
+        encryptionAlgo:
+          type: string
+          default: aes-256-gcm
+        accessRoles:
+          type: array
+          items:
+            type: string
+
+    # ============== 集成 ==============
+    Integration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+          example: esign
+        name:
+          type: string
+        type:
+          type: string
+          enum: [http_api, webhook, database, file]
+        config:
+          type: object
+          description: 配置（敏感字段脱敏）
+        enabled:
+          type: boolean
+        lastSyncAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    IntegrationInput:
+      type: object
+      required: [code, name, type, config]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        config:
+          type: object
+        enabled:
+          type: boolean
+          default: true
+
+    # ============== AI ==============
+    OcrResult:
+      type: object
+      properties:
+        documentType:
+          type: string
+          enum: [id_card, bank_card, certificate]
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        cost:
+          type: number
+          format: float
+
+    AiQaInput:
+      type: object
+      required: [question]
+      properties:
+        question:
+          type: string
+        context:
+          type: object
+          properties:
+            userRole:
+              type: string
+            departmentId:
+              type: string
+              format: uuid
+
+    AiQaResult:
+      type: object
+      properties:
+        answer:
+          type: string
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              url:
+                type: string
+              score:
+                type: number
+        confidence:
+          type: number
+        cost:
+          type: number
+        tokens:
+          type: integer
+
+    AiScoreSuggestInput:
+      type: object
+      required: [employeeId, cycleId]
+      properties:
+        employeeId:
+          type: string
+          format: uuid
+        cycleId:
+          type: string
+          format: uuid
+        selfEvaluation:
+          type: object
+        historicalPerformance:
+          type: array
+          items:
+            type: object
+        attendance:
+          type: object
+        projectDeliveries:
+          type: array
+          items:
+            type: object
