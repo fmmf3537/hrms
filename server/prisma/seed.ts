@@ -91,10 +91,15 @@ async function main() {
 
   console.log('==> Seeding admin user...');
   const adminRole = roles.find((r) => r.code === 'admin')!;
-  const passwordHash = await bcrypt.hash('Admin@123', 10);
+  const passwordHash = await bcrypt.hash('Admin@123', 12);
   const admin = await prisma.user.upsert({
     where: { username: 'admin' },
-    update: {},
+    // 重跑 seed 时强制升级：重新哈希到 cost=12 + mustChangePassword=true
+    // （保证运维同事本地旧哈希与新安全基线一致）
+    update: {
+      passwordHash,
+      mustChangePassword: true,
+    },
     create: {
       username: 'admin',
       passwordHash,

@@ -3,9 +3,9 @@
 # server / client 由 pnpm dev 在本地启动，不进容器
 
 services:
-  # PostgreSQL 数据库
+  # PostgreSQL 数据库（含 pgvector 扩展，M0.5-5 AI 切片依赖）
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: hrms_postgres
     restart: unless-stopped
     environment:
@@ -17,6 +17,8 @@ services:
       TZ: Asia/Shanghai
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # 自动启用 pgvector 扩展（仅首次启动时执行）
+      - ./server/prisma/init-scripts:/docker-entrypoint-initdb.d:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:

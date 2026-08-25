@@ -143,7 +143,9 @@ model Employee {
 model AuditLog {
   id           String   @id @default(uuid()) @db.Uuid
   userId       String?  @map("user_id") @db.Uuid // 操作用户 id，匿名/系统操作为 null（不建外键，用户删除不影响日志留存）
-  action       String   @db.VarChar(50) // LOGIN / CREATE / UPDATE / DELETE / EXPORT
+  // V1.2 新增：actor_type 区分操作主体（USER / AGENT / SYSTEM / INTEGRATION），为 AI Agent / 第三方对接审计铺垫
+  actorType    String   @default("USER") @map("actor_type") @db.VarChar(20)
+  action       String   @db.VarChar(50) // LOGIN / CREATE / UPDATE / DELETE / EXPORT / AUDIT_REVEAL
   resourceType String   @map("resource_type") @db.VarChar(50) // Auth / Employee / Salary / Attendance ...
   resourceId   String?  @map("resource_id") @db.VarChar(64)
   description  String?  @db.Text // 人类可读描述
@@ -155,9 +157,11 @@ model AuditLog {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@index([userId])
+  @@index([actorType])
   @@index([action])
   @@index([resourceType])
   @@index([createdAt])
   @@index([resourceType, createdAt])
+  @@index([actorType, createdAt])
   @@map("audit_logs")
 }

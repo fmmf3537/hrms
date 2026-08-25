@@ -34,6 +34,8 @@ export const AUDIT_STATUS = {
 
 export interface AuditLogParams {
   userId?: string | null;
+  /** V1.2 新增：操作主体类型，默认 USER；AI 调用填 AGENT；定时任务填 SYSTEM；第三方对接填 INTEGRATION */
+  actorType?: 'USER' | 'AGENT' | 'SYSTEM' | 'INTEGRATION';
   action: string;
   resourceType: string;
   resourceId?: string | null;
@@ -65,6 +67,7 @@ export async function auditLog(params: AuditLogParams): Promise<void> {
     await prisma.auditLog.create({
       data: {
         userId: params.userId ?? null,
+        actorType: params.actorType ?? 'USER',
         action: params.action,
         resourceType: params.resourceType,
         resourceId: params.resourceId ?? null,

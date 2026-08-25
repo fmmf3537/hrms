@@ -39,6 +39,7 @@ describe('auditLog', () => {
     expect(mocks.create).toHaveBeenCalledWith({
       data: {
         userId: 'user-1',
+        actorType: 'USER',
         action: 'LOGIN',
         resourceType: 'Auth',
         resourceId: null,

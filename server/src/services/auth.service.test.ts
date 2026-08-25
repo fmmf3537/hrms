@@ -1,6 +1,6 @@
 // M0-08+ 安全修复：auth.service 关键安全行为单测 | HRMS
 // 覆盖：login 失败审计、refresh rotation、reuse 检测、me 禁用拦截、logout 幂等
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-use-before-define */
 
 import jwt from 'jsonwebtoken';
 import {
@@ -58,6 +58,15 @@ const mocks = vi.hoisted(() => {
 
 vi.mock('uuid', () => ({
   v4: mocks.uuidV4,
+}));
+
+// bcryptMocks 在文件下方 hoist 定义（vitest 要求 vi.mock 工厂内引用的变量必须 hoist）
+// eslint-disable-next-line @typescript-eslint/no-use-before-define
+vi.mock('bcryptjs', () => ({
+  default: {
+    compare: bcryptMocks.compareFn,
+    hash: bcryptMocks.hashFn,
+  },
 }));
 
 vi.mock('../lib/prisma', () => ({
@@ -182,11 +191,11 @@ describe('login - 失败审计埋点', () => {
     );
   });
 
-  it('账号已停用 → 抛 401 + 写 FAILURE 审计 (携带 userId)', async () => {
+  it('账号已停用 → 对外抛 401+10110 + 审计记录"账号已停用"（防账号枚举）', async () => {
     mocks.userFindFirst.mockResolvedValue(makeUser({ status: 'disabled' }));
 
     await expect(authService.login('alice', 'pwd'))
-      .rejects.toMatchObject({ statusCode: 401 });
+      .rejects.toMatchObject({ statusCode: 401, code: 10110, message: '用户名或密码错误' });
 
     expect(mocks.auditLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -197,11 +206,11 @@ describe('login - 失败审计埋点', () => {
     );
   });
 
-  it('密码错误 → 抛 401 + 写 FAILURE 审计（对外文案统一为"用户名或密码错误"）', async () => {
+  it('密码错误 → 抛 401 + 写 FAILURE 审计（对外文案统一为"用户名或密码错误"，V1.2 code=10110）', async () => {
     mocks.userFindFirst.mockResolvedValue(makeUser());
 
     await expect(authService.login('alice', 'definitely-wrong-pwd'))
-      .rejects.toMatchObject({ statusCode: 401, message: '用户名或密码错误' });
+      .rejects.toMatchObject({ statusCode: 401, code: 10110, message: '用户名或密码错误' });
 
     expect(mocks.auditLog).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -210,6 +219,82 @@ describe('login - 失败审计埋点', () => {
         description: contains('密码错误'),
       }),
     );
+  });
+
+  // V1.2.1：账号禁用对外文案应与"密码错"完全一致（防账号枚举）
+  it('账号已停用 → 对外抛 401+10110 + 审计记录"账号已停用"（防账号枚举）', async () => {
+    mocks.userFindFirst.mockResolvedValue(makeUser({ status: 'disabled' }));
+
+    await expect(authService.login('alice', 'pwd'))
+      .rejects.toMatchObject({ statusCode: 401, code: 10110, message: '用户名或密码错误' });
+
+    expect(mocks.auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        status: 'FAILURE',
+        description: contains('账号已停用'),
+      }),
+    );
+  });
+});
+
+// ==================== login - 渐进式重哈希（V1.2.1）====================
+
+// 在 describe 之前 hoist bcrypt mock 工厂（V1.2.1：测试渐进式重哈希）
+const bcryptMocks = vi.hoisted(() => {
+  const compareFn = vi.fn();
+  const hashFn = vi.fn();
+  return { compareFn, hashFn };
+});
+
+describe('login - 渐进式重哈希（cost 10 → 12）', () => {
+  beforeEach(() => {
+    bcryptMocks.compareFn.mockReset();
+    bcryptMocks.hashFn.mockReset();
+  });
+
+  it('passwordHash cost < 12 → 登录成功后异步用 cost=12 重写', async () => {
+    // cost=10 的 bcrypt 哈希（合法格式）
+    const cost10Hash = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+    mocks.userFindFirst.mockResolvedValue(makeUser({ passwordHash: cost10Hash }));
+    bcryptMocks.compareFn.mockResolvedValue(true);
+    bcryptMocks.hashFn.mockResolvedValue('$2a$12$newHashForTest');
+
+    await authService.login('alice', 'pwd', {});
+
+    // 异步重哈希等 microtask 跑完
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 20);
+    });
+
+    expect(bcryptMocks.hashFn).toHaveBeenCalledWith('pwd', 12);
+    expect(mocks.userUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'user-1' },
+        data: expect.objectContaining({
+          passwordHash: expect.stringMatching(/^\$2[aby]\$12\$/),
+        }),
+      }),
+    );
+  });
+
+  it('passwordHash cost = 12 → 不触发重哈希（userUpdate 仅写 lastLoginAt）', async () => {
+    const cost12Hash = '$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+    mocks.userFindFirst.mockResolvedValue(makeUser({ passwordHash: cost12Hash }));
+    bcryptMocks.compareFn.mockResolvedValue(true);
+
+    await authService.login('alice', 'pwd', {});
+
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 20);
+    });
+
+    expect(bcryptMocks.hashFn).not.toHaveBeenCalled();
+    // userUpdate 仍会被调，但只写 lastLoginAt
+    expect(mocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: { lastLoginAt: expect.any(Date) },
+    });
   });
 });
 

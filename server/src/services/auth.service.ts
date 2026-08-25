@@ -187,7 +187,7 @@ export async function login(
       userAgent: meta.userAgent ?? null,
       status: auditService.AUDIT_STATUS.FAILURE,
     }).catch(() => { /* audit 内部已兜底 */ });
-    throw new AppError('用户名或密码错误', 401);
+    throw new AppError('用户名或密码错误', 401, 10110);
   }
 
   if (user.status !== 'active') {
@@ -201,7 +201,9 @@ export async function login(
       userAgent: meta.userAgent ?? null,
       status: auditService.AUDIT_STATUS.FAILURE,
     }).catch(() => { /* audit 内部已兜底 */ });
-    throw new AppError('用户名或密码错误', 401);
+    // V1.2.1 安全加固：对外文案与"密码错"完全一致（防账号枚举），
+    // 内部审计已记录具体原因（账号已停用）
+    throw new AppError('用户名或密码错误', 401, 10110);
   }
 
   const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
@@ -216,8 +218,27 @@ export async function login(
       userAgent: meta.userAgent ?? null,
       status: auditService.AUDIT_STATUS.FAILURE,
     }).catch(() => { /* audit 内部已兜底 */ });
-    throw new AppError('用户名或密码错误', 401);
+    throw new AppError('用户名或密码错误', 401, 10110);
   }
+
+  // 渐进式重哈希：若当前 passwordHash 的 cost < 12（V1.2 安全基线），
+  // 异步用 cost=12 重新哈希后写回，登录主流程不被阻塞。
+  // 失败仅 console.error，不影响登录。
+  (async () => {
+    try {
+      const roundsMatch = /^\$2[aby]\$(\d+)\$/.exec(user.passwordHash);
+      const currentRounds = roundsMatch ? parseInt(roundsMatch[1], 10) : 0;
+      if (currentRounds < 12) {
+        const newHash = await bcrypt.hash(password, 12);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash: newHash },
+        });
+      }
+    } catch (err) {
+      console.error('[auth] 渐进式重哈希失败（不影响登录）:', err);
+    }
+  })();
 
   const accessToken = signAccessToken(user);
 
@@ -257,9 +278,9 @@ export async function refresh(refreshTokenValue: string) {
     }) as RefreshTokenPayload;
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      throw new AppError('刷新令牌已过期，请重新登录', 401);
+      throw new AppError('刷新令牌已过期，请重新登录', 401, 10104);
     }
-    throw new AppError('无效的刷新令牌', 401);
+    throw new AppError('无效的刷新令牌', 401, 10105);
   }
 
   await connectRedis();
@@ -278,7 +299,7 @@ export async function refresh(refreshTokenValue: string) {
       description: '刷新令牌重用检测命中，已强制该用户所有会话下线',
       status: auditService.AUDIT_STATUS.FAILURE,
     }).catch(() => { /* audit 内部已兜底 */ });
-    throw new AppError('检测到刷新令牌被重用，请重新登录', 401);
+    throw new AppError('检测到刷新令牌被重用，请重新登录', 401, 10106);
   }
 
   // 3. 用户当前状态校验
@@ -288,7 +309,7 @@ export async function refresh(refreshTokenValue: string) {
   });
   if (!user || user.status !== 'active') {
     await revokeAllUserTokens(decoded.userId);
-    throw new AppError('用户不存在或已被禁用', 401);
+    throw new AppError('用户不存在或已被禁用', 403, 10111);
   }
 
   // 4. Rotation：吊销旧 token + 签发新 token
