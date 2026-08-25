@@ -76,6 +76,23 @@ V1.2 之前的 6 个严重项全部修复：
 - [x] M0.5-6 配置中心（configs + configService + 内存缓存 + §3.5.2 seed）
 - [x] M0.5-7 改密 + 二次验证（change-password / force-change-password / request-2fa / verify-2fa）
 
+### M0.5 收尾（已完成）
+
+- 7 个切片全部实现并 commit：M0.5-1 审批流 / M0.5-2 通知 / M0.5-3 字段加密 / M0.5-4 第三方对接 / M0.5-5 AI 底座 / M0.5-6 配置中心 / M0.5-7 改密 + 二次验证
+- 累计单测：26 → 51 → 100 → 115 → 140
+- 数据库：12+ 张表（user / role / permission / audit / approval × 3 / notification × 2 / encrypted × 2 / integration × 2 / config / ai × 4 / user_position_history / user_salary_history 等）
+- 公共底座 5 个切片为 M1-M5 业务模块铺路：审批流 / 通知 / 加密 / 对接 / AI
+
+### 工程强约束（V1.2 时代）
+
+- **不用 class + 静态方法**：统一 `export function` 范式
+- **业务规则必走 configs 表**：禁止硬编码（工号/合同预警/试用期/调基月/绩效系数等 12 类）
+- **敏感字段必加密**：身份证/银行卡/薪资字段走 M0.5-3 AES-256-GCM
+- **审计必写**：增删改 + 关键读 + AI 调用（actor_type 区分 USER/AGENT/SYSTEM/INTEGRATION）
+- **AI 调用必审计**：userId / capability / tokens / cost / duration 全留痕
+- **后台任务用 BullMQ**：不用 node-cron 裸跑
+- **AI Coding 任务强约束**：禁止越界做未授权切片，禁止修改旧测试文件，必须在报告中完整列出变更
+
 ### M1-M5 业务模块
 - M1 组织人事（第 3-5 周）：A1-A7 切片，含 AI OCR + 电子签（提前到一期）
 - M2 考勤假勤（第 6-8 周）：B1-B6
