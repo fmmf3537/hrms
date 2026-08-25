@@ -2,13 +2,16 @@
 import { Router, type Router as RouterType } from 'express';
 import { z } from 'zod';
 
+import { PERMISSIONS } from '../constants/permissions';
 import * as integrationController from '../controllers/integration.controller';
-import { authenticate } from '../middleware/auth';
+import {
+  authenticate, rejectIfMustChangePassword, requirePermission,
+} from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
 
-router.use(authenticate);
+router.use(authenticate, rejectIfMustChangePassword);
 
 const listSyncLogsSchema = z.object({
   integrationId: z.string().uuid().optional(),
@@ -38,14 +41,46 @@ const sendSchema = z.object({
   payload: z.unknown(),
 });
 
-router.get('/', integrationController.list);
-router.get('/sync-logs', validate(listSyncLogsSchema, 'query'), integrationController.listSyncLogs);
-router.get('/:code', integrationController.getByCode);
-router.post('/', validate(createSchema), integrationController.create);
-router.put('/:id', validate(updateSchema), integrationController.update);
-router.delete('/:id', integrationController.remove);
-router.post('/send', validate(sendSchema), integrationController.send);
-router.post('/:code/sync', integrationController.sync);
-router.post('/:code/test', integrationController.testConnection);
+router.get('/', requirePermission(PERMISSIONS.INTEGRATION_READ), integrationController.list);
+router.get(
+  '/sync-logs',
+  requirePermission(PERMISSIONS.INTEGRATION_READ),
+  validate(listSyncLogsSchema, 'query'),
+  integrationController.listSyncLogs,
+);
+router.get('/:code', requirePermission(PERMISSIONS.INTEGRATION_READ), integrationController.getByCode);
+router.post(
+  '/',
+  requirePermission(PERMISSIONS.INTEGRATION_WRITE),
+  validate(createSchema),
+  integrationController.create,
+);
+router.put(
+  '/:id',
+  requirePermission(PERMISSIONS.INTEGRATION_WRITE),
+  validate(updateSchema),
+  integrationController.update,
+);
+router.delete(
+  '/:id',
+  requirePermission(PERMISSIONS.INTEGRATION_WRITE),
+  integrationController.remove,
+);
+router.post(
+  '/send',
+  requirePermission(PERMISSIONS.INTEGRATION_SEND),
+  validate(sendSchema),
+  integrationController.send,
+);
+router.post(
+  '/:code/sync',
+  requirePermission(PERMISSIONS.INTEGRATION_SEND),
+  integrationController.sync,
+);
+router.post(
+  '/:code/test',
+  requirePermission(PERMISSIONS.INTEGRATION_READ),
+  integrationController.testConnection,
+);
 
 export default router;

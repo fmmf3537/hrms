@@ -9,6 +9,7 @@ export default defineConfig({
       REDIS_URL: 'redis://localhost:6401',
       JWT_SECRET: 'vitest-jwt-secret-vitest-jwt-secret',
       JWT_REFRESH_SECRET: 'vitest-refresh-secret-vitest-refresh',
+      ENCRYPTION_KEY: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     },
   },
 });

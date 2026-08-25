@@ -89,7 +89,8 @@ function signAccessToken(user: UserWithRoles): string {
     departmentId: user.employee?.departmentId ?? null,
     roles,
     permissions: mergePermissions(rolePerms),
-    tokenVersion: 0,
+    tokenVersion: user.tokenVersion,
+    mustChangePassword: user.mustChangePassword,
   };
   return jwt.sign(payload, env.JWT_SECRET, {
     algorithm: 'HS256',
@@ -351,12 +352,171 @@ export async function me(userId: string) {
   });
 
   if (!user) {
-    throw new AppError('用户不存在', 404);
+    throw new AppError('用户不存在', 404, 70101);
   }
   // 禁用用户不应能查自己（与"禁用即冻结"原则一致）
   if (user.status !== 'active') {
-    throw new AppError('账号已被禁用', 403);
+    throw new AppError('账号已被禁用', 403, 10111);
   }
 
   return toSafeUser(user);
+}
+
+const PASSWORD_STRENGTH = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+
+/**
+ * 用户自助改密（M0.5-7）
+ * - 校验旧密码 → 强度校验 → bcrypt cost=12 → 清 mustChangePassword → bump tokenVersion
+ * - 吊销全部 refresh token（全端下线）
+ */
+export async function changePassword(
+  userId: string,
+  oldPassword: string,
+  newPassword: string,
+  meta: { ipAddress?: string | null; userAgent?: string | null } = {},
+): Promise<void> {
+  if (!PASSWORD_STRENGTH.test(newPassword)) {
+    throw new AppError(
+      '新密码强度不足：至少 8 位，且含大小写字母与数字',
+      400,
+      10100,
+    );
+  }
+  if (oldPassword === newPassword) {
+    throw new AppError('新密码不能与旧密码相同', 400, 10100);
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
+  if (!user || user.status !== 'active') {
+    throw new AppError('用户不存在或已被禁用', 403, 10111);
+  }
+
+  const ok = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!ok) {
+    throw new AppError('旧密码错误', 401, 10110);
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      passwordHash: newHash,
+      mustChangePassword: false,
+      tokenVersion: { increment: 1 },
+    },
+  });
+
+  await revokeAllUserTokens(userId);
+
+  auditService.auditLog({
+    userId,
+    action: 'UPDATE_PASSWORD',
+    resourceType: auditService.AUDIT_RESOURCE_TYPES.AUTH,
+    resourceId: userId,
+    description: '用户自助修改密码',
+    ipAddress: meta.ipAddress ?? null,
+    userAgent: meta.userAgent ?? null,
+  }).catch(() => { /* fire-and-forget */ });
+}
+
+/**
+ * Admin 强制要求某用户下次登录改密（M0.5-7）
+ */
+export async function forceChangePassword(
+  actorUserId: string,
+  targetUserId: string,
+): Promise<void> {
+  const target = await prisma.user.findFirst({
+    where: { id: targetUserId, deletedAt: null },
+  });
+  if (!target) {
+    throw new AppError('用户不存在', 404, 70101);
+  }
+
+  await prisma.user.update({
+    where: { id: targetUserId },
+    data: {
+      mustChangePassword: true,
+      tokenVersion: { increment: 1 },
+    },
+  });
+  await revokeAllUserTokens(targetUserId);
+
+  auditService.auditLog({
+    userId: actorUserId,
+    action: 'UPDATE_PASSWORD',
+    resourceType: auditService.AUDIT_RESOURCE_TYPES.AUTH,
+    resourceId: targetUserId,
+    description: `管理员强制用户 ${target.username} 下次登录改密`,
+  }).catch(() => { /* fire-and-forget */ });
+}
+
+const TWO_FA_TTL_SEC = 5 * 60;
+
+/**
+ * 发起二次验证：向用户手机/邮箱发 6 位验证码（经 integration sms/email）
+ */
+export async function request2fa(
+  userId: string,
+  channel: 'sms' | 'email',
+): Promise<{ expiresIn: number }> {
+  const user = await prisma.user.findFirst({
+    where: { id: userId, deletedAt: null },
+  });
+  if (!user || user.status !== 'active') {
+    throw new AppError('用户不存在或已被禁用', 403, 10111);
+  }
+
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  await connectRedis();
+  await redis.set(`2fa:${userId}:${channel}`, code, 'EX', TWO_FA_TTL_SEC);
+
+  // 延迟加载，避免与 notification/integration 循环依赖
+  const { send } = await import('./integration.service');
+
+  if (channel === 'sms') {
+    if (!user.phone) {
+      throw new AppError('用户未绑定手机号', 400, 10100);
+    }
+    await send({
+      code: 'sms',
+      payload: { to: user.phone, content: `您的验证码是 ${code}，${TWO_FA_TTL_SEC / 60} 分钟内有效` },
+    });
+  } else {
+    if (!user.email) {
+      throw new AppError('用户未绑定邮箱', 400, 10100);
+    }
+    await send({
+      code: 'email',
+      payload: {
+        to: user.email,
+        subject: 'HRMS 二次验证码',
+        content: `您的验证码是 ${code}，${TWO_FA_TTL_SEC / 60} 分钟内有效`,
+      },
+    });
+  }
+
+  return { expiresIn: TWO_FA_TTL_SEC };
+}
+
+/**
+ * 校验二次验证码
+ */
+export async function verify2fa(
+  userId: string,
+  channel: 'sms' | 'email',
+  code: string,
+): Promise<{ verified: true }> {
+  await connectRedis();
+  const key = `2fa:${userId}:${channel}`;
+  const stored = await redis.get(key);
+  if (!stored || stored !== code) {
+    throw new AppError('验证码错误或已过期', 401, 10103);
+  }
+  await redis.del(key);
+  // 短期放行标记（敏感操作中间件可查）
+  await redis.set(`2fa_ok:${userId}`, '1', 'EX', 15 * 60);
+  return { verified: true };
 }

@@ -3,16 +3,14 @@ import { startNotificationWorker, stopNotificationWorker } from './jobs/notifica
 import { env } from './lib/env';
 import prisma from './lib/prisma';
 import { redis, connectRedis } from './lib/redis';
+import { startCacheRefresh, stopCacheRefresh } from './services/config.service';
 
 const { PORT } = env;
 
-// 启动服务器
 const server = app.listen(PORT, async () => {
-  // 启动时预连接 Redis，尽早暴露连接问题
   await connectRedis();
-
-  // M0.5-2: 启动通知 worker（异步消费 BullMQ 队列）
   await startNotificationWorker();
+  startCacheRefresh();
 
   console.log(`
 🚀 HRMS Server is running!
@@ -21,23 +19,21 @@ const server = app.listen(PORT, async () => {
 🔗 API URL: http://localhost:${PORT}
 
 Available endpoints:
-- GET  /api/health              Health check
-- POST /api/auth/login          User login
-- POST /api/auth/refresh        Refresh access token
-- POST /api/auth/logout         User logout
-- GET  /api/auth/me             Get current user
-- GET  /api/approvals/flows     List approval flows
-- POST /api/approvals/instances Submit approval
-- GET  /api/notifications       My notifications
-- POST /api/notifications/send  Send notification
+- GET  /api/health
+- POST /api/auth/login
+- POST /api/auth/change-password
+- GET  /api/configs
+- GET  /api/approvals/flows
+- GET  /api/notifications
+- GET  /api/integrations
   `);
 });
 
-// 优雅关闭
 function shutdown(signal: string) {
   console.log(`${signal} received, closing server...`);
   server.close(async () => {
     console.log('Server closed');
+    stopCacheRefresh();
     await stopNotificationWorker();
     await prisma.$disconnect();
     redis.disconnect();
@@ -48,7 +44,6 @@ function shutdown(signal: string) {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-// 未捕获的错误处理
 process.on('uncaughtException', (error) => {
   console.error('Uncaught Exception:', error);
   process.exit(1);

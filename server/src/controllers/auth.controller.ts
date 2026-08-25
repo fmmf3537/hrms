@@ -6,6 +6,7 @@ import * as authService from '../services/auth.service';
 /**
  * POST /api/auth/login
  * 审计埋点已下沉到 auth.service.login（成功与失败均记录）
+ * mustChangePassword=true → HTTP 403 + 10112，但仍返回 tokens 供改密页使用
  */
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { username, password } = req.body as { username: string; password: string };
@@ -13,6 +14,16 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
     ipAddress: req.ip ?? null,
     userAgent: req.headers['user-agent'] ?? null,
   });
+
+  if (result.user.mustChangePassword) {
+    res.status(403).json({
+      success: false,
+      error: '必须先修改密码',
+      code: 10112,
+      data: result,
+    });
+    return;
+  }
 
   res.json({
     success: true,
@@ -71,3 +82,47 @@ export const permissionDemo = (req: Request, res: Response): void => {
     },
   });
 };
+
+/**
+ * POST /api/auth/change-password
+ * 自助改密（允许 mustChangePassword=true 用户调用）
+ */
+export const changePassword = asyncHandler(async (req: Request, res: Response) => {
+  const { oldPassword, newPassword } = req.body as {
+    oldPassword: string;
+    newPassword: string;
+  };
+  await authService.changePassword(req.user!.userId, oldPassword, newPassword, {
+    ipAddress: req.ip ?? null,
+    userAgent: req.headers['user-agent'] ?? null,
+  });
+  res.json({ success: true, message: '密码已修改，请重新登录' });
+});
+
+/**
+ * POST /api/auth/force-change-password
+ * Admin 强制目标用户下次登录改密
+ */
+export const forceChangePassword = asyncHandler(async (req: Request, res: Response) => {
+  const { userId } = req.body as { userId: string };
+  await authService.forceChangePassword(req.user!.userId, userId);
+  res.json({ success: true, message: '已强制该用户下次登录改密' });
+});
+
+/**
+ * POST /api/auth/request-2fa
+ */
+export const request2fa = asyncHandler(async (req: Request, res: Response) => {
+  const { channel } = req.body as { channel: 'sms' | 'email' };
+  const result = await authService.request2fa(req.user!.userId, channel);
+  res.json({ success: true, data: result });
+});
+
+/**
+ * POST /api/auth/verify-2fa
+ */
+export const verify2fa = asyncHandler(async (req: Request, res: Response) => {
+  const { channel, code } = req.body as { channel: 'sms' | 'email'; code: string };
+  const result = await authService.verify2fa(req.user!.userId, channel, code);
+  res.json({ success: true, data: result });
+});

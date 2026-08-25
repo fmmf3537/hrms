@@ -2,15 +2,16 @@
 import { Router, type Router as RouterType } from 'express';
 import { z } from 'zod';
 
+import { PERMISSIONS } from '../constants/permissions';
 import * as notificationController from '../controllers/notification.controller';
-import { authenticate } from '../middleware/auth';
+import {
+  authenticate, rejectIfMustChangePassword, requirePermission,
+} from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
 
-router.use(authenticate);
-
-// ===== 用户侧 =====
+router.use(authenticate, rejectIfMustChangePassword);
 
 const listMySchema = z.object({
   unreadOnly: z.coerce.boolean().default(false),
@@ -20,12 +21,11 @@ const listMySchema = z.object({
     .default(20),
 });
 
+// 用户侧：任意已登录用户可查自己的通知
 router.get('/', validate(listMySchema, 'query'), notificationController.listMy);
 router.get('/unread-count', notificationController.unreadCount);
 router.post('/:id/read', notificationController.markAsRead);
 router.post('/read-all', notificationController.markAllAsRead);
-
-// ===== 主动发送（admin/HR）=====
 
 const sendSchema = z
   .object({
@@ -42,9 +42,12 @@ const sendSchema = z
     { message: 'templateKey 和 content 互斥，必须二选一' },
   );
 
-router.post('/send', validate(sendSchema), notificationController.send);
-
-// ===== 模板管理（admin）=====
+router.post(
+  '/send',
+  requirePermission(PERMISSIONS.NOTIFICATION_SEND),
+  validate(sendSchema),
+  notificationController.send,
+);
 
 const listTemplatesSchema = z.object({
   channel: z.enum(['in_app', 'email', 'sms']).optional(),
@@ -68,9 +71,28 @@ const updateTemplateSchema = z.object({
   description: z.string().max(1000).optional(),
 });
 
-router.get('/templates', validate(listTemplatesSchema, 'query'), notificationController.listTemplates);
-router.post('/templates', validate(createTemplateSchema), notificationController.createTemplate);
-router.put('/templates/:id', validate(updateTemplateSchema), notificationController.updateTemplate);
-router.delete('/templates/:id', notificationController.deleteTemplate);
+router.get(
+  '/templates',
+  requirePermission(PERMISSIONS.NOTIFICATION_TEMPLATE_READ),
+  validate(listTemplatesSchema, 'query'),
+  notificationController.listTemplates,
+);
+router.post(
+  '/templates',
+  requirePermission(PERMISSIONS.NOTIFICATION_TEMPLATE_WRITE),
+  validate(createTemplateSchema),
+  notificationController.createTemplate,
+);
+router.put(
+  '/templates/:id',
+  requirePermission(PERMISSIONS.NOTIFICATION_TEMPLATE_WRITE),
+  validate(updateTemplateSchema),
+  notificationController.updateTemplate,
+);
+router.delete(
+  '/templates/:id',
+  requirePermission(PERMISSIONS.NOTIFICATION_TEMPLATE_WRITE),
+  notificationController.deleteTemplate,
+);
 
 export default router;

@@ -2,13 +2,16 @@
 import { Router, type Router as RouterType } from 'express';
 import { z } from 'zod';
 
+import { PERMISSIONS } from '../constants/permissions';
 import * as encryptedFieldController from '../controllers/encryptedField.controller';
-import { authenticate } from '../middleware/auth';
+import {
+  authenticate, rejectIfMustChangePassword, requirePermission,
+} from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
 
-router.use(authenticate);
+router.use(authenticate, rejectIfMustChangePassword);
 
 const listFieldsSchema = z.object({
   enabledOnly: z.coerce.boolean().default(false),
@@ -46,11 +49,40 @@ const rotateKeySchema = z.object({
   newKeyVersion: z.number().int().min(2).max(100),
 });
 
-router.get('/', validate(listFieldsSchema, 'query'), encryptedFieldController.listFields);
-router.post('/', validate(createFieldSchema), encryptedFieldController.createField);
-router.delete('/:id', encryptedFieldController.deleteField);
-router.post('/:id/decrypt', validate(decryptSchema), encryptedFieldController.decrypt);
-router.post('/decrypt-batch', validate(decryptBatchSchema), encryptedFieldController.decryptBatch);
-router.post('/:id/rotate-key', validate(rotateKeySchema), encryptedFieldController.rotateKey);
+router.get(
+  '/',
+  requirePermission(PERMISSIONS.ENCRYPTED_FIELD_READ),
+  validate(listFieldsSchema, 'query'),
+  encryptedFieldController.listFields,
+);
+router.post(
+  '/',
+  requirePermission(PERMISSIONS.ENCRYPTED_FIELD_WRITE),
+  validate(createFieldSchema),
+  encryptedFieldController.createField,
+);
+router.delete(
+  '/:id',
+  requirePermission(PERMISSIONS.ENCRYPTED_FIELD_WRITE),
+  encryptedFieldController.deleteField,
+);
+router.post(
+  '/:id/decrypt',
+  requirePermission(PERMISSIONS.ENCRYPTED_FIELD_DECRYPT),
+  validate(decryptSchema),
+  encryptedFieldController.decrypt,
+);
+router.post(
+  '/decrypt-batch',
+  requirePermission(PERMISSIONS.ENCRYPTED_FIELD_DECRYPT),
+  validate(decryptBatchSchema),
+  encryptedFieldController.decryptBatch,
+);
+router.post(
+  '/:id/rotate-key',
+  requirePermission(PERMISSIONS.ENCRYPTED_FIELD_ROTATE),
+  validate(rotateKeySchema),
+  encryptedFieldController.rotateKey,
+);
 
 export default router;

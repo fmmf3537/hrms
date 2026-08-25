@@ -2,21 +2,20 @@
 import { Router, type Router as RouterType } from 'express';
 import { z } from 'zod';
 
+import { PERMISSIONS } from '../constants/permissions';
 import * as approvalController from '../controllers/approval.controller';
-import { authenticate } from '../middleware/auth';
+import {
+  authenticate, rejectIfMustChangePassword, requirePermission,
+} from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
 
-// 所有端点都需要鉴权
-router.use(authenticate);
+router.use(authenticate, rejectIfMustChangePassword);
 
-// ===== 模板管理 =====
-
-// 节点 schema（递归简化：单层）
 const nodeSchema = z.object({
   id: z.string().min(1).max(64),
-  type: z.literal('sequential'), // M0.5-1 仅支持依次审批
+  type: z.literal('sequential'),
   approverType: z.enum(['role', 'user', 'direct_leader', 'department_leader']),
   approverValue: z.string().min(1).max(100),
   condition: z.string().max(200).nullable().optional(),
@@ -36,12 +35,14 @@ const listFlowsSchema = z.object({
 
 router.get(
   '/flows',
+  requirePermission(PERMISSIONS.APPROVAL_FLOW_READ),
   validate(listFlowsSchema, 'query'),
   approvalController.listFlows,
 );
 
 router.get(
   '/flows/by-key',
+  requirePermission(PERMISSIONS.APPROVAL_FLOW_READ),
   validate(z.object({
     category: z.string().min(1).max(50),
     key: z.string().min(1).max(100),
@@ -51,11 +52,10 @@ router.get(
 
 router.post(
   '/flows',
+  requirePermission(PERMISSIONS.APPROVAL_FLOW_WRITE),
   validate(createFlowSchema),
   approvalController.createFlow,
 );
-
-// ===== 实例操作 =====
 
 const submitSchema = z.object({
   flowKey: z.string().regex(/^[\w-]+:[\w-]+$/, 'flowKey 格式错误，应为 category:key'),
@@ -84,41 +84,48 @@ const listMySchema = z.object({
 
 router.post(
   '/instances',
+  requirePermission(PERMISSIONS.APPROVAL_INSTANCE_ACT),
   validate(submitSchema),
   approvalController.submit,
 );
 
 router.post(
   '/instances/:id/approve',
+  requirePermission(PERMISSIONS.APPROVAL_INSTANCE_ACT),
   validate(actionCommentSchema),
   approvalController.approve,
 );
 
 router.post(
   '/instances/:id/reject',
+  requirePermission(PERMISSIONS.APPROVAL_INSTANCE_ACT),
   validate(actionCommentSchema),
   approvalController.reject,
 );
 
 router.post(
   '/instances/:id/transfer',
+  requirePermission(PERMISSIONS.APPROVAL_INSTANCE_ACT),
   validate(transferSchema),
   approvalController.transfer,
 );
 
 router.post(
   '/instances/:id/withdraw',
-  approvalController.withdraw, // 无 body 校验
+  requirePermission(PERMISSIONS.APPROVAL_INSTANCE_ACT),
+  approvalController.withdraw,
 );
 
 router.get(
   '/instances',
+  requirePermission(PERMISSIONS.APPROVAL_INSTANCE_ACT),
   validate(listMySchema, 'query'),
   approvalController.listMy,
 );
 
 router.get(
   '/instances/:id',
+  requirePermission(PERMISSIONS.APPROVAL_INSTANCE_ACT),
   approvalController.getInstance,
 );
 

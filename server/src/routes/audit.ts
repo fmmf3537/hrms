@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { PERMISSIONS } from '../constants/permissions';
 import * as auditController from '../controllers/audit.controller';
-import { authenticate, requirePermission } from '../middleware/auth';
+import { authenticate, rejectIfMustChangePassword, requirePermission } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
@@ -37,6 +37,7 @@ const listQuerySchema = z.object({
 router.get(
   '/',
   authenticate,
+  rejectIfMustChangePassword,
   requirePermission(PERMISSIONS.AUDIT_READ),
   validate(listQuerySchema, 'query'),
   auditController.list,
