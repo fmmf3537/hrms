@@ -21,6 +21,8 @@ const DEFAULT_CONFIGS: Array<{
   { category: 'employee_no', key: 'yearly_reset', value: true, remark: '自然年度重置流水' },
   { category: 'employee_no', key: 'concurrent_strategy', value: 'pg_sequence', remark: '并发策略' },
   { category: 'contract', key: 'warning_days', value: [30, 15, 7], remark: '合同到期预警天数' },
+  { category: 'certificate', key: 'warning_days', value: 60, remark: '资质证书到期预警天数' },
+  { category: 'headcount', key: 'warning_ratio', value: 1.1, remark: '编制预警阈值（在职/编制）' },
   { category: 'probation', key: 'months', value: 3, remark: '试用期月数' },
   { category: 'probation', key: 'remind_days', value: 15, remark: '转正提前提醒天数' },
   { category: 'archive', key: 'years', value: 5, remark: '离职档案保留年限' },
@@ -554,14 +556,101 @@ async function main() {
   }
   console.log(`   ✓ ${DEFAULT_CONFIGS.length} config keys ensured`);
 
-  console.log('==> Seeding AI knowledge base (M0.5-5)...');
-  try {
-    const { seedAiKnowledgeBase } = await import('./seed-ai-knowledge');
-    const n = await seedAiKnowledgeBase(prisma);
-    console.log(`   ✓ AI knowledge base seeded (${n} docs attempted)`);
-  } catch (err) {
-    console.warn('   ⚠ AI knowledge base seed skipped/failed:', err instanceof Error ? err.message : err);
+  console.log('==> Seeding departments + employees (M1-A1+A2)...');
+  const xach = companies.find((c) => c.code === 'XACH')!;
+  const deptDefs = [
+    { code: 'PEDU', name: '产教服务中心', headcount: 30, order: 1 },
+    { code: 'HR', name: '人力资源部', headcount: 8, order: 2 },
+    { code: 'FIN', name: '财务部', headcount: 6, order: 3 },
+    { code: 'TECH', name: '技术部', headcount: 20, order: 4 },
+  ];
+  const seededDepts = [];
+  for (const d of deptDefs) {
+    const existing = await prisma.department.findFirst({
+      where: { companyId: xach.id, code: d.code },
+    });
+    if (existing) {
+      seededDepts.push(existing);
+    } else {
+      seededDepts.push(await prisma.department.create({
+        data: {
+          companyId: xach.id,
+          code: d.code,
+          name: d.name,
+          headcount: d.headcount,
+          order: d.order,
+          status: 'active',
+          createdBy: admin.id,
+        },
+      }));
+    }
   }
+  console.log(`   ✓ ${seededDepts.length} departments`);
+
+  const hrDept = seededDepts.find((d) => d.code === 'HR')!;
+  const techDept = seededDepts.find((d) => d.code === 'TECH')!;
+  const year = new Date().getFullYear();
+  const empSeeds: Array<{
+    employeeNo: string;
+    name: string;
+    departmentId: string;
+    userId?: string;
+    status: string;
+  }> = [
+    {
+      employeeNo: `XACH${year}0001`,
+      name: '系统管理员',
+      departmentId: hrDept.id,
+      userId: admin.id,
+      status: 'active',
+    },
+    {
+      employeeNo: `XACH${year}0002`,
+      name: 'HR 专员',
+      departmentId: hrDept.id,
+      status: 'active',
+    },
+    {
+      employeeNo: `XACH${year}0003`,
+      name: '部门负责人',
+      departmentId: techDept.id,
+      status: 'active',
+    },
+    {
+      employeeNo: `XACH${year}0004`,
+      name: '高管',
+      departmentId: hrDept.id,
+      status: 'active',
+    },
+    {
+      employeeNo: `XACH${year}0005`,
+      name: '普通员工',
+      departmentId: techDept.id,
+      status: 'probation',
+    },
+  ];
+
+  let empCreated = 0;
+  for (const e of empSeeds) {
+    const exists = await prisma.employee.findUnique({ where: { employeeNo: e.employeeNo } });
+    if (!exists) {
+      await prisma.employee.create({
+        data: {
+          employeeNo: e.employeeNo,
+          name: e.name,
+          companyId: xach.id,
+          departmentId: e.departmentId,
+          userId: e.userId,
+          status: e.status,
+          hireDate: new Date(`${year}-01-01`),
+          contractType: 'formal',
+          createdBy: admin.id,
+        },
+      });
+      empCreated += 1;
+    }
+  }
+  console.log(`   ✓ ${empCreated} employees created (idempotent)`);
 
   console.log('==> Done.');
 }

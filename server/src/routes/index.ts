@@ -4,7 +4,10 @@ import aiRoutes from './ai';
 import approvalRoutes from './approval';
 import auditRoutes from './audit';
 import authRoutes from './auth';
+import companyRoutes from './company';
 import configRoutes from './config';
+import departmentRoutes from './department';
+import employeeRoutes from './employee';
 import encryptedFieldRoutes from './encryptedField';
 import integrationRoutes from './integration';
 import notificationRoutes from './notification';
@@ -38,5 +41,9 @@ router.use('/integrations', integrationRoutes);
 router.use('/ai', aiRoutes);
 // M0.5-6: 配置中心
 router.use('/configs', configRoutes);
+// M1-A1+A2: 组织架构 + 员工档案
+router.use('/companies', companyRoutes);
+router.use('/departments', departmentRoutes);
+router.use('/employees', employeeRoutes);
 
 export default router;

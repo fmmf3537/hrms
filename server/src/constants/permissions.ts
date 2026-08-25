@@ -83,6 +83,13 @@ export const PERMISSIONS = {
   AI_DOCUMENT_READ: 'ai:document:read',
   AI_DOCUMENT_WRITE: 'ai:document:write',
   AI_CONVERSATION_READ: 'ai:conversation:read',
+
+  // M1-A1 组织架构
+  COMPANY_READ: 'company:read',
+  COMPANY_WRITE: 'company:write',
+  // M1-A2 员工档案（DEPARTMENT_* / EMPLOYEE_READ/WRITE 已存在，复用）
+  EMPLOYEE_READ_SENSITIVE: 'employee:read_sensitive',
+  EMPLOYEE_AI_OCR: 'employee:ai_ocr',
 } as const;
 
 /** 权限点字面量联合类型 */
@@ -97,6 +104,10 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
   hr: [
     PERMISSIONS.EMPLOYEE_READ,
     PERMISSIONS.EMPLOYEE_WRITE,
+    PERMISSIONS.EMPLOYEE_READ_SENSITIVE,
+    PERMISSIONS.EMPLOYEE_AI_OCR,
+    PERMISSIONS.COMPANY_READ,
+    PERMISSIONS.COMPANY_WRITE,
     PERMISSIONS.DEPARTMENT_READ,
     PERMISSIONS.DEPARTMENT_WRITE,
     PERMISSIONS.ATTENDANCE_READ,

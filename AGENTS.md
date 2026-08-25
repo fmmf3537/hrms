@@ -83,6 +83,15 @@ V1.2 之前的 6 个严重项全部修复：
 - 数据库：12+ 张表（user / role / permission / audit / approval × 3 / notification × 2 / encrypted × 2 / integration × 2 / config / ai × 4 / user_position_history / user_salary_history 等）
 - 公共底座 5 个切片为 M1-M5 业务模块铺路：审批流 / 通知 / 加密 / 对接 / AI
 
+### M1 组织人事（进行中）
+
+- **A1+A2 合并提交（已完成）**：组织架构 + 员工档案
+  - 扩展 companies / departments / employees + 新增 employee_position_history / employee_salary_history
+  - 25 个新端点（company 7 + department 8 + employee 10）
+  - 38 个新单测（140 → 178）
+  - AI OCR 集成（M0.5-4 LLM 网关）+ 字段加密（M0.5-3 AES-256-GCM）+ 合同预警（M0.5-2 通知）+ 业务规则（工号/预警天数走 M0.5-6 configService）
+- 后续：A3-A7 切片（入职 / 转正 / 调动 / 离职 / 合同）
+
 ### 工程强约束（V1.2 时代）
 
 - **不用 class + 静态方法**：统一 `export function` 范式

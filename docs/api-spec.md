@@ -617,6 +617,46 @@
 }
 ```
 
+### 3.5 Company API（M1-A1）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| GET | `/companies` | 是 | 法人列表（分页） |
+| GET | `/companies/:id` | 是 | 法人详情 |
+| POST | `/companies` | 是 | 创建法人（admin/company:write） |
+| PUT | `/companies/:id` | 是 | 更新法人 |
+| DELETE | `/companies/:id` | 是 | 软删除法人 |
+| GET | `/companies/:id/statistics` | 是 | 部门数/员工数/编制汇总 |
+| GET | `/companies/:id/headcount-warning` | 是 | 编制预警 |
+
+### 3.6 Department API（M1-A1）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| GET | `/departments` | 是 | 部门列表 |
+| GET | `/departments/tree` | 是 | 部门树（query: companyId, rootId?） |
+| GET | `/departments/:id` | 是 | 部门详情 |
+| POST | `/departments` | 是 | 创建部门（≤4 级） |
+| PUT | `/departments/:id` | 是 | 更新部门 |
+| DELETE | `/departments/:id` | 是 | 软删除部门 |
+| POST | `/departments/:id/move` | 是 | 调整上级/排序 |
+| GET | `/departments/:id/headcount` | 是 | 编制 vs 在职人数 |
+
+### 3.7 Employee API（M1-A2）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| GET | `/employees` | 是 | 员工列表（分页+过滤，敏感字段脱敏） |
+| GET | `/employees/statistics` | 是 | 员工统计 |
+| GET | `/employees/:id` | 是 | 员工详情（敏感字段按权限解密） |
+| POST | `/employees` | 是 | 创建员工（工号自动生成 + 字段加密） |
+| PUT | `/employees/:id` | 是 | 更新员工 |
+| DELETE | `/employees/:id` | 是 | 软删除 |
+| POST | `/employees/parse-id-card` | 是 | AI OCR 身份证 |
+| POST | `/employees/parse-bank-card` | 是 | AI OCR 银行卡 |
+| POST | `/employees/parse-certificate` | 是 | AI OCR 资质证书 |
+| GET | `/employees/contract-expiring` | 是 | N 天内合同到期员工 |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

@@ -817,8 +817,8 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 
 | 切片 | 范围 | 子任务 | 工时 |
 |---|---|---|---|
-| A1 | 组织架构 CRUD（法人 + 部门树 + 编制预警） | 6 | 3.5d |
-| A2 | 员工档案 CRUD（8 类 60 字段 + **AI OCR**） | 8 | 5d |
+| A1 | 组织架构 CRUD（法人 + 部门树 + 编制预警）（**已实现**）详见 [`server/src/services/org/README.md`](../../server/src/services/org/README.md) | 6 | 3.5d |
+| A2 | 员工档案 CRUD（8 类 60 字段 + **AI OCR**）（**已实现**）详见 [`server/src/services/org/README.md`](../../server/src/services/org/README.md) | 8 | 5d |
 | A3 | 入职流程（含工号自动生成 + AI OCR 资料收集） | 5 | 2.5d |
 | A4 | 转正流程 | 4 | 1.5d |
 | A5 | 调动流程（含权限/薪酬联动） | 5 | 2.5d |
@@ -1170,6 +1170,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M0.5.1** | **2026-08-25** | **feat(ai+config): M0.5-5 AI 底座 + M0.5-6 配置中心（commit 649a912）<br>**M0.5-5**：4 张 AI 表（ai_documents / ai_embeddings（pgvector 1536 维）/ ai_conversations / ai_summaries）+ 5 个能力接口（/ai/ocr /qa /summarize /score-suggest /documents）+ LLM 网关（OpenAI 兼容）+ OCR/Map adapter（mock）+ 知识库冷启动 34 篇（V1.2 要求 ≥ 28）+ 15 个新单测（125→140）<br>**M0.5-6**：configs 表 + configService（内存缓存 5 分钟刷新 + effective_from/to 版本回溯）+ 12 类业务规则可配置化 + audit AI_OCR/AI_QA/AI_SUMMARIZE/AI_SCORE action + 7xxxx 业务错误码 | **WorkBuddy** |
 | **M0.5.2** | **2026-08-25** | **feat(auth): M0.5-7 改密 + 二次验证（commit d124990）<br>changePassword / forceChangePassword（强密码正则 + bcrypt cost=12 + tokenVersion bump + 全 refresh token 吊销）/ request2fa / verify2fa（Redis 存 5 分钟 + 15 分钟免二次标记）/ rejectIfMustChangePassword 中间件 / 业务路由组挂载 / 错误码 10100-10130 扩充 + mustChangePassword=true 时 login 返 403+10112 但仍返回 tokens 供改密页使用 | **WorkBuddy** |
 | **M0.5.3** | **2026-08-25** | **fix(integration): M0.5-6 触发的 config 加密 + 脱敏补 commit（b444386）<br>integration.service.ts 加 encryptConfig / decryptConfig / maskConfig 3 个工具函数（依赖 M0.5-3 crypto service），create/update 自动加密 config，get 自动脱敏敏感字段（password / apiKey / appSecret 等 12 类），createIntegration 错误码 50101 → 70102 | **WorkBuddy** |
+| **M1.0.1** | **2026-08-25** | **feat(org+employee): M1-A1+A2 组织架构 + 员工档案合并切片（Cursor 交付）<br>**A1**：companies + departments 扩展 + 法人/部门 CRUD + 4 级层级检查 + 编制预警（headcount vs currentCount × warningRatio）<br>**A2**：employees 扩展 + 2 张历史表（位置/薪资） + 工号自动生成 + 合同/资质到期预警 + 敏感字段加密（idCard/bankCard/phone 走 M0.5-3 AES-256-GCM）+ AI OCR 集成 + 25 个新端点 + 38 个新单测（140→178）<br>**依赖**：M0.5-3 加密 + M0.5-6 配置中心 + M0.5-2 通知 + M0.5-4 LLM 网关 | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

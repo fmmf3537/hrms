@@ -65,7 +65,7 @@ model UserRole {
   @@map("user_roles")
 }
 
-// ==================== 法人公司表 ====================
+// ==================== 法人公司表（M1-A1 扩展）====================
 model Company {
   id        String    @id @default(uuid()) @db.Uuid
   code      String    @unique @db.VarChar(20) // XACH / XACX / SCXH
@@ -74,70 +74,152 @@ model Company {
   city      String?   @db.VarChar(20) // 西安 / 四川
   address   String?   @db.VarChar(500)
   contact   String?   @db.VarChar(100)
-  status    String    @default("active") @db.VarChar(20)
+  status    String    @default("active") @db.VarChar(20) // active / suspended
+  legalRep  String?   @map("legal_rep") @db.VarChar(50) // 法人代表
+  taxNo     String?   @map("tax_no") @db.VarChar(50) // 税号
+  createdBy String?   @map("created_by") @db.Uuid
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  // 关系：一个 Company 有多个 Department
   departments Department[]
+  employees   Employee[]
 
-  // 关系：一个 Company 有多个 Employee
-  employees Employee[]
-
+  @@index([status])
   @@map("companies")
 }
 
-// ==================== 部门表 ====================
+// ==================== 部门表（M1-A1 扩展）====================
 model Department {
   id        String    @id @default(uuid()) @db.Uuid
   companyId String    @map("company_id") @db.Uuid
-  parentId  String?   @map("parent_id") @db.Uuid
-  code      String    @unique @db.VarChar(50)
-  name      String    @db.VarChar(100)
-  leaderId  String?   @map("leader_id") @db.Uuid // 关联 Employee.id，但暂不强制外键（避免循环依赖）
+  parentId  String?   @map("parent_id") @db.Uuid // 自引用，4 级层级上限（depth 0-3）
+  code      String    @db.VarChar(50) // 部门编码（公司内唯一）
+  name      String    @db.VarChar(200)
+  leaderId  String?   @map("leader_id") @db.Uuid // 关联 Employee.id，暂不强制外键
+  headcount Int       @default(0) // 编制数
   order     Int       @default(0)
-  status    String    @default("active") @db.VarChar(20)
+  status    String    @default("active") @db.VarChar(20) // active / suspended / merged
+  createdBy String?   @map("created_by") @db.Uuid
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  company   Company      @relation(fields: [companyId], references: [id])
-  parent    Department?  @relation("DeptTree", fields: [parentId], references: [id])
-  children  Department[] @relation("DeptTree")
+  company   Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Department[] @relation("DepartmentHierarchy")
   employees Employee[]
 
+  @@unique([companyId, code])
   @@index([companyId, parentId])
+  @@index([status])
   @@map("departments")
 }
 
-// ==================== 员工表 ====================
+// ==================== 员工表（M1-A2 扩展）====================
+// 敏感字段 idCard / bankCard / phone / emergencyContactPhone 走 crypto.service 加密
 model Employee {
-  id             String    @id @default(uuid()) @db.Uuid
-  userId         String?   @unique @map("user_id") @db.Uuid
-  companyId      String    @map("company_id") @db.Uuid
-  departmentId   String?   @map("department_id") @db.Uuid
-  employeeNo     String    @unique @map("employee_no") @db.VarChar(20) // 工号：法人代码+年份+4位流水
-  name           String    @db.VarChar(50)
-  gender         String?   @db.VarChar(10) // male / female
-  idCard         String?   @unique @map("id_card") @db.VarChar(255) // 加密存储（应用层处理）
-  birthDate      DateTime? @map("birth_date") @db.Date
-  phone          String?   @db.VarChar(20)
-  email          String?   @db.VarChar(100)
-  employmentType String    @map("employment_type") @db.VarChar(20) // formal / intern / consultant / labor
-  status         String    @default("probation") @db.VarChar(20) // probation / active / resigned
-  hireDate       DateTime? @map("hire_date") @db.Date
-  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
-  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+  id          String  @id @default(uuid()) @db.Uuid
+  userId      String? @unique @map("user_id") @db.Uuid // 1:1 关联 users（未建账号时为空）
+  employeeNo  String  @unique @map("employee_no") @db.VarChar(30) // 工号
+  name        String  @db.VarChar(50)
+  // 基础信息
+  gender          String?   @db.VarChar(10) // male / female
+  birthDate       DateTime? @map("birth_date") @db.Date
+  idCard          String?   @map("id_card") @db.Text // 加密存储
+  nativePlace     String?   @map("native_place") @db.VarChar(200)
+  ethnicity       String?   @db.VarChar(20)
+  politicalStatus String?   @map("political_status") @db.VarChar(50)
+  // 联系信息
+  phone                 String? @map("phone") @db.Text // 加密
+  email                 String? @db.VarChar(100)
+  emergencyContactName  String? @map("emergency_contact_name") @db.VarChar(50)
+  emergencyContactPhone String? @map("emergency_contact_phone") @db.Text // 加密
+  address               String? @db.Text
+  // 教育经历
+  educationLevel String?   @map("education_level") @db.VarChar(50)
+  degree         String?   @db.VarChar(50)
+  school         String?   @db.VarChar(200)
+  major          String?   @db.VarChar(100)
+  graduationDate DateTime? @map("graduation_date") @db.Date
+  // 工作经历 JSON
+  workHistory Json? @map("work_history")
+  // 合同（原 employment_type → contract_type）
+  contractType  String?   @map("contract_type") @db.VarChar(50) // formal / intern / consultant / labor
+  contractStart DateTime? @map("contract_start") @db.Date
+  contractEnd   DateTime? @map("contract_end") @db.Date
+  // 资质证书 JSON
+  certificates Json?
+  // 银行卡
+  bankName String? @map("bank_name") @db.VarChar(100)
+  bankCard String? @map("bank_card") @db.Text // 加密
+  // 社保公积金
+  socialInsured   Boolean  @default(false) @map("social_insured")
+  socialCity      String?  @map("social_city") @db.VarChar(50)
+  socialBase      Decimal? @map("social_base") @db.Decimal(10, 2)
+  housingFundCity String?  @map("housing_fund_city") @db.VarChar(50)
+  housingFundRate Decimal? @map("housing_fund_rate") @db.Decimal(4, 2)
+  housingFundBase Decimal? @map("housing_fund_base") @db.Decimal(10, 2)
+  // 公司 / 部门（departmentId 可选以保迁移安全；createEmployee 校验必填）
+  companyId    String  @map("company_id") @db.Uuid
+  departmentId String? @map("department_id") @db.Uuid
+  // 雇佣状态
+  status          String    @default("probation") @db.VarChar(20) // probation / active / resigned
+  hireDate        DateTime  @map("hire_date") @db.Date
+  resignationDate DateTime? @map("resignation_date") @db.Date
+  remark          String?   @db.Text
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
 
   user       User?       @relation(fields: [userId], references: [id])
-  company    Company     @relation(fields: [companyId], references: [id])
-  department Department? @relation(fields: [departmentId], references: [id])
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
 
   @@index([companyId, departmentId])
-  @@index([employmentType, status])
+  @@index([status])
+  @@index([contractEnd])
+  @@index([hireDate])
+  @@index([deletedAt])
   @@map("employees")
+}
+
+// ==================== 员工岗位历史（M1-A2 建表，A5 调动写入）====================
+model EmployeePositionHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  fromCompanyId String?  @map("from_company_id") @db.Uuid
+  fromDeptId    String?  @map("from_dept_id") @db.Uuid
+  fromPosition  String?  @map("from_position") @db.VarChar(100)
+  toCompanyId   String   @map("to_company_id") @db.Uuid
+  toDeptId      String   @map("to_dept_id") @db.Uuid
+  toPosition    String   @map("to_position") @db.VarChar(100)
+  changeType    String   @map("change_type") @db.VarChar(20) // promote / transfer / demote / hire
+  changeDate    DateTime @map("change_date") @db.Date
+  reason        String?  @db.Text
+  operatorId    String?  @map("operator_id") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([employeeId, changeDate])
+  @@map("employee_position_history")
+}
+
+// ==================== 员工薪资历史（M1-A2 建表，A4 转正写入）====================
+model EmployeeSalaryHistory {
+  id                String   @id @default(uuid()) @db.Uuid
+  employeeId        String   @map("employee_id") @db.Uuid
+  effectiveDate     DateTime @map("effective_date") @db.Date
+  baseSalary        Decimal  @map("base_salary") @db.Decimal(10, 2)
+  performanceSalary Decimal? @map("performance_salary") @db.Decimal(10, 2)
+  totalSalary       Decimal  @map("total_salary") @db.Decimal(10, 2)
+  changeType        String   @map("change_type") @db.VarChar(20) // hire / promote / annual_adjust / performance
+  reason            String?  @db.Text
+  operatorId        String?  @map("operator_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([employeeId, effectiveDate])
+  @@map("employee_salary_history")
 }
 
 // ==================== 审计日志表（M0-08） ====================
