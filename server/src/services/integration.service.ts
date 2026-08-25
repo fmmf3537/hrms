@@ -1,5 +1,6 @@
 // M0.5-4: 第三方对接 service | HRMS
 // 职责：CRUD + 调用 adapter（按 code 路由）+ 写 sync log + 测试连通性
+// config 落库：AES-256-GCM 加密 JSON；对外 GET 脱敏密钥字段
 
 import type { Prisma } from '@prisma/client';
 
@@ -9,20 +10,93 @@ import { registerAllAdapters } from '../integrations/adapters/register';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 
-// ============== 错误码（与 docs/error-codes.md §5xxxx 对齐）==============
+import * as cryptoService from './crypto.service';
 
-// 50100 INTEGRATION_CONFIG_MISSING（env 未配置）
+// ============== 错误码（与 docs/error-codes.md §5xxxx 对齐）==============
+// 50100 INTEGRATION_CONFIG_MISSING
 // 50101 INTEGRATION_NOT_FOUND
 // 50110 INTEGRATION_PROVIDER_ERROR
-// 50111 INTEGRATION_TIMEOUT
-// 50112 INTEGRATION_RATE_LIMITED
-// 50120 INTEGRATION_PAYLOAD_INVALID
+// 50120 INTEGRATION_PAYLOAD_INVALID / adapter 缺失
+// 70102 DUPLICATE（code 冲突）
+
+const CONFIG_KEY_VERSION = 1;
+const SENSITIVE_CONFIG_KEYS = new Set([
+  'password',
+  'apiKey',
+  'api_key',
+  'appSecret',
+  'app_secret',
+  'accessSecret',
+  'access_secret',
+  'secretKey',
+  'secret_key',
+  'accessKey',
+  'access_key',
+  'key',
+  'token',
+  'secret',
+]);
+
+interface EncryptedConfigBlob {
+  __enc: true;
+  keyVersion: number;
+  ciphertext: string;
+}
+
+function isEncryptedConfigBlob(value: unknown): value is EncryptedConfigBlob {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const obj = value as Record<string, unknown>;
+  return obj.__enc === true
+    && typeof obj.ciphertext === 'string'
+    && typeof obj.keyVersion === 'number';
+}
+
+/**
+ * 明文 config → 加密包装（Json 可存）
+ */
+export function encryptConfig(config: Record<string, unknown>): EncryptedConfigBlob {
+  return {
+    __enc: true,
+    keyVersion: CONFIG_KEY_VERSION,
+    ciphertext: cryptoService.encrypt(JSON.stringify(config), CONFIG_KEY_VERSION),
+  };
+}
+
+/**
+ * 解密落库 config；兼容历史明文 JSON（seed 迁移期）
+ */
+export function decryptConfig(stored: Prisma.JsonValue): Record<string, unknown> {
+  if (isEncryptedConfigBlob(stored)) {
+    const plain = cryptoService.decrypt(stored.ciphertext, stored.keyVersion);
+    return JSON.parse(plain) as Record<string, unknown>;
+  }
+  if (stored && typeof stored === 'object' && !Array.isArray(stored)) {
+    return stored as Record<string, unknown>;
+  }
+  return {};
+}
+
+/**
+ * 对外返回：敏感字段脱敏为 ***
+ */
+export function maskConfig(config: Record<string, unknown>): Record<string, unknown> {
+  const masked: Record<string, unknown> = {};
+  Object.entries(config).forEach(([k, v]) => {
+    if (SENSITIVE_CONFIG_KEYS.has(k) && v !== '' && v != null) {
+      masked[k] = '***';
+    } else if (v && typeof v === 'object' && !Array.isArray(v)) {
+      masked[k] = maskConfig(v as Record<string, unknown>);
+    } else {
+      masked[k] = v;
+    }
+  });
+  return masked;
+}
 
 // ============== 初始化 ==============
 
 /**
  * 确保 adapter 注册（懒加载）
- * service 任何方法首次调用时触发
  */
 function ensureAdaptersRegistered(): void {
   registerAllAdapters();
@@ -37,7 +111,6 @@ async function writeSyncLog(
 ): Promise<void> {
   const isAdapterResult = 'recordCount' in result;
   const status = result.success ? 'success' : 'failed';
-  // AdapterResult 有 duration，TestResult 有 latency
   const duration = isAdapterResult
     ? (result).duration ?? 0
     : (result as TestResult).latency ?? 0;
@@ -52,7 +125,6 @@ async function writeSyncLog(
     },
   });
 
-  // 成功后更新 lastSyncAt
   if (result.success) {
     await prisma.integration.update({
       where: { id: integrationId },
@@ -67,15 +139,14 @@ export interface CreateIntegrationInput {
   code: string;
   name: string;
   type: 'http_api' | 'webhook' | 'database' | 'file';
-  config: Prisma.InputJsonValue;
+  config: Record<string, unknown>;
   description?: string;
 }
 
 export async function createIntegration(input: CreateIntegrationInput): Promise<{ id: string }> {
-  // 检查 code 唯一
   const existing = await prisma.integration.findUnique({ where: { code: input.code } });
   if (existing) {
-    throw new AppError(`集成 code 已存在: ${input.code}`, 409, 50101);
+    throw new AppError(`集成 code 已存在: ${input.code}`, 409, 70102);
   }
 
   const created = await prisma.integration.create({
@@ -83,7 +154,7 @@ export async function createIntegration(input: CreateIntegrationInput): Promise<
       code: input.code,
       name: input.name,
       type: input.type,
-      config: input.config,
+      config: encryptConfig(input.config) as unknown as Prisma.InputJsonValue,
       description: input.description ?? null,
       enabled: true,
     },
@@ -119,7 +190,7 @@ export async function getIntegrationByCode(code: string): Promise<{
   code: string;
   name: string;
   type: string;
-  config: Prisma.JsonValue;
+  config: Record<string, unknown>;
   enabled: boolean;
 }> {
   const integ = await prisma.integration.findUnique({
@@ -128,12 +199,13 @@ export async function getIntegrationByCode(code: string): Promise<{
   if (!integ || integ.deletedAt) {
     throw new AppError(`集成不存在: ${code}`, 404, 50101);
   }
+  const plain = decryptConfig(integ.config);
   return {
     id: integ.id,
     code: integ.code,
     name: integ.name,
     type: integ.type,
-    config: integ.config,
+    config: maskConfig(plain),
     enabled: integ.enabled,
   };
 }
@@ -142,20 +214,22 @@ export async function updateIntegration(
   id: string,
   input: Partial<Omit<CreateIntegrationInput, 'code'>>,
 ): Promise<{ id: string }> {
+  const data: Prisma.IntegrationUpdateInput = {
+    name: input.name,
+    type: input.type,
+    description: input.description,
+  };
+  if (input.config !== undefined) {
+    data.config = encryptConfig(input.config) as unknown as Prisma.InputJsonValue;
+  }
   const updated = await prisma.integration.update({
     where: { id },
-    data: {
-      name: input.name,
-      type: input.type,
-      config: input.config,
-      description: input.description,
-    },
+    data,
   });
   return { id: updated.id };
 }
 
 export async function deleteIntegration(id: string): Promise<void> {
-  // 软删除 + 禁用
   await prisma.integration.update({
     where: { id },
     data: { deletedAt: new Date(), enabled: false },
@@ -171,11 +245,6 @@ export interface SendInput {
 
 /**
  * 通过指定 code 发送 / 调用集成
- * - 查 integration + 找 adapter
- * - adapter 缺失 → 50120
- * - integration 禁用 → 50100
- * - 调 adapter.send(payload, config)
- * - 写 sync log
  */
 export async function send(input: SendInput): Promise<AdapterResult> {
   ensureAdaptersRegistered();
@@ -197,7 +266,8 @@ export async function send(input: SendInput): Promise<AdapterResult> {
     );
   }
 
-  const result = await adapter.send(input.payload, integration.config as Record<string, unknown>);
+  const config = decryptConfig(integration.config);
+  const result = await adapter.send(input.payload, config);
   await writeSyncLog(integration.id, 'send', result);
   return result;
 }
@@ -222,7 +292,8 @@ export async function sync(input: SyncInput): Promise<AdapterResult> {
     throw new AppError(`集成 ${input.code} 没有对应 adapter`, 501, 50120);
   }
 
-  const result = await adapter.sync(integration.config as Record<string, unknown>);
+  const config = decryptConfig(integration.config);
+  const result = await adapter.sync(config);
   await writeSyncLog(integration.id, 'sync', result);
   return result;
 }
@@ -247,7 +318,8 @@ export async function testConnection(input: TestConnectionInput): Promise<TestRe
     throw new AppError(`集成 ${input.code} 没有对应 adapter`, 501, 50120);
   }
 
-  const result = await adapter.testConnection(integration.config as Record<string, unknown>);
+  const config = decryptConfig(integration.config);
+  const result = await adapter.testConnection(config);
   await writeSyncLog(integration.id, 'test_connection', result);
   return result;
 }
