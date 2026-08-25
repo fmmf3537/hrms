@@ -1,5 +1,8 @@
-# 西安辰航卓越科技有限公司  
+# 西安辰航卓越科技有限公司
 员工管理系统产品需求文档（PRD）
+
+> **⚠️ V1.1.archived 2026-08-25**：本文档已合并到 [`HRMS-V1.2.md`](./HRMS-V1.2.md)，不再作为主源维护。
+> 仅作历史决策追溯参考。新功能、变更请直接更新 V1.2 主文档。
 
 版本：V1.0 | 编制日期：2026-08-23 | 编制：WorkBuddy AI 协助
 
@@ -191,7 +194,7 @@ HR| 员工档案、入转调离、合同、考勤汇总、薪酬核算、绩效�
 ---|---|---  
 WiFi 打卡| 固定办公（西安/北京/四川办公室）| 连接指定 WiFi SSID 才能打卡  
 GPS 打卡| 外勤/项目驻场| 定位精度 ≤100m，需上传位置描述  
-考勤机| 固定办公（可选）| 对接现有考勤机数据（一期手动导入）  
+考勤机（得力 e+）| 固定办公| 一期：按得力 e+ 导出格式手工导入打卡数据；二期：接入得力开放 API 自动同步  
 补卡| 漏打卡| 每月限 3 次，需上级审批  
   
 **打卡规则** ：
@@ -203,7 +206,13 @@ GPS 打卡| 外勤/项目驻场| 定位精度 ≤100m，需上传位置描述
   * 早退：17:30 前打卡
   * 缺卡：当日无任何打卡记录
 
+**考勤数据源策略（得力 e+ 对接）** ：
 
+  * 现状：公司使用得力云考勤机，打卡数据上云至得力 e+ 平台。
+  * 一期（方案 B）：HRMS 先不直连得力 API，由行政从得力 e+ App 导出打卡记录（Excel），通过 HRMS「考勤数据导入」功能入库存档，跑通「打卡→排班/请假/加班→考勤汇总→薪酬」完整闭环。导入模块**按得力 e+ 导出格式**做解析模板，便于二期平滑升级。
+  * 二期：接入得力 e+ 开放平台（v2-api.delicloud.com），自动同步部门/员工与打卡数据，替代手工导入。
+  * 架构约束：无论一期/二期，员工表、部门表必须预留 `external_id`（对应得力 `employee_ext_id` / `department_ext_id`），建立「HRMS id ↔ 得力 ext_id」关联，避免二期接 API 时返工表结构。
+  * 得力适配器作为一期**可选尾巴**：若得力接口授权（App-Key/Secret）提前就绪，可在不阻塞主流程前提下顺带接入，与手工导入并存。
 
 #### 4.2.2 排班管理
 
@@ -531,7 +540,8 @@ D| 0.5| ≤5%| 不合格
 招聘系统| 入| offer 接受的候选人 → 入职档案| REST API（同 PostgreSQL）  
 电子签平台| 双向| 合同签署| 法大大/上上签 API  
 个税系统| 出| 个税申报| 税局直连（暂缓）  
-银行| 出| 工资代发| 银企直联（暂缓）  
+银行| 出| 工资代发| 银企直联（暂缓）
+得力 e+ 开放平台| 入| 部门/员工同步 + 考勤打卡数据自动获取| REST API（v2-api.delicloud.com，需 App-Key/Secret + MD5 签名）  
   
 ## 七、数据模型
 
@@ -539,8 +549,8 @@ D| 0.5| ≤5%| 不合格
 
 模块| 核心表| 说明  
 ---|---|---  
-组织人事| companies / departments / positions / employees / contracts| 法人、部门、岗位、员工、合同  
-考勤假勤| shifts / schedules / attendance_records / leaves / overtimes / business_trips| 班次、排班、打卡、请假、加班、出差  
+组织人事| companies / departments / positions / employees / contracts| 法人、部门、岗位、员工、合同（employees / departments 含 external_id 关联得力 e+）  
+考勤假勤| shifts / schedules / attendance_records / leaves / overtimes / business_trips| 班次、排班、打卡、请假、加班、出差（attendance_records 含 source 来源标记：导入 / API）  
 薪酬核算| salary_grades / payslips / payslip_items / social_insurance / tax_records / service_fees| 薪级、工资单、工资项、社保、个税、劳务费  
 绩效管理| performance_cycles / performance_indicators / performance_scores / sales_commissions| 考核周期、指标、评分、销售提成  
 系统管理| users / roles / permissions / approval_flows / approval_records / audit_logs / configs| 用户、角色、权限、审批流、审批记录、日志、配置  
@@ -555,6 +565,9 @@ D| 0.5| ≤5%| 不合格
     employees 1───n payslips
     employees 1───n performance_scores
     payslips 1───n payslip_items
+
+    employees.external_id   ↔ 得力 e+ employee_ext_id（打卡数据回匹配主键）
+    departments.external_id ↔ 得力 e+ department_ext_id（组织同步主键）
     
 
 ## 八、非功能需求
@@ -662,7 +675,8 @@ AI Coding 生成代码质量不稳定| 高| 严格代码评审 + 完整测试用
 多地社保政策频繁调整| 中| 社保方案配置化 + 季度政策复核  
 员工抵触新系统| 中| 充分培训 + HR 一对一辅导  
 数据迁移错误| 中| 迁移脚本双跑校验 + 历史数据备份  
-保密数据泄露| 高| 字段级加密 + 访问审计 + 二次授权  
+保密数据泄露| 高| 字段级加密 + 访问审计 + 二次授权
+得力 e+ 接口授权采购阻塞二期进度| 中| 一期采用手工导入不依赖授权；接口授权采购列为二期前置动作，本期即可启动购买  
   
 ## 十三、附录
 
@@ -680,3 +694,4 @@ AI Coding 生成代码质量不稳定| 高| 严格代码评审 + 完整测试用
 版本| 日期| 变更说明| 变更人  
 ---|---|---|---  
 V1.0| 2026-08-23| 初稿| WorkBuddy AI
+V1.1| 2026-08-25| 考勤数据源决策：一期采用得力 e+ 导出格式手工导入跑通闭环（方案 B），二期接入得力开放 API；数据模型预留 external_id；得力适配器作为一期可选尾巴| WorkBuddy AI
