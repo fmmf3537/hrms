@@ -5,8 +5,75 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import { ROLE_PERMISSIONS } from '../src/constants/permissions';
+import { encryptConfig } from '../src/services/integration.service';
 
 const prisma = new PrismaClient();
+
+/** V1.2 §3.5.2 必配置化业务规则默认 seed */
+const DEFAULT_CONFIGS: Array<{
+  category: string;
+  key: string;
+  value: unknown;
+  remark: string;
+}> = [
+  { category: 'employee_no', key: 'format', value: '{company_code}{year}{seq:4}', remark: '工号格式' },
+  { category: 'employee_no', key: 'reuse_after_resign', value: false, remark: '离职工号不复用' },
+  { category: 'employee_no', key: 'yearly_reset', value: true, remark: '自然年度重置流水' },
+  { category: 'employee_no', key: 'concurrent_strategy', value: 'pg_sequence', remark: '并发策略' },
+  { category: 'contract', key: 'warning_days', value: [30, 15, 7], remark: '合同到期预警天数' },
+  { category: 'probation', key: 'months', value: 3, remark: '试用期月数' },
+  { category: 'probation', key: 'remind_days', value: 15, remark: '转正提前提醒天数' },
+  { category: 'archive', key: 'years', value: 5, remark: '离职档案保留年限' },
+  {
+    category: 'performance',
+    key: 'coefficient',
+    value: {
+      S: 1.5, A: 1.2, B: 1.0, C: 0.8, D: 0.5,
+    },
+    remark: '绩效系数',
+  },
+  {
+    category: 'salary',
+    key: 'fixed_floating_ratio',
+    value: {
+      高管: 0.6, 部门: 0.7, 技术: 0.8, 生产: 0.75, 职能: 0.85,
+    },
+    remark: '固浮比',
+  },
+  {
+    category: 'commission',
+    key: 'rate',
+    value: { 整机: 0.05, 服务: 0.08, 培训: 0.03 },
+    remark: '提成比例',
+  },
+  {
+    category: 'travel',
+    key: 'allowance',
+    value: { 一线城市: { P1: 100, P2: 150 }, 二线城市: { P1: 80, P2: 120 } },
+    remark: '差旅补助',
+  },
+  {
+    category: 'leave',
+    key: 'annual_days',
+    value: { '1-10年': 5, '10-20年': 10, '>20年': 15 },
+    remark: '年假额度',
+  },
+  { category: 'overtime', key: 'monthly_hours_cap', value: 36, remark: '加班月上限小时' },
+  {
+    category: 'schedule',
+    key: 'conflict_rule',
+    value: { maxContinuousWorkDays: 6, minRestHours: 12 },
+    remark: '排班冲突规则',
+  },
+  { category: 'hr_attrition', key: 'overtime_ratio_threshold', value: 0.2, remark: '加班费占比预警' },
+  { category: 'hr_attrition', key: 'monthly_threshold', value: 0.05, remark: '月度离职率预警' },
+  {
+    category: 'tax',
+    key: 'year_end_bonus_policy',
+    value: { mode: 'separate', valid_until: '2027-12-31', auto_fallback: 'merged' },
+    remark: '年终奖计税政策',
+  },
+];
 
 async function main() {
   console.log('==> Seeding companies...');
@@ -448,17 +515,53 @@ async function main() {
   ];
 
   for (const integ of integrations) {
+    const encrypted = encryptConfig(integ.config as Record<string, unknown>);
     await prisma.integration.upsert({
       where: { code: integ.code },
-      update: {},
+      // 重跑 seed 时同步加密包装（兼容历史明文）
+      update: { config: encrypted as never },
       create: {
-        ...integ,
+        code: integ.code,
+        name: integ.name,
+        type: integ.type,
+        description: integ.description,
         enabled: true,
-        config: integ.config as never,
+        config: encrypted as never,
       },
     });
   }
-  console.log(`   ✓ ${integrations.length} integrations registered`);
+  console.log(`   ✓ ${integrations.length} integrations registered (config encrypted)`);
+
+  console.log('==> Seeding default configs (M0.5-6)...');
+  const effectiveFrom = new Date('2020-01-01');
+  for (const cfg of DEFAULT_CONFIGS) {
+    const existing = await prisma.config.findFirst({
+      where: { category: cfg.category, key: cfg.key, version: 1 },
+    });
+    if (!existing) {
+      await prisma.config.create({
+        data: {
+          category: cfg.category,
+          key: cfg.key,
+          value: cfg.value as never,
+          version: 1,
+          effectiveFrom,
+          effectiveTo: null,
+          remark: cfg.remark,
+        },
+      });
+    }
+  }
+  console.log(`   ✓ ${DEFAULT_CONFIGS.length} config keys ensured`);
+
+  console.log('==> Seeding AI knowledge base (M0.5-5)...');
+  try {
+    const { seedAiKnowledgeBase } = await import('./seed-ai-knowledge');
+    const n = await seedAiKnowledgeBase(prisma);
+    console.log(`   ✓ AI knowledge base seeded (${n} docs attempted)`);
+  } catch (err) {
+    console.warn('   ⚠ AI knowledge base seed skipped/failed:', err instanceof Error ? err.message : err);
+  }
 
   console.log('==> Done.');
 }

@@ -18,8 +18,10 @@ model User {
   email        String?   @unique @db.VarChar(100)
   phone        String?   @db.VarChar(20)
   status       String    @default("active") @db.VarChar(20) // active / disabled
-  // 首次登录/默认口令用户必须改密：seed 的 admin 置 true，改密接口（M1）成功后清 false
+  // 首次登录/默认口令用户必须改密：seed 的 admin 置 true，改密成功后清 false
   mustChangePassword Boolean @default(false) @map("must_change_password")
+  // 改密即全端下线：签发 JWT 时写入，校验时与 DB 对齐（可选增强）
+  tokenVersion Int @default(0) @map("token_version")
   lastLoginAt  DateTime? @map("last_login_at") @db.Timestamptz(6)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -385,4 +387,97 @@ model IntegrationSyncLog {
   @@index([integrationId, createdAt])
   @@index([status, createdAt])
   @@map("integration_sync_logs")
+}
+
+// ==================== 配置中心（M0.5-6）====================
+// 业务规则统一走 configs + effective_from / effective_to 版本回溯（V1.2 §三.5）
+
+model Config {
+  id            String    @id @default(uuid()) @db.Uuid
+  category      String    @db.VarChar(50)
+  key           String    @db.VarChar(100)
+  value         Json
+  version       Int       @default(1)
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  createdBy     String?   @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  remark        String?   @db.Text
+
+  @@unique([category, key, version])
+  @@index([category, key, effectiveFrom])
+  @@index([effectiveTo])
+  @@map("configs")
+}
+
+// ==================== AI 底座（M0.5-5）====================
+// ai_documents（知识库文档）+ ai_embeddings（pgvector 向量）
+// ai_conversations（对话历史）+ ai_summaries（AI 生成摘要缓存）
+
+model AiDocument {
+  id          String    @id @default(uuid()) @db.Uuid
+  title       String    @db.VarChar(500)
+  sourceType  String    @map("source_type") @db.VarChar(50) // employee_handbook / faq / policy / procedure
+  content     String    @db.Text // 完整原文
+  metadata    Json? // 来源 URL / 版本号 / 维护人 等
+  enabled     Boolean   @default(true)
+  createdBy   String?   @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  embeddings AiEmbedding[]
+
+  @@index([sourceType, enabled])
+  @@index([createdAt])
+  @@map("ai_documents")
+}
+
+model AiEmbedding {
+  id         String                       @id @default(uuid()) @db.Uuid
+  documentId String                       @map("document_id") @db.Uuid
+  chunkIndex Int                          @map("chunk_index") // 文档分块后的顺序
+  chunkText  String                       @map("chunk_text") @db.Text
+  embedding  Unsupported("vector(1536)")? // pgvector 维度（OpenAI text-embedding-3-small 1536 维）
+  tokenCount Int?                         @map("token_count")
+  createdAt  DateTime                     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  document AiDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, chunkIndex])
+  @@map("ai_embeddings")
+}
+
+model AiConversation {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  documentId String?  @map("document_id") @db.Uuid // 命中的知识库文档（可空：闲聊）
+  question   String   @db.Text
+  answer     String   @db.Text
+  sources    Json? // 来源文档列表 [{title, score}]
+  tokens     Int      @default(0)
+  cost       Decimal  @default(0) @db.Decimal(10, 6) // USD 元
+  duration   Int      @default(0) // 毫秒
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("ai_conversations")
+}
+
+model AiSummary {
+  id          String    @id @default(uuid()) @db.Uuid
+  type        String    @db.VarChar(50) // payroll_diff / performance_summary / contract_renewal
+  referenceId String?   @map("reference_id") @db.Uuid // 关联业务记录 ID（工资单/绩效/合同）
+  content     String    @db.Text
+  highlights  Json? // 高亮要点
+  tokens      Int       @default(0)
+  cost        Decimal   @default(0) @db.Decimal(10, 6)
+  duration    Int       @default(0)
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz(6) // 缓存过期
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([type, referenceId])
+  @@index([expiresAt])
+  @@map("ai_summaries")
 }

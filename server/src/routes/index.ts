@@ -1,8 +1,10 @@
 import { Router, type Router as RouterType } from 'express';
 
+import aiRoutes from './ai';
 import approvalRoutes from './approval';
 import auditRoutes from './audit';
 import authRoutes from './auth';
+import configRoutes from './config';
 import encryptedFieldRoutes from './encryptedField';
 import integrationRoutes from './integration';
 import notificationRoutes from './notification';
@@ -32,5 +34,9 @@ router.use('/notifications', notificationRoutes);
 router.use('/encrypted-fields', encryptedFieldRoutes);
 // M0.5-4: 第三方对接
 router.use('/integrations', integrationRoutes);
+// M0.5-5: AI 底座
+router.use('/ai', aiRoutes);
+// M0.5-6: 配置中心
+router.use('/configs', configRoutes);
 
 export default router;

@@ -88,6 +88,21 @@ const envSchema = z.object({
   LLM_BASE_URL: z.string().default('https://api.openai.com/v1'),
   LLM_MODEL: z.string().default('gpt-4o-mini'),
 
+  // AI 底座（M0.5-5）
+  EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
+  EMBEDDING_DIM: z.string().default('1536').transform((v) => parseInt(v, 10)),
+  LLM_DEFAULT_MODEL: z.string().default('gpt-4o-mini'),
+  LLM_MAX_TOKENS_QA: z.string().default('1000').transform((v) => parseInt(v, 10)),
+  LLM_MAX_TOKENS_SUMMARY: z.string().default('500').transform((v) => parseInt(v, 10)),
+  LLM_TEMPERATURE: z.string().default('0.3').transform((v) => parseFloat(v)),
+  AI_QA_TOP_K: z.string().default('5').transform((v) => parseInt(v, 10)),
+  AI_SIMILARITY_THRESHOLD: z.string().default('0.7').transform((v) => parseFloat(v)),
+  AI_DOCUMENT_CHUNK_SIZE: z.string().default('500').transform((v) => parseInt(v, 10)),
+  AI_DOCUMENT_CHUNK_OVERLAP: z.string().default('50').transform((v) => parseInt(v, 10)),
+  OCR_PROVIDER: z.enum(['mock', 'tencent', 'baidu']).default('mock'),
+  OCR_SECRET_ID: z.string().default(''),
+  OCR_SECRET_KEY: z.string().default(''),
+
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });

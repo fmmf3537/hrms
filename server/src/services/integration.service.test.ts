@@ -113,7 +113,7 @@ describe('createIntegration - 创建集成', () => {
     expect(mocks.integCreate).toHaveBeenCalled();
   });
 
-  it('code 重复 → 抛 50101 (409)', async () => {
+  it('code 重复 → 抛 70102 (409)', async () => {
     mocks.integFindUnique.mockResolvedValueOnce(makeIntegration());
 
     await expect(
@@ -123,7 +123,7 @@ describe('createIntegration - 创建集成', () => {
         type: 'http_api',
         config: {},
       }),
-    ).rejects.toMatchObject({ statusCode: 409, code: 50101 });
+    ).rejects.toMatchObject({ statusCode: 409, code: 70102 });
   });
 });
 
@@ -144,15 +144,25 @@ describe('listIntegrations - 列出集成', () => {
 });
 
 describe('getIntegrationByCode - 按 code 查', () => {
-  it('找到 → 返回配置（含 config 字段）', async () => {
+  it('找到 → 返回脱敏 config（密钥为 ***）', async () => {
     mocks.integFindUnique.mockResolvedValueOnce(makeIntegration());
 
     const result = await integrationService.getIntegrationByCode('sms');
 
     expect(result.code).toBe('sms');
     expect(result.config).toEqual({
-      provider: 'mock', accessKey: 'k', accessSecret: 's', signName: 'n',
+      provider: 'mock', accessKey: '***', accessSecret: '***', signName: 'n',
     });
+  });
+
+  it('加密落库 config → 解密后脱敏返回', async () => {
+    const plain = { provider: 'mock', accessKey: 'secret-key', signName: 'n' };
+    const enc = integrationService.encryptConfig(plain);
+    mocks.integFindUnique.mockResolvedValueOnce(makeIntegration({ config: enc }));
+
+    const result = await integrationService.getIntegrationByCode('sms');
+    expect(result.config.accessKey).toBe('***');
+    expect(result.config.provider).toBe('mock');
   });
 
   it('不存在 → 抛 50101 (404)', async () => {
@@ -169,6 +179,24 @@ describe('getIntegrationByCode - 按 code 查', () => {
     await expect(
       integrationService.getIntegrationByCode('sms'),
     ).rejects.toMatchObject({ statusCode: 404, code: 50101 });
+  });
+});
+
+describe('createIntegration - 落库加密', () => {
+  it('create 时 config 以 __enc 包装写入', async () => {
+    mocks.integFindUnique.mockResolvedValueOnce(null);
+    mocks.integCreate.mockImplementationOnce(({ data }: any) => Promise.resolve({ id: 'new-integ', ...data }));
+
+    await integrationService.createIntegration({
+      code: 'new_one',
+      name: '新集成',
+      type: 'http_api',
+      config: { apiKey: 'raw-secret' },
+    });
+
+    const call = mocks.integCreate.mock.calls[0][0];
+    expect(call.data.config).toMatchObject({ __enc: true, keyVersion: 1 });
+    expect(typeof call.data.config.ciphertext).toBe('string');
   });
 });
 

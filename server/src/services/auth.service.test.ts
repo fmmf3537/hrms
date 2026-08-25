@@ -123,6 +123,7 @@ const makeUser = (overrides: Record<string, unknown> = {}) => ({
   phone: null,
   status: 'active',
   mustChangePassword: false,
+  tokenVersion: 0,
   userRoles: [
     {
       role: {
@@ -405,5 +406,44 @@ describe('logout - 幂等', () => {
     const token = signRefresh('user-1', 'tid-1');
     await authService.logout('user-1', token);
     expect(mocks.srem).toHaveBeenCalledWith('refresh_active:user-1', 'tid-1');
+  });
+});
+
+// ==================== changePassword - M0.5-7 ====================
+
+describe('changePassword', () => {
+  it('旧密码正确 + 强度合格 → 更新哈希 / 清 mustChange / bump tokenVersion / 吊销 refresh', async () => {
+    mocks.userFindFirst.mockResolvedValue(makeUser({ mustChangePassword: true }));
+    mocks.smembers.mockResolvedValue(['t1']);
+    bcryptMocks.compareFn.mockResolvedValueOnce(true);
+    bcryptMocks.hashFn.mockResolvedValueOnce('$2a$12$newhash');
+
+    await authService.changePassword('user-1', 'OldPass1', 'NewPass12');
+
+    expect(mocks.userUpdate).toHaveBeenCalledWith({
+      where: { id: 'user-1' },
+      data: expect.objectContaining({
+        passwordHash: '$2a$12$newhash',
+        mustChangePassword: false,
+        tokenVersion: { increment: 1 },
+      }),
+    });
+    expect(mocks.del).toHaveBeenCalledWith('refresh:user-1:t1');
+    expect(mocks.auditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'UPDATE_PASSWORD' }),
+    );
+  });
+
+  it('旧密码错误 → 401/10110', async () => {
+    mocks.userFindFirst.mockResolvedValue(makeUser());
+    bcryptMocks.compareFn.mockResolvedValueOnce(false);
+
+    await expect(authService.changePassword('user-1', 'wrong', 'NewPass12'))
+      .rejects.toMatchObject({ statusCode: 401, code: 10110 });
+  });
+
+  it('新密码强度不足 → 400/10100', async () => {
+    await expect(authService.changePassword('user-1', 'OldPass1', 'weak'))
+      .rejects.toMatchObject({ statusCode: 400, code: 10100 });
   });
 });

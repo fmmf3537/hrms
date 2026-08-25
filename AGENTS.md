@@ -8,12 +8,13 @@
 
 - pnpm monorepo：client (Vue3) / server (Express+Prisma+PG) / mobile (留空)
 - 认证：JWT (access 15min + refresh 7d，已升级 rotation + reuse 检测)
-- 权限：RBAC（Role.permissions JSON 数组，5 角色 × 32 权限点）
+- 权限：RBAC（Role.permissions JSON 数组，5 角色 × 权限点含 M0.5）
 - 数据库：PostgreSQL 15+（**锁定，不预留多数据库迁移**，详见 V1.2 §三.1）
 - 缓存/队列：Redis + BullMQ
-- 字段加密：M0.5-3 AES-256-GCM
+- 字段加密：M0.5-3 AES-256-GCM（含第三方 integration.config）
+- 配置中心：M0.5-6 `configs` + `configService`（effective_from/to 版本回溯）
 - 移动端：H5 一期 → 小程序/App 二期
-- AI 能力（M0.5-5）：LLM 网关（OpenAI 兼容） + pgvector + OCR
+- AI 能力（M0.5-5）：LLM 网关（OpenAI 兼容）+ pgvector + OCR（**已落地**，见 `server/src/services/ai/`）
 
 ## 命名规范
 
@@ -66,12 +67,14 @@ V1.2 之前的 6 个严重项全部修复：
 - [x] api-spec.md / openapi.yaml / flow-diagrams.md / audit-masking.md 全部同步 actor_type / reveal 接口 / 历史表 ER 图
 - 单测 29/29 通过（新增 3 个：账号禁用防枚举 + 渐进式重哈希 2 个）
 
-### M0.5 公共底座 + AI 底座（第 2 周，规划中）
-- [ ] M0.5-1 审批流基础设施（approval_flows / approval_instances / approval_records）
-- [ ] M0.5-2 消息通知基础设施（notification_templates / notification_logs + BullMQ）
-- [ ] M0.5-3 字段级加密（encrypted_fields + AES-256-GCM + KMS）
-- [ ] M0.5-4 第三方对接框架（external_integrations + 适配器接口）
-- [ ] M0.5-5 AI 底座（ai_documents / ai_embeddings / ai_conversations / ai_summaries + LLM 网关 + pgvector + OCR）
+### M0.5 公共底座 + AI 底座
+- [x] M0.5-1 审批流基础设施（approval_flows / approval_instances / approval_records + RBAC）
+- [x] M0.5-2 消息通知基础设施（templates / logs + BullMQ；email/sms 经 integration adapters）
+- [x] M0.5-3 字段级加密（encrypted_fields + AES-256-GCM）
+- [x] M0.5-4 第三方对接框架（integrations + 适配器；config AES 加密 + 脱敏 GET）
+- [x] M0.5-5 AI 底座（ai_documents / ai_embeddings / ai_conversations / ai_summaries + LLM 网关 + OCR）
+- [x] M0.5-6 配置中心（configs + configService + 内存缓存 + §3.5.2 seed）
+- [x] M0.5-7 改密 + 二次验证（change-password / force-change-password / request-2fa / verify-2fa）
 
 ### M1-M5 业务模块
 - M1 组织人事（第 3-5 周）：A1-A7 切片，含 AI OCR + 电子签（提前到一期）

@@ -11,6 +11,11 @@ export const AUDIT_ACTIONS = {
   UPDATE: 'UPDATE',
   DELETE: 'DELETE',
   EXPORT: 'EXPORT',
+  // AI 底座（M0.5-5）
+  AI_OCR: 'AI_OCR',
+  AI_QA: 'AI_QA',
+  AI_SUMMARIZE: 'AI_SUMMARIZE',
+  AI_SCORE: 'AI_SCORE',
 } as const;
 
 /** 审计资源类型（resource_type 字段，统一收敛避免散落字符串） */
@@ -23,6 +28,7 @@ export const AUDIT_RESOURCE_TYPES = {
   SALARY: 'Salary',
   PERFORMANCE: 'Performance',
   CONTRACT: 'Contract',
+  AI: 'Ai',
 } as const;
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[keyof typeof AUDIT_RESOURCE_TYPES];

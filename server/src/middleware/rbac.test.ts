@@ -8,6 +8,7 @@ import { PERMISSIONS, WILDCARD } from '../constants/permissions';
 import { mergePermissions } from '../services/auth.service';
 
 import { requirePermission, type JwtPayload } from './auth';
+import { AppError } from './errorHandler';
 
 function makeUser(permissions: string[]): JwtPayload {
   return {
@@ -18,6 +19,7 @@ function makeUser(permissions: string[]): JwtPayload {
     roles: ['employee'],
     permissions,
     tokenVersion: 0,
+    mustChangePassword: false,
   };
 }
 
@@ -37,6 +39,7 @@ describe('requirePermission', () => {
     const { req, res, next } = createMocks(makeUser([WILDCARD]));
     requirePermission(PERMISSIONS.SALARY_WRITE, PERMISSIONS.CONTRACT_WRITE)(req, res, next);
     expect(next).toHaveBeenCalledOnce();
+    expect(next).toHaveBeenCalledWith();
   });
 
   it('用户拥有 salary:read → 访问 requirePermission(salary:read) 放行', () => {
@@ -45,49 +48,41 @@ describe('requirePermission', () => {
     expect(next).toHaveBeenCalledOnce();
   });
 
-  it('用户无 salary:write（权限为 employee:read）→ 返回 403', () => {
-    const {
-      req, res, status, json, next,
-    } = createMocks(makeUser([PERMISSIONS.EMPLOYEE_READ]));
+  it('用户无 salary:write → next(AppError 403/10121)', () => {
+    const { req, res, next } = createMocks(makeUser([PERMISSIONS.EMPLOYEE_READ]));
     requirePermission(PERMISSIONS.SALARY_WRITE)(req, res, next);
-    expect(next).not.toHaveBeenCalled();
-    expect(status).toHaveBeenCalledWith(403);
-    expect(json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, code: 403 }),
-    );
+    expect(next).toHaveBeenCalledOnce();
+    const err = (next as ReturnType<typeof vi.fn>).mock.calls[0][0] as AppError;
+    expect(err).toBeInstanceOf(AppError);
+    expect(err.statusCode).toBe(403);
+    expect(err.code).toBe(10121);
   });
 
-  it('req.user 为 undefined（未认证）→ 返回 401', () => {
-    const {
-      req, res, status, json, next,
-    } = createMocks(undefined);
+  it('req.user 为 undefined → next(AppError 401/10101)', () => {
+    const { req, res, next } = createMocks(undefined);
     requirePermission(PERMISSIONS.SALARY_READ)(req, res, next);
-    expect(next).not.toHaveBeenCalled();
-    expect(status).toHaveBeenCalledWith(401);
-    expect(json).toHaveBeenCalledWith(
-      expect.objectContaining({ success: false, code: 401 }),
-    );
+    const err = (next as ReturnType<typeof vi.fn>).mock.calls[0][0] as AppError;
+    expect(err).toBeInstanceOf(AppError);
+    expect(err.statusCode).toBe(401);
+    expect(err.code).toBe(10101);
   });
 
-  it('req.user.permissions 缺失（旧 token 无该字段）→ 返回 403 而非误放行', () => {
-    // 模拟 M0-05 签发的旧 token：payload 中没有 permissions 字段
+  it('req.user.permissions 缺失 → next(AppError 403/10121)', () => {
     const legacyUser = { ...makeUser([]) } as { permissions?: string[] };
     delete legacyUser.permissions;
-    const {
-      req, res, status, next,
-    } = createMocks(legacyUser as unknown as JwtPayload);
+    const { req, res, next } = createMocks(legacyUser as unknown as JwtPayload);
     requirePermission(PERMISSIONS.SALARY_READ)(req, res, next);
-    expect(next).not.toHaveBeenCalled();
-    expect(status).toHaveBeenCalledWith(403);
+    const err = (next as ReturnType<typeof vi.fn>).mock.calls[0][0] as AppError;
+    expect(err.statusCode).toBe(403);
+    expect(err.code).toBe(10121);
   });
 
-  it('req.user.permissions 为空数组 → 返回 403', () => {
-    const {
-      req, res, status, next,
-    } = createMocks(makeUser([]));
+  it('req.user.permissions 为空数组 → next(AppError 403/10121)', () => {
+    const { req, res, next } = createMocks(makeUser([]));
     requirePermission(PERMISSIONS.SALARY_READ)(req, res, next);
-    expect(next).not.toHaveBeenCalled();
-    expect(status).toHaveBeenCalledWith(403);
+    const err = (next as ReturnType<typeof vi.fn>).mock.calls[0][0] as AppError;
+    expect(err.statusCode).toBe(403);
+    expect(err.code).toBe(10121);
   });
 });
 
@@ -99,7 +94,7 @@ describe('mergePermissions', () => {
     ]);
     expect(merged).toContain(PERMISSIONS.EMPLOYEE_READ);
     expect(merged).toContain(PERMISSIONS.DEPARTMENT_READ);
-    expect(merged).toHaveLength(2); // 去重生效
+    expect(merged).toHaveLength(2);
   });
 
   it('任一角色含 * → 直接返回 [*]（全通）', () => {
