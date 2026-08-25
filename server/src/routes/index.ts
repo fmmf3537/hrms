@@ -12,6 +12,7 @@ import encryptedFieldRoutes from './encryptedField';
 import integrationRoutes from './integration';
 import notificationRoutes from './notification';
 import onboardingRoutes from './onboarding';
+import regularizationRoutes from './regularization';
 
 const router: RouterType = Router();
 
@@ -47,5 +48,6 @@ router.use('/companies', companyRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/employees', employeeRoutes);
 router.use('/onboarding', onboardingRoutes);
+router.use('/regularizations', regularizationRoutes);
 
 export default router;

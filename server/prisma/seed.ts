@@ -95,6 +95,25 @@ const DEFAULT_CONFIGS: Array<{
     value: ['设备发放', '工位安排', '导师分配', '培训安排'],
     remark: '入职引导清单模板',
   },
+  // M1-A4 转正流程
+  {
+    category: 'regularization',
+    key: 'approval_flow_key',
+    value: 'regularization:regularization_approval',
+    remark: '转正审批流 flowKey',
+  },
+  {
+    category: 'regularization',
+    key: 'salary_effective',
+    value: 'next_month',
+    remark: '转正薪资生效策略',
+  },
+  {
+    category: 'regularization',
+    key: 'approval_nodes',
+    value: ['department_leader', 'hr', 'ceo'],
+    remark: '转正审批节点',
+  },
 ];
 
 async function main() {
@@ -705,6 +724,42 @@ async function main() {
     console.log('   ✓ 1 onboarding record + 4 tasks');
   } else {
     console.log('   ✓ onboarding demo already exists (skip)');
+  }
+
+  console.log('==> Seeding regularization demo (M1-A4)...');
+  const probationEmp = await prisma.employee.findFirst({
+    where: {
+      companyId: xach.id,
+      status: 'probation',
+      deletedAt: null,
+    },
+  });
+  if (probationEmp) {
+    const existingReg = await prisma.regularizationRecord.findFirst({
+      where: {
+        employeeId: probationEmp.id,
+        status: { notIn: ['cancelled', 'rejected'] },
+      },
+    });
+    if (!existingReg) {
+      const end = new Date(probationEmp.hireDate);
+      end.setMonth(end.getMonth() + 3);
+      await prisma.regularizationRecord.create({
+        data: {
+          employeeId: probationEmp.id,
+          hireDate: probationEmp.hireDate,
+          probationEndDate: end,
+          selfEvaluation: '试用期内完成岗位培训与项目交付，申请转正。',
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 1 regularization record (draft)');
+    } else {
+      console.log('   ✓ regularization demo already exists (skip)');
+    }
+  } else {
+    console.log('   ✓ no probation employee, skip regularization seed');
   }
 
   console.log('==> Done.');

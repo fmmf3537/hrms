@@ -667,6 +667,15 @@
 | POST | `/onboarding/:id/parse-ocr` | 是 | OCR 三合一（idCard / bankCard / certificate） |
 | POST | `/onboarding/:id/confirm` | 是 | 提交审批（draft→submitted）；body.approved 时为审批回调 confirm/reject |
 
+### 3.9 Regularization API（M1-A4）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/regularizations` | 是 | HR 代员工创建转正草稿 |
+| GET | `/regularizations` | 是 | 转正列表（分页 + 状态/公司/部门过滤） |
+| GET | `/regularizations/:id` | 是 | 转正详情（含 employee 关联信息） |
+| POST | `/regularizations/:id/cancel` | 是 | 撤回/取消（draft 直接；submitted 调 approval.withdraw） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

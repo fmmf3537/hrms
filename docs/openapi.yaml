@@ -51,6 +51,8 @@ tags:
     description: 员工档案（M1-A2）
   - name: Onboarding
     description: 入职流程（M1-A3）
+  - name: Regularization
+    description: 转正流程（M1-A4）
 
 security:
   - BearerAuth: []
@@ -1231,6 +1233,81 @@ paths:
         '200':
           description: 成功
 
+  /regularizations:
+    get:
+      tags: [Regularization]
+      summary: 转正列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: companyId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: departmentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, submitted, approved, rejected, cancelled]
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Regularization]
+      summary: 创建转正草稿
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegularizationCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /regularizations/{id}:
+    get:
+      tags: [Regularization]
+      summary: 转正详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /regularizations/{id}/cancel:
+    post:
+      tags: [Regularization]
+      summary: 撤回/取消转正
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1769,3 +1846,16 @@ components:
         materialsChecklist:
           type: object
           additionalProperties: { type: boolean }
+
+    RegularizationCreateInput:
+      type: object
+      required: [employeeId]
+      properties:
+        employeeId: { type: string, format: uuid }
+        selfEvaluation: { type: string }
+        managerEvaluation: { type: string }
+        hrEvaluation: { type: string }
+        performanceScore: { type: integer, minimum: 0, maximum: 100 }
+        newBaseSalary: { type: number }
+        newPerformanceSalary: { type: number }
+        newTotalSalary: { type: number }

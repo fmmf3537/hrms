@@ -93,7 +93,11 @@ V1.2 之前的 6 个严重项全部修复：
 - **A3 入职流程（已完成）**：onboarding_records + onboarding_tasks 2 张表
   + 状态机 + 工号自动生成 + AI OCR 资料收集（复用 A2 employeeAI 三方法）
   + 审批流 + 通知 + 5 个新端点 + 17 个新单测（178 → 195）
-- 后续：A4（转正）→ A6（离职）→ A5（调动）→ A7（合同）
+- **A4 转正流程（已完成）**：regularization_records 1 张表
+  + 状态机 + 3 级审批流（部门负责人 → HR → 总经理）
+  + 转正后 employee.status probation → active + 薪资历史写入
+  + listUpcomingRegularizations 给 BullMQ 调用 + 4 个新端点 + 18 个新单测（195 → 213）
+- 后续：A6（离职）→ A5（调动）→ A7（合同）
 
 ### 工程强约束（V1.2 时代）
 

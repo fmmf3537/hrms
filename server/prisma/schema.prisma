@@ -644,3 +644,46 @@ model OnboardingTask {
   @@index([ownerId, status])
   @@map("onboarding_tasks")
 }
+
+// ==================== M1-A4 转正流程 ====================
+// 状态机：draft → submitted → approved / rejected / cancelled
+// 不建 Employee 反向关系（避免改 A1+A2 已有 model）；service 层校验 active 唯一
+model RegularizationRecord {
+  id               String   @id @default(uuid()) @db.Uuid
+  // 关联员工（必须是 probation 状态；无 Prisma relation，避免改 Employee）
+  employeeId       String   @map("employee_id") @db.Uuid
+  // 试用期
+  hireDate         DateTime @map("hire_date") @db.Date
+  probationEndDate DateTime @map("probation_end_date") @db.Date
+  // 申请内容
+  appliedAt           DateTime @default(now()) @map("applied_at") @db.Timestamptz(6)
+  selfEvaluation      String?  @map("self_evaluation") @db.Text
+  managerEvaluation   String?  @map("manager_evaluation") @db.Text
+  hrEvaluation        String?  @map("hr_evaluation") @db.Text
+  performanceScore    Int?     @map("performance_score")
+  // 转正后薪资（如有调整）
+  newBaseSalary         Decimal? @map("new_base_salary") @db.Decimal(10, 2)
+  newPerformanceSalary  Decimal? @map("new_performance_salary") @db.Decimal(10, 2)
+  newTotalSalary        Decimal? @map("new_total_salary") @db.Decimal(10, 2)
+  // 状态机 draft / submitted / approved / rejected / cancelled
+  status String @default("draft") @db.VarChar(20)
+  // 审批流（M0.5-1）
+  approvalInstanceId String? @unique @map("approval_instance_id") @db.Uuid
+  // 审批结果
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  approvedBy     String?   @map("approved_by") @db.Uuid
+  rejectedAt     DateTime? @map("rejected_at") @db.Timestamptz(6)
+  rejectedBy     String?   @map("rejected_by") @db.Uuid
+  rejectedReason String?   @map("rejected_reason") @db.Text
+  // 元数据
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  cancelledAt     DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy     String?   @map("cancelled_by") @db.Uuid
+  cancelledReason String?   @map("cancelled_reason") @db.Text
+
+  @@index([employeeId, status])
+  @@index([status, probationEndDate])
+  @@map("regularization_records")
+}
