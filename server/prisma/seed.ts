@@ -217,6 +217,109 @@ async function main() {
   });
   console.log(`   ✓ trip_default flow (id=${tripFlow.id})`);
 
+  console.log('==> Seeding default notification templates (M0.5-2)...');
+
+  // 1) 合同到期提醒 - 邮件 + 站内信
+  const tplContractEmail = await prisma.notificationTemplate.upsert({
+    where: { key_channel: { key: 'contract_expiring', channel: 'email' } },
+    update: {},
+    create: {
+      key: 'contract_expiring',
+      name: '合同到期提醒（邮件）',
+      channel: 'email',
+      subject: '【辰航 HR】合同 {{days_remaining}} 天后到期',
+      contentTemplate:
+        '您好 {{employee_name}}：\n\n您的 {{contract_type}} 将于 {{end_date}} 到期（剩余 {{days_remaining}} 天）。\n请及时与 HR 联系办理续签手续。\n\n辰航 HR 系统',
+      variables: { employee_name: '员工姓名', contract_type: '合同类型', end_date: '到期日', days_remaining: '剩余天数' },
+      enabled: true,
+      description: '合同 30/15/7 天到期前自动发邮件',
+    },
+  });
+
+  const tplContractInApp = await prisma.notificationTemplate.upsert({
+    where: { key_channel: { key: 'contract_expiring', channel: 'in_app' } },
+    update: {},
+    create: {
+      key: 'contract_expiring',
+      name: '合同到期提醒（站内信）',
+      channel: 'in_app',
+      subject: '合同即将到期',
+      contentTemplate: '您的 {{contract_type}} 将在 {{days_remaining}} 天后到期（{{end_date}}），请及时续签。',
+      enabled: true,
+    },
+  });
+
+  // 2) 审批待办 - 站内信
+  const tplApprovalPending = await prisma.notificationTemplate.upsert({
+    where: { key_channel: { key: 'approval_pending', channel: 'in_app' } },
+    update: {},
+    create: {
+      key: 'approval_pending',
+      name: '审批待办提醒',
+      channel: 'in_app',
+      subject: '您有新的审批待办',
+      contentTemplate: '{{initiator_name}} 发起了「{{title}}」审批，请尽快处理。',
+      enabled: true,
+    },
+  });
+
+  // 3) 审批通过 - 站内信 + 邮件
+  const tplApprovalApprovedInApp = await prisma.notificationTemplate.upsert({
+    where: { key_channel: { key: 'approval_approved', channel: 'in_app' } },
+    update: {},
+    create: {
+      key: 'approval_approved',
+      name: '审批通过（站内信）',
+      channel: 'in_app',
+      subject: '您的审批已通过',
+      contentTemplate: '「{{title}}」已通过审批（{{approved_by}} 处理）。',
+      enabled: true,
+    },
+  });
+
+  const tplApprovalApprovedEmail = await prisma.notificationTemplate.upsert({
+    where: { key_channel: { key: 'approval_approved', channel: 'email' } },
+    update: {},
+    create: {
+      key: 'approval_approved',
+      name: '审批通过（邮件）',
+      channel: 'email',
+      subject: '【辰航 HR】您的审批已通过 - {{title}}',
+      contentTemplate:
+        '您好：\n\n您发起的「{{title}}」已通过审批。\n处理人：{{approved_by}}\n时间：{{approved_at}}\n\n辰航 HR 系统',
+      enabled: true,
+    },
+  });
+
+  // 4) 审批驳回 - 站内信 + 邮件
+  const tplApprovalRejectedInApp = await prisma.notificationTemplate.upsert({
+    where: { key_channel: { key: 'approval_rejected', channel: 'in_app' } },
+    update: {},
+    create: {
+      key: 'approval_rejected',
+      name: '审批驳回（站内信）',
+      channel: 'in_app',
+      subject: '您的审批被驳回',
+      contentTemplate: '「{{title}}」被驳回。原因：{{comment}}',
+      enabled: true,
+    },
+  });
+
+  const tplApprovalRejectedEmail = await prisma.notificationTemplate.upsert({
+    where: { key_channel: { key: 'approval_rejected', channel: 'email' } },
+    update: {},
+    create: {
+      key: 'approval_rejected',
+      name: '审批驳回（邮件）',
+      channel: 'email',
+      subject: '【辰航 HR】您的审批被驳回 - {{title}}',
+      contentTemplate: '您好：\n\n您发起的「{{title}}」被驳回。\n驳回人：{{rejected_by}}\n原因：{{comment}}\n\n请修改后重新提交。',
+      enabled: true,
+    },
+  });
+
+  console.log(`   ✓ ${7} notification templates seeded`);
+
   console.log('==> Done.');
 }
 

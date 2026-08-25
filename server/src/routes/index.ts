@@ -3,6 +3,7 @@ import { Router, type Router as RouterType } from 'express';
 import approvalRoutes from './approval';
 import auditRoutes from './audit';
 import authRoutes from './auth';
+import notificationRoutes from './notification';
 
 const router: RouterType = Router();
 
@@ -23,5 +24,7 @@ router.use('/auth', authRoutes);
 router.use('/audit-logs', auditRoutes);
 // M0.5-1: 审批流
 router.use('/approvals', approvalRoutes);
+// M0.5-2: 通知
+router.use('/notifications', notificationRoutes);
 
 export default router;

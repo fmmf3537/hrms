@@ -239,3 +239,60 @@ model ApprovalRecord {
   @@index([createdAt])
   @@map("approval_records")
 }
+
+// ==================== 通知（M0.5-2）====================
+// 模板（NotificationTemplate）→ 日志（NotificationLog）
+// 三种通道：in_app（站内信）/ email / sms
+// 发送走 BullMQ 队列 + 失败重试 3 次
+
+model NotificationTemplate {
+  id              String   @id @default(uuid()) @db.Uuid
+  key             String   @db.VarChar(100) // 全局唯一，如 contract_expiring / approval_pending
+  name            String   @db.VarChar(200)
+  channel         String   @db.VarChar(20) // in_app / email / sms
+  subject         String?  @db.VarChar(200) // 邮件主题；短信/站内信可空
+  contentTemplate String   @map("content_template") @db.Text // Handlebars 模板
+  variables       Json?    // 变量定义（JSON schema），给前端/调用方参考
+  enabled         Boolean  @default(true)
+  description     String?  @db.Text
+  createdBy       String?  @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // 关系
+  logs NotificationLog[]
+
+  @@unique([key, channel]) // 同一 key 不同 channel 视为不同模板
+  @@index([key, enabled])
+  @@index([enabled])
+  @@map("notification_templates")
+}
+
+model NotificationLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  templateId  String?  @map("template_id") @db.Uuid // 模板删除后保留日志
+  templateKey String?  @map("template_key") @db.VarChar(100) // 冗余存储便于查询
+  userId      String   @map("user_id") @db.Uuid
+  channel     String   @db.VarChar(20)
+  status      String   @default("pending") @db.VarChar(20) // pending / sent / failed
+  subject     String?  @db.VarChar(500)
+  content     String   @db.Text // 渲染后内容
+  data        Json?    // 渲染时使用的变量
+  retryCount  Int      @default(0) @map("retry_count")
+  lastError   String?  @map("last_error") @db.Text
+  sentAt      DateTime? @map("sent_at") @db.Timestamptz(6)
+  readAt      DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  // 关系
+  template NotificationTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([userId, readAt]) // 查"未读"
+  @@index([templateKey])
+  @@index([channel, status])
+  @@map("notification_logs")
+}

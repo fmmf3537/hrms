@@ -1,4 +1,5 @@
 import app from './app';
+import { startNotificationWorker, stopNotificationWorker } from './jobs/notification.queue';
 import { env } from './lib/env';
 import prisma from './lib/prisma';
 import { redis, connectRedis } from './lib/redis';
@@ -10,6 +11,9 @@ const server = app.listen(PORT, async () => {
   // 启动时预连接 Redis，尽早暴露连接问题
   await connectRedis();
 
+  // M0.5-2: 启动通知 worker（异步消费 BullMQ 队列）
+  await startNotificationWorker();
+
   console.log(`
 🚀 HRMS Server is running!
 
@@ -17,11 +21,15 @@ const server = app.listen(PORT, async () => {
 🔗 API URL: http://localhost:${PORT}
 
 Available endpoints:
-- GET  /api/health        Health check
-- POST /api/auth/login    User login (username + password)
-- POST /api/auth/refresh  Refresh access token
-- POST /api/auth/logout   User logout
-- GET  /api/auth/me       Get current user
+- GET  /api/health              Health check
+- POST /api/auth/login          User login
+- POST /api/auth/refresh        Refresh access token
+- POST /api/auth/logout         User logout
+- GET  /api/auth/me             Get current user
+- GET  /api/approvals/flows     List approval flows
+- POST /api/approvals/instances Submit approval
+- GET  /api/notifications       My notifications
+- POST /api/notifications/send  Send notification
   `);
 });
 
@@ -30,6 +38,7 @@ function shutdown(signal: string) {
   console.log(`${signal} received, closing server...`);
   server.close(async () => {
     console.log('Server closed');
+    await stopNotificationWorker();
     await prisma.$disconnect();
     redis.disconnect();
     process.exit(0);
