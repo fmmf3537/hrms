@@ -296,3 +296,48 @@ model NotificationLog {
   @@index([channel, status])
   @@map("notification_logs")
 }
+
+// ==================== 字段加密（M0.5-3）====================
+// 加密字段配置（EncryptedField）→ 访问审计（EncryptedFieldAudit）
+// 算法：AES-256-GCM（认证加密），主密钥从 env 加载
+// 存储格式：base64(iv).base64(ciphertext).base64(authTag)
+
+model EncryptedField {
+  id             String   @id @default(uuid()) @db.Uuid
+  tableName      String   @map("table_name") @db.VarChar(100)
+  columnName     String   @map("column_name") @db.VarChar(100)
+  encryptionAlgo String   @default("aes-256-gcm") @map("encryption_algo") @db.VarChar(50)
+  keyVersion     Int      @default(1) @map("key_version")
+  accessRoles    Json     @map("access_roles") // ["admin", "hr", "self"]，self=员工本人
+  enabled        Boolean  @default(true)
+  description    String?  @db.Text
+  createdBy      String?  @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // 关系
+  audits EncryptedFieldAudit[]
+
+  @@unique([tableName, columnName])
+  @@index([enabled])
+  @@map("encrypted_fields")
+}
+
+model EncryptedFieldAudit {
+  id        String   @id @default(uuid()) @db.Uuid
+  fieldId   String   @map("field_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  operation String   @db.VarChar(20) // encrypt / decrypt / rotate_key
+  recordId  String?  @map("record_id") @db.Uuid // 哪条记录的字段被操作
+  ipAddress String?  @map("ip_address") @db.VarChar(45) // IPv4/IPv6
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // 关系
+  field EncryptedField @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@index([fieldId, createdAt])
+  @@index([userId, operation])
+  @@index([createdAt])
+  @@map("encrypted_field_audits")
+}

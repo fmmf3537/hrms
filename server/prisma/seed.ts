@@ -320,6 +320,85 @@ async function main() {
 
   console.log(`   ✓ ${7} notification templates seeded`);
 
+  console.log('==> Seeding default encrypted fields (M0.5-3)...');
+
+  // 1) 员工身份证号 — admin/hr/员工本人
+  await prisma.encryptedField.upsert({
+    where: { tableName_columnName: { tableName: 'employees', columnName: 'id_card' } },
+    update: {},
+    create: {
+      tableName: 'employees',
+      columnName: 'id_card',
+      encryptionAlgo: 'aes-256-gcm',
+      keyVersion: 1,
+      accessRoles: ['admin', 'hr', 'self'],
+      enabled: true,
+      description: '员工身份证号（18 位）— admin/hr 全部可见，本人可见，其他角色 mask',
+    },
+  });
+
+  // 2) 员工银行卡号 — 仅 admin/hr
+  await prisma.encryptedField.upsert({
+    where: { tableName_columnName: { tableName: 'employees', columnName: 'bank_card' } },
+    update: {},
+    create: {
+      tableName: 'employees',
+      columnName: 'bank_card',
+      encryptionAlgo: 'aes-256-gcm',
+      keyVersion: 1,
+      accessRoles: ['admin', 'hr'],
+      enabled: true,
+      description: '员工银行卡号 — 仅 admin/hr 可见',
+    },
+  });
+
+  // 3) 工资单基本工资 — admin/hr
+  await prisma.encryptedField.upsert({
+    where: { tableName_columnName: { tableName: 'payslips', columnName: 'base_salary' } },
+    update: {},
+    create: {
+      tableName: 'payslips',
+      columnName: 'base_salary',
+      encryptionAlgo: 'aes-256-gcm',
+      keyVersion: 1,
+      accessRoles: ['admin', 'hr'],
+      enabled: true,
+      description: '工资单基本工资 — 仅 admin/hr 可见（员工本人按审计脱敏规则显示 mask）',
+    },
+  });
+
+  // 4) 工资单奖金 — admin/hr
+  await prisma.encryptedField.upsert({
+    where: { tableName_columnName: { tableName: 'payslips', columnName: 'bonus' } },
+    update: {},
+    create: {
+      tableName: 'payslips',
+      columnName: 'bonus',
+      encryptionAlgo: 'aes-256-gcm',
+      keyVersion: 1,
+      accessRoles: ['admin', 'hr'],
+      enabled: true,
+      description: '工资单奖金/津贴 — 仅 admin/hr 可见',
+    },
+  });
+
+  // 5) 员工手机号 — admin/hr/员工本人
+  await prisma.encryptedField.upsert({
+    where: { tableName_columnName: { tableName: 'employees', columnName: 'phone' } },
+    update: {},
+    create: {
+      tableName: 'employees',
+      columnName: 'phone',
+      encryptionAlgo: 'aes-256-gcm',
+      keyVersion: 1,
+      accessRoles: ['admin', 'hr', 'self'],
+      enabled: true,
+      description: '员工手机号 — admin/hr/本人可见',
+    },
+  });
+
+  console.log('   ✓ 5 encrypted fields registered');
+
   console.log('==> Done.');
 }
 

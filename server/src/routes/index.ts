@@ -3,6 +3,7 @@ import { Router, type Router as RouterType } from 'express';
 import approvalRoutes from './approval';
 import auditRoutes from './audit';
 import authRoutes from './auth';
+import encryptedFieldRoutes from './encryptedField';
 import notificationRoutes from './notification';
 
 const router: RouterType = Router();
@@ -26,5 +27,7 @@ router.use('/audit-logs', auditRoutes);
 router.use('/approvals', approvalRoutes);
 // M0.5-2: 通知
 router.use('/notifications', notificationRoutes);
+// M0.5-3: 字段加密
+router.use('/encrypted-fields', encryptedFieldRoutes);
 
 export default router;

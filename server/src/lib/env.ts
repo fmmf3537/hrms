@@ -56,6 +56,16 @@ const envSchema = z.object({
     }),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
+  // 字段加密（M0.5-3）
+  // 主密钥：64 个十六进制字符（32 字节）= AES-256
+  // 生产环境必须从 KMS 注入，禁止使用 dev-only 默认值
+  ENCRYPTION_KEY: z.string()
+    .regex(/^[a-f0-9]{64}$/, 'ENCRYPTION_KEY 必须是 64 位十六进制字符串（32 字节）')
+    .refine((v) => !isProd || !isForbiddenSecret(v), {
+      message: `ENCRYPTION_KEY in production must not contain any of: ${FORBIDDEN_SECRET_FRAGMENTS.join(', ')}`,
+    })
+    .default(isProd ? '' : 'a'.repeat(64)), // 开发占位（64 个 a），生产必须显式提供
+
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });
