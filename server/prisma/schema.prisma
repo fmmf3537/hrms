@@ -756,3 +756,61 @@ model HandoverTask {
   @@index([ownerId, status])
   @@map("handover_tasks")
 }
+
+// ==================== M1-A5 调动流程 ====================
+// 状态机：draft → submitted → approved / rejected / cancelled
+// 关联 employee（A2 已有）+ employee_position_history（A2 已有，A5 写入）
+//                    + employee_salary_history（A2 已有，A4 已用，A5 写入）
+//                    + approval_instance（M0.5-1 已有）
+model TransferRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  // 关联员工
+  employeeId    String   @map("employee_id") @db.Uuid
+  // 调动类型
+  transferType  String   @map("transfer_type") @db.VarChar(20)
+  // transfer / promote / demote
+  // 调动原因
+  reason        String?  @db.Text
+  // 调动前部门（snapshot，冗余保存避免后续部门调整影响）
+  fromCompanyId String   @map("from_company_id") @db.Uuid
+  fromDeptId    String   @map("from_dept_id") @db.Uuid
+  fromPosition  String?  @map("from_position") @db.VarChar(100)
+  // 调动后部门
+  toCompanyId   String   @map("to_company_id") @db.Uuid
+  toDeptId      String   @map("to_dept_id") @db.Uuid
+  toPosition    String   @map("to_position") @db.VarChar(100)
+  // 薪资变更（晋升/降职必填，平调可选）
+  newBaseSalary          Decimal? @map("new_base_salary") @db.Decimal(10, 2)
+  newPerformanceSalary   Decimal? @map("new_performance_salary") @db.Decimal(10, 2)
+  newTotalSalary         Decimal? @map("new_total_salary") @db.Decimal(10, 2)
+  // 生效日
+  effectiveDate DateTime @map("effective_date") @db.Date
+  // 状态机
+  status        String   @default("draft") @db.VarChar(20)
+  // draft / submitted / approved / rejected / cancelled
+  // 审批流（M0.5-1）
+  approvalInstanceId String? @unique @map("approval_instance_id") @db.Uuid
+  // 审批结果
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  approvedBy     String?   @map("approved_by") @db.Uuid
+  rejectedAt     DateTime? @map("rejected_at") @db.Timestamptz(6)
+  rejectedBy     String?   @map("rejected_by") @db.Uuid
+  rejectedReason String?   @map("rejected_reason") @db.Text
+  // 联动状态
+  positionHistoryWritten Boolean @default(false) @map("position_history_written")
+  salaryHistoryWritten   Boolean @default(false) @map("salary_history_written")
+  employeeUpdated        Boolean @default(false) @map("employee_updated")
+  // 元数据
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  cancelledAt     DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy     String?   @map("cancelled_by") @db.Uuid
+  cancelledReason String?   @map("cancelled_reason") @db.Text
+
+  @@index([employeeId, status])
+  @@index([status, effectiveDate])
+  @@index([fromDeptId, status])
+  @@index([toDeptId, status])
+  @@map("transfer_records")
+}

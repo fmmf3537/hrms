@@ -104,7 +104,13 @@ V1.2 之前的 6 个严重项全部修复：
   + 离职证明 mock PDF（HTML + 水印，configs.offboarding.certificate_*）
   + 档案 1 年后访问 RBAC（configs.offboarding.archive_access_after_1y）
   + 6 个新端点 + 21 个新单测（213 → 234）
-- 后续：A5（调动）→ A7（合同）
+- **A5 调动流程（已完成）**：transfer_records 1 张表
+  + 4 级审批流（调出部门 → 调入部门 → HR → 总经理）
+  + 调动类型（平调/晋升/降职）+ 联动 employee_position_history + employee_salary_history
+  + 立即/次月生效策略（configs.transfer.salary_effective）
+  + 5 个新端点 + 21 个新单测（234 → 255）
+  + **权限重算留二期，未来生效日 BullMQ 留独立任务**
+- 后续：A7（合同）
 
 ### 工程强约束（V1.2 时代）
 

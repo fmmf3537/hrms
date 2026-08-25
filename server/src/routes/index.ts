@@ -14,6 +14,7 @@ import notificationRoutes from './notification';
 import offboardingRoutes from './offboarding';
 import onboardingRoutes from './onboarding';
 import regularizationRoutes from './regularization';
+import transferRoutes from './transfer';
 
 const router: RouterType = Router();
 
@@ -51,5 +52,6 @@ router.use('/employees', employeeRoutes);
 router.use('/onboarding', onboardingRoutes);
 router.use('/regularizations', regularizationRoutes);
 router.use('/offboarding', offboardingRoutes);
+router.use('/transfers', transferRoutes);
 
 export default router;

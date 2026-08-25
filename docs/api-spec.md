@@ -687,6 +687,16 @@
 | POST | `/offboarding/:id/cancel` | 是 | 撤回/取消 |
 | POST | `/offboarding/:id/issue-certificate` | 是 | 签发离职证明（mock HTML PDF） |
 
+### 3.11 Transfer API（M1-A5）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/transfers` | 是 | HR 提交调动申请（draft） |
+| GET | `/transfers` | 是 | 调动列表（分页 + 状态/员工/fromDept/toDept 过滤） |
+| GET | `/transfers/:id` | 是 | 调动详情（含 employee + fromDept + toDept 关联） |
+| POST | `/transfers/:id/update` | 是 | 更新调动草稿（仅 draft） |
+| POST | `/transfers/:id/cancel` | 是 | 撤回/取消（draft 直接取消；submitted 调 approval.withdraw） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

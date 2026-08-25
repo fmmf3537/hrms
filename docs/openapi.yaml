@@ -1393,6 +1393,103 @@ paths:
         '200':
           description: 成功
 
+  /transfers:
+    get:
+      tags: [Transfer]
+      summary: 调动列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, submitted, approved, rejected, cancelled]
+        - name: fromDeptId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: toDeptId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Transfer]
+      summary: 提交调动申请（draft）
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /transfers/{id}:
+    get:
+      tags: [Transfer]
+      summary: 调动详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /transfers/{id}/update:
+    post:
+      tags: [Transfer]
+      summary: 更新调动草稿
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferUpdateInput'
+      responses:
+        '200':
+          description: 成功
+  /transfers/{id}/cancel:
+    post:
+      tags: [Transfer]
+      summary: 撤回/取消调动
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1955,3 +2052,37 @@ components:
           enum: [employee_initiated, company_initiated]
         reason: { type: string }
         lastWorkingDate: { type: string, format: date }
+
+    TransferCreateInput:
+      type: object
+      required: [employeeId, transferType, toCompanyId, toDeptId, toPosition, effectiveDate]
+      properties:
+        employeeId: { type: string, format: uuid }
+        transferType:
+          type: string
+          enum: [transfer, promote, demote]
+        reason: { type: string }
+        fromCompanyId: { type: string, format: uuid }
+        fromDeptId: { type: string, format: uuid }
+        toCompanyId: { type: string, format: uuid }
+        toDeptId: { type: string, format: uuid }
+        toPosition: { type: string }
+        newBaseSalary: { type: number }
+        newPerformanceSalary: { type: number }
+        newTotalSalary: { type: number }
+        effectiveDate: { type: string, format: date }
+
+    TransferUpdateInput:
+      type: object
+      properties:
+        transferType:
+          type: string
+          enum: [transfer, promote, demote]
+        reason: { type: string, nullable: true }
+        toCompanyId: { type: string, format: uuid }
+        toDeptId: { type: string, format: uuid }
+        toPosition: { type: string }
+        newBaseSalary: { type: number, nullable: true }
+        newPerformanceSalary: { type: number, nullable: true }
+        newTotalSalary: { type: number, nullable: true }
+        effectiveDate: { type: string, format: date }

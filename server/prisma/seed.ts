@@ -157,6 +157,37 @@ const DEFAULT_CONFIGS: Array<{
     value: ['hr', 'ceo'],
     remark: '离职审批节点',
   },
+  // M1-A5 调动流程
+  {
+    category: 'transfer',
+    key: 'approval_flow_key',
+    value: 'transfer:transfer_approval',
+    remark: '调动审批流 flowKey',
+  },
+  {
+    category: 'transfer',
+    key: 'approval_nodes',
+    value: ['from_dept_leader', 'to_dept_leader', 'hr', 'ceo'],
+    remark: '调动 4 级审批节点',
+  },
+  {
+    category: 'transfer',
+    key: 'salary_effective',
+    value: 'immediate',
+    remark: '调动薪资生效策略',
+  },
+  {
+    category: 'transfer',
+    key: 'requires_salary_for_promote',
+    value: true,
+    remark: '晋升/降职必填新薪资',
+  },
+  {
+    category: 'transfer',
+    key: 'max_future_days',
+    value: 90,
+    remark: '未来生效日最大天数',
+  },
 ];
 
 async function main() {
@@ -848,6 +879,48 @@ async function main() {
     }
   } else {
     console.log('   ✓ no active employee, skip offboarding seed');
+  }
+
+  console.log('==> Seeding transfer demo (M1-A5)...');
+  const transferEmp = await prisma.employee.findFirst({
+    where: {
+      companyId: xach.id,
+      status: 'active',
+      deletedAt: null,
+      employeeNo: `XACH${year}0003`,
+    },
+  });
+  const finDept = seededDepts.find((d) => d.code === 'FIN');
+  if (transferEmp && finDept && techDept) {
+    const existingTransfer = await prisma.transferRecord.findFirst({
+      where: {
+        employeeId: transferEmp.id,
+        status: { notIn: ['rejected', 'cancelled'] },
+      },
+    });
+    if (!existingTransfer) {
+      await prisma.transferRecord.create({
+        data: {
+          employeeId: transferEmp.id,
+          transferType: 'transfer',
+          reason: '演示：跨部门平调',
+          fromCompanyId: xach.id,
+          fromDeptId: techDept.id,
+          fromPosition: '部门负责人',
+          toCompanyId: xach.id,
+          toDeptId: finDept.id,
+          toPosition: '财务专员',
+          effectiveDate: new Date(`${year}-09-01`),
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 1 transfer record (draft)');
+    } else {
+      console.log('   ✓ transfer demo already exists (skip)');
+    }
+  } else {
+    console.log('   ✓ no suitable employee/dept, skip transfer seed');
   }
 
   console.log('==> Done.');
