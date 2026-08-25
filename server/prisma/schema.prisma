@@ -82,8 +82,9 @@ model Company {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  departments Department[]
-  employees   Employee[]
+  departments        Department[]
+  employees          Employee[]
+  onboardingRecords  OnboardingRecord[]
 
   @@index([status])
   @@map("companies")
@@ -105,10 +106,11 @@ model Department {
   updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(6)
 
-  company   Company      @relation(fields: [companyId], references: [id], onDelete: Restrict)
-  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children  Department[] @relation("DepartmentHierarchy")
-  employees Employee[]
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  parent            Department?        @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children          Department[]       @relation("DepartmentHierarchy")
+  employees         Employee[]
+  onboardingRecords OnboardingRecord[]
 
   @@unique([companyId, code])
   @@index([companyId, parentId])
@@ -562,4 +564,83 @@ model AiSummary {
   @@index([type, referenceId])
   @@index([expiresAt])
   @@map("ai_summaries")
+}
+
+// ==================== M1-A3 入职流程 ====================
+// 状态机：draft → submitted → approved / cancelled
+// 关联 employee 后字段被复制到 employees 表
+model OnboardingRecord {
+  id           String    @id @default(uuid()) @db.Uuid
+  // 草稿基本信息
+  name         String    @db.VarChar(50)
+  gender       String?   @db.VarChar(10)
+  birthDate    DateTime? @map("birth_date") @db.Date
+  phone        String?   @map("phone") @db.Text // 加密
+  email        String?   @db.VarChar(100)
+  // 入职单位 / 部门（草稿阶段允许先选好）
+  companyId    String    @map("company_id") @db.Uuid
+  departmentId String    @map("department_id") @db.Uuid
+  // 入职信息
+  hireDate     DateTime  @map("hire_date") @db.Date
+  contractType String    @map("contract_type") @db.VarChar(50)
+  // 试用期
+  probationMonths Int? @map("probation_months") // 默认从 configs.probation.months 读
+  // 薪资（草稿可填，正式入 employee 表时再写 history）
+  baseSalary Decimal? @map("base_salary") @db.Decimal(10, 2)
+  // OCR 临时字段（草稿阶段保存，confirm 时复制到 employees 表）
+  idCard        String?   @map("id_card") @db.Text // 加密
+  idCardOcrAt   DateTime? @map("id_card_ocr_at") @db.Timestamptz(6)
+  bankName      String?   @map("bank_name") @db.VarChar(100)
+  bankCard      String?   @map("bank_card") @db.Text // 加密
+  bankCardOcrAt DateTime? @map("bank_card_ocr_at") @db.Timestamptz(6)
+  certificates  Json? // [{name, number, issueDate, expireDate, imageUrl}]
+  // 材料完整性（走 configs.onboarding.required_materials 校验）
+  materialsChecklist Json? @map("materials_checklist")
+  // 状态机 draft / submitted / approved / cancelled
+  status String @default("draft") @db.VarChar(20)
+  // 审批流（M0.5-1）
+  approvalInstanceId String? @unique @map("approval_instance_id") @db.Uuid
+  // 关联 employee（approved 后回填）
+  employeeId String? @unique @map("employee_id") @db.Uuid
+  // 元数据
+  createdBy       String?   @map("created_by") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  cancelledAt     DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledReason String?   @map("cancelled_reason") @db.Text
+
+  company    Company          @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  department Department       @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  tasks      OnboardingTask[]
+
+  @@index([companyId, status])
+  @@index([status, hireDate])
+  @@index([createdBy, status])
+  @@map("onboarding_records")
+}
+
+// 入职引导清单（configs.onboarding.checklist 模板 → 实际任务实例）
+model OnboardingTask {
+  id           String    @id @default(uuid()) @db.Uuid
+  onboardingId String    @map("onboarding_id") @db.Uuid
+  // 任务名（来自 checklist 模板）
+  name         String    @db.VarChar(100) // '设备发放' / '工位安排' / '导师分配' / '培训安排'
+  // 任务类别 equipment / workspace / mentor / training
+  category     String    @db.VarChar(50)
+  // 负责人
+  ownerId      String?   @map("owner_id") @db.Uuid
+  // 状态 pending / in_progress / done / skipped
+  status       String    @default("pending") @db.VarChar(20)
+  dueDate      DateTime? @map("due_date") @db.Date
+  completedAt  DateTime? @map("completed_at") @db.Timestamptz(6)
+  completedBy  String?   @map("completed_by") @db.Uuid
+  remark       String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  onboarding OnboardingRecord @relation(fields: [onboardingId], references: [id], onDelete: Cascade)
+
+  @@index([onboardingId, status])
+  @@index([ownerId, status])
+  @@map("onboarding_tasks")
 }

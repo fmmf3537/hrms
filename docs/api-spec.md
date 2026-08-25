@@ -657,6 +657,16 @@
 | POST | `/employees/parse-certificate` | 是 | AI OCR 资质证书 |
 | GET | `/employees/contract-expiring` | 是 | N 天内合同到期员工 |
 
+### 3.8 Onboarding API（M1-A3）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/onboarding` | 是 | 发起入职登记（草稿 + 4 个引导任务） |
+| GET | `/onboarding` | 是 | 入职列表（分页 + 状态/公司/部门过滤） |
+| GET | `/onboarding/:id` | 是 | 入职详情（含 tasks，敏感字段脱敏） |
+| POST | `/onboarding/:id/parse-ocr` | 是 | OCR 三合一（idCard / bankCard / certificate） |
+| POST | `/onboarding/:id/confirm` | 是 | 提交审批（draft→submitted）；body.approved 时为审批回调 confirm/reject |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

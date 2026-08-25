@@ -69,11 +69,31 @@ const DEFAULT_CONFIGS: Array<{
   },
   { category: 'hr_attrition', key: 'overtime_ratio_threshold', value: 0.2, remark: '加班费占比预警' },
   { category: 'hr_attrition', key: 'monthly_threshold', value: 0.05, remark: '月度离职率预警' },
+  { category: 'tax', key: 'year_end_bonus_policy', value: { mode: 'separate', valid_until: '2027-12-31', auto_fallback: 'merged' }, remark: '年终奖计税政策' },
+  // M1-A3 入职流程
   {
-    category: 'tax',
-    key: 'year_end_bonus_policy',
-    value: { mode: 'separate', valid_until: '2027-12-31', auto_fallback: 'merged' },
-    remark: '年终奖计税政策',
+    category: 'onboarding',
+    key: 'required_materials',
+    value: ['idCard', 'bankCard', 'degreeCert'],
+    remark: '入职必填材料',
+  },
+  {
+    category: 'onboarding',
+    key: 'default_role',
+    value: 'employee',
+    remark: '入职默认角色',
+  },
+  {
+    category: 'onboarding',
+    key: 'default_password_pattern',
+    value: 'Welcome@{seq4}',
+    remark: '入职默认密码模板',
+  },
+  {
+    category: 'onboarding',
+    key: 'checklist',
+    value: ['设备发放', '工位安排', '导师分配', '培训安排'],
+    remark: '入职引导清单模板',
   },
 ];
 
@@ -651,6 +671,41 @@ async function main() {
     }
   }
   console.log(`   ✓ ${empCreated} employees created (idempotent)`);
+
+  console.log('==> Seeding onboarding demo (M1-A3)...');
+  const existingOb = await prisma.onboardingRecord.findFirst({
+    where: { name: '测试新员工', companyId: xach.id, status: 'draft' },
+  });
+  if (!existingOb) {
+    await prisma.onboardingRecord.create({
+      data: {
+        name: '测试新员工',
+        gender: 'male',
+        email: 'onboarding.demo@example.com',
+        companyId: xach.id,
+        departmentId: techDept.id,
+        hireDate: new Date(`${year}-09-01`),
+        contractType: 'formal',
+        probationMonths: 3,
+        materialsChecklist: {
+          idCard: true, bankCard: true, degreeCert: true,
+        },
+        status: 'draft',
+        createdBy: admin.id,
+        tasks: {
+          create: [
+            { name: '设备发放', category: 'equipment', status: 'pending' },
+            { name: '工位安排', category: 'workspace', status: 'pending' },
+            { name: '导师分配', category: 'mentor', status: 'pending' },
+            { name: '培训安排', category: 'training', status: 'pending' },
+          ],
+        },
+      },
+    });
+    console.log('   ✓ 1 onboarding record + 4 tasks');
+  } else {
+    console.log('   ✓ onboarding demo already exists (skip)');
+  }
 
   console.log('==> Done.');
 }

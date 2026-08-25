@@ -90,6 +90,11 @@ export const PERMISSIONS = {
   // M1-A2 员工档案（DEPARTMENT_* / EMPLOYEE_READ/WRITE 已存在，复用）
   EMPLOYEE_READ_SENSITIVE: 'employee:read_sensitive',
   EMPLOYEE_AI_OCR: 'employee:ai_ocr',
+
+  // M1-A3 入职流程
+  ONBOARDING_READ: 'onboarding:read',
+  ONBOARDING_WRITE: 'onboarding:write',
+  ONBOARDING_CONFIRM: 'onboarding:confirm',
 } as const;
 
 /** 权限点字面量联合类型 */
@@ -137,6 +142,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.AI_DOCUMENT_READ,
     PERMISSIONS.AI_DOCUMENT_WRITE,
     PERMISSIONS.AI_CONVERSATION_READ,
+    PERMISSIONS.ONBOARDING_READ,
+    PERMISSIONS.ONBOARDING_WRITE,
+    PERMISSIONS.ONBOARDING_CONFIRM,
   ],
   dept_head: [
     PERMISSIONS.EMPLOYEE_READ_SELF_DEPT,
@@ -147,6 +155,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.LEAVE_APPROVE,
     PERMISSIONS.OVERTIME_APPROVE,
     PERMISSIONS.APPROVAL_INSTANCE_ACT,
+    PERMISSIONS.ONBOARDING_READ,
   ],
   executive: [
     PERMISSIONS.EMPLOYEE_READ,

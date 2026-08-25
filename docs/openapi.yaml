@@ -49,6 +49,8 @@ tags:
     description: 部门树（M1-A1）
   - name: Employee
     description: 员工档案（M1-A2）
+  - name: Onboarding
+    description: 入职流程（M1-A3）
 
 security:
   - BearerAuth: []
@@ -1124,6 +1126,111 @@ paths:
         '200':
           description: 成功
 
+  /onboarding:
+    get:
+      tags: [Onboarding]
+      summary: 入职列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: companyId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: departmentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, submitted, approved, cancelled]
+        - name: keyword
+          in: query
+          schema: { type: string }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Onboarding]
+      summary: 发起入职登记（草稿）
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /onboarding/{id}:
+    get:
+      tags: [Onboarding]
+      summary: 入职详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /onboarding/{id}/parse-ocr:
+    post:
+      tags: [Onboarding]
+      summary: OCR 三合一
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, imageBase64]
+              properties:
+                type:
+                  type: string
+                  enum: [idCard, bankCard, certificate]
+                imageBase64:
+                  type: string
+      responses:
+        '200':
+          description: 成功
+  /onboarding/{id}/confirm:
+    post:
+      tags: [Onboarding]
+      summary: 提交审批或审批回调确认/驳回
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approved: { type: boolean }
+                instanceId: { type: string, format: uuid }
+                reason: { type: string }
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1644,3 +1751,21 @@ components:
           type: array
           items:
             type: object
+
+    OnboardingCreateInput:
+      type: object
+      required: [name, companyId, departmentId, hireDate, contractType]
+      properties:
+        name: { type: string }
+        companyId: { type: string, format: uuid }
+        departmentId: { type: string, format: uuid }
+        hireDate: { type: string, format: date }
+        contractType:
+          type: string
+          enum: [formal, intern, consultant, labor]
+        gender: { type: string, enum: [male, female] }
+        phone: { type: string }
+        email: { type: string, format: email }
+        materialsChecklist:
+          type: object
+          additionalProperties: { type: boolean }
