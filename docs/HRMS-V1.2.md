@@ -143,7 +143,7 @@
 
 **关键交互**：
 - 身份证号自动校验合法性，自动计算出生日期与性别
-- **AI OCR 自动填充**（M1 嵌入）：员工上传证件/银行卡/证书照片后自动识别填入对应字段
+- **AI OCR 自动填充**（M1 嵌入）：员工上传证件/银行卡/证书照片后自动识别填入对应字段 —— 接口见 [`api-spec.md`](./api-spec.md) §4.5 `/ai/ocr`，数据流见 [`flow-diagrams.md`](./flow-diagrams.md) §1.1 入职流程
 - 合同到期前 **30/15/7 天**三级预警（系统消息 + 邮件，走 M0.5 通知基础设施）
 - 资质证书到期前 60 天预警（无人机执照年审）
 - 员工信息修改支持员工自助提交 + HR 审批（二期）
@@ -182,7 +182,7 @@
 - 合同状态：草拟 / 待签 / 已签 / 即将到期 / 已到期 / 已终止
 - 合同附件：扫描件上传（PDF/JPG，单文件 ≤10MB）
 - 到期预警：30/15/7 天三级
-- **电子签**（一期用免费版 e-签宝，提前于 V1.1 的二期计划）
+- **电子签**（一期用免费版 e-签宝，提前于 V1.1 的二期计划）—— 选型决策 / 3 年预算 / 隐性成本分析见 [`e-sign-cost.md`](./e-sign-cost.md)
 
 ### 2.3 模块 B：考勤假勤
 
@@ -639,6 +639,12 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 - 配置表行数小（< 200 行），可在服务启动时**全量加载到内存**，每 5 分钟刷新一次
 - 历史版本查询走 DB（按 version / date 范围）
 
+#### 3.5.5 相关文档
+
+- 配置项的**保留期 + 归档 + 销毁 SOP**：[`operations.md`](./operations.md) §2 数据生命周期完整 SOP
+- 配置变更涉及**敏感值写入**（如薪资、绩效系数）的**脱敏规则**：[`audit-masking.md`](./audit-masking.md) §2 基线脱敏规则
+- 配置变更操作的**错误码**（如并发冲突、版本冲突）：[`error-codes.md`](./error-codes.md) §7xxxx 通用业务
+
 ---
 
 ## 四、阶段与任务
@@ -723,6 +729,15 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 > 2. 发现 30 天内到期 → 写 `notification_logs`（模板：合同到期提醒）
 > 3. 通知适配器异步发邮件 + 站内信
 > 4. 同时创建 `approval_instances`（自动发起合同续签审批流，走 M0.5-1 基础设施）
+
+#### 4.4.4 M0.5 配套文档
+
+- **接口契约**（API 路径 / 请求 / 响应）：[`api-spec.md`](./api-spec.md) §4 M0.5 即将实现接口 + [`openapi.yaml`](./openapi.yaml)（Swagger 可加载）
+- **错误码**（2xxxx 审批 / 3xxxx 通知 / 4xxxx 加密 / 5xxxx 对接 / 6xxxx AI）：[`error-codes.md`](./error-codes.md) §二、段位规划
+- **数据模型**（ER 图含 7 张 M0.5 新表）：[`flow-diagrams.md`](./flow-diagrams.md) §3.2 审批流 + 通知 + 加密 + AI 数据模型
+- **系统架构图**（含 M0.5 公共底座层与各业务模块的复用关系）：[`flow-diagrams.md`](./flow-diagrams.md) §2.1 整体技术架构
+- **代码评审 checklist**（新增 AI 调用合规检查项）：[`operations.md`](./operations.md) §3.5 故障预防 + §3.3.3 升级机制
+- **敏感字段脱敏规则**（AI 调用结果写审计的脱敏基线）：[`audit-masking.md`](./audit-masking.md) §2.1 字段级脱敏规则
 
 ---
 
@@ -1026,10 +1041,17 @@ AI 生成的代码必须经人工评审，重点检查：
 
 1. 选定 LLM 供应商并申请 API Key（OpenAI / DeepSeek / 通义千问任一）
 2. 申请 OCR 服务（腾讯云 OCR / 百度 AI 开放平台）
-3. 申请电子签（e-签宝个人/小微企业版，免费够用）
+3. 申请电子签（e-签宝个人/小微企业版，免费够用）—— 详见 [`e-sign-cost.md`](./e-sign-cost.md) 选型决策
 4. 准备 pgvector 扩展（Docker 镜像确认或自建）
 5. 准备 KMS / 密钥管理（生产前必须，开发期用 .env 占位）
 6. 配置 .env 新增项：`LLM_API_KEY` / `OCR_SECRET` / `ENCRYPTION_KEY` / `NOTIFICATION_SMTP_*` / `SMS_*`
+
+#### 6.5.1 M0.5 期间配套预算与运维
+
+- **外部服务月度预算**（100 人规模，~2,145 元/月）：[`operations.md`](./operations.md) §1.2 外部服务月费明细
+- **Bug 响应 SLA**（4 级 P0/P1/P2/P3）：[`operations.md`](./operations.md) §3.1 故障分级
+- **AI 能力调用审计**（userId / capability / tokens / cost / duration）：[`audit-masking.md`](./audit-masking.md) §5 二次审计
+- **配置变更运维**（业务规则走 `configs` 表 + 版本回溯）：详见 [§3.5](#35-配置表与版本回溯约定v12-统一)
 
 ---
 
