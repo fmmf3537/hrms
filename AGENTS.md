@@ -56,6 +56,16 @@ V1.2 之前的 6 个严重项全部修复：
 - [x] Prisma 类型推导消除 `as UserWithRoles` 强转
 - 单测 26/26 通过；lint 0 错；type-check 0 错
 
+### V1.2.1 演进（已完成）
+- [x] audit_logs 加 `actor_type` 字段（USER / AGENT / SYSTEM / INTEGRATION）+ 2 个新 index
+- [x] PostgreSQL 镜像切到 `pgvector/pgvector:pg16` + 自动启用 vector 扩展
+- [x] auth.service 渐进式重哈希（cost 10 → 12 异步升级）
+- [x] 修复账号枚举漏洞（账号禁用统一 401+10110）
+- [x] 5 处 AppError 升级为 3 参（message, statusCode, code）
+- [x] 新增 [`docs/knowledge-base-seed.md`](./docs/knowledge-base-seed.md)（AI 智能问答冷启动 ≥ 28 篇）
+- [x] api-spec.md / openapi.yaml / flow-diagrams.md / audit-masking.md 全部同步 actor_type / reveal 接口 / 历史表 ER 图
+- 单测 29/29 通过（新增 3 个：账号禁用防枚举 + 渐进式重哈希 2 个）
+
 ### M0.5 公共底座 + AI 底座（第 2 周，规划中）
 - [ ] M0.5-1 审批流基础设施（approval_flows / approval_instances / approval_records）
 - [ ] M0.5-2 消息通知基础设施（notification_templates / notification_logs + BullMQ）

@@ -245,6 +245,7 @@
 | Method | Path | 鉴权 | 权限 | 描述 |
 |---|---|---|---|---|
 | GET | `/audit-logs` | 是 | `audit:read` | 分页查询审计日志 |
+| POST | `/audit-logs/:id/reveal` | 是 | `audit:read` + 角色为 admin/hr/executive | 申请查看某条审计的明文（详见 [`audit-masking.md`](./audit-masking.md) §4.2） |
 
 #### GET /audit-logs
 
@@ -252,7 +253,8 @@
 - `page`（默认 1）
 - `pageSize`（默认 20，最大 100）
 - `userId`（可选，UUID）
-- `action`（可选，如 `LOGIN` / `CREATE` / `UPDATE` / `DELETE` / `EXPORT`）
+- `actorType`（可选，V1.2.1 新增，如 `USER` / `AGENT` / `SYSTEM` / `INTEGRATION`）
+- `action`（可选，如 `LOGIN` / `CREATE` / `UPDATE` / `DELETE` / `EXPORT` / `AUDIT_REVEAL`）
 - `resourceType`（可选，如 `Auth` / `Employee`）
 - `from`（可选，ISO datetime）
 - `to`（可选，ISO datetime）
@@ -265,6 +267,7 @@
     {
       "id": "uuid",
       "userId": "uuid",
+      "actorType": "USER",
       "action": "LOGIN",
       "resourceType": "Auth",
       "resourceId": "uuid",
@@ -282,6 +285,36 @@
   "pageSize": 20
 }
 ```
+
+#### POST /audit-logs/:id/reveal
+
+**请求体**：
+```json
+{
+  "fields": ["before.base_salary", "after.base_salary"],
+  "reason": "处理员工投诉，需要核对调薪记录"
+}
+```
+
+**响应**（成功 200，仅返回请求字段，其他仍 mask）：
+```json
+{
+  "success": true,
+  "data": {
+    "before.base_salary": 15000,
+    "after.base_salary": 18000
+  }
+}
+```
+
+**错误码**：
+- `40110 DECRYPT_PERMISSION_DENIED`（403）—— 角色无权限（如 dept_head 不允许看明文）或请求的字段不在脱敏白名单内
+- `70101 NOT_FOUND`（404）—— auditLog 不存在
+- `10121 FORBIDDEN_PERMISSION`（403）—— 缺少 `audit:read` 权限
+
+**关键约束**：
+- 每次 reveal 都写一条 `AUDIT_REVEAL` 审计（actor_type=USER）—— "看明文必留痕"
+- 同一用户 24h 内 reveal > 10 次 → 自动冻结账号 1h + 通知 CTO（详见 [`audit-masking.md`](./audit-masking.md) §5.2）
 
 ## 四、M0.5 即将实现接口
 

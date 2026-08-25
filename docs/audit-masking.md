@@ -49,6 +49,7 @@ V1.2 已实现的 `audit_logs` 表的 `old_value` / `new_value` 是 JSON 字段�
 | **住址** | 字段名含 `address` | 保留到省/市级 | `陕西省西安市雁塔区xx路xx号` → `陕西省西安市` |
 | **紧急联系人** | 字段名含 `emergency_contact` | 完全 mask | `张三` → `***` |
 | **IP 地址** | 含 `.` 的 IPv4 | 末段 mask | `192.168.1.100` → `192.168.1.***` |
+| **actorType**（V1.2.1 新增） | audit_logs.actor_type 字段，枚举值 | **不脱敏**（USER / AGENT / SYSTEM / INTEGRATION 枚举） | `USER` → `USER` |
 
 ### 2.2 基线白名单（不脱敏的字段）
 
@@ -187,6 +188,11 @@ POST /api/audit-logs/:id/reveal
   }
 }
 ```
+
+**错误码**（reveal 接口专用）：
+- 请求的字段不存在或不在脱敏白名单内 → 返回 `400` + `40110 DECRYPT_PERMISSION_DENIED`（V1.2 错误码规范对齐：40110 即 §4xxxx 段）
+- 角色无权限（如 dept_head） → 返回 `403` + `40110 DECRYPT_PERMISSION_DENIED`
+- auditLog 不存在 → 返回 `404` + `70101 NOT_FOUND`
 
 **二次审计**：
 - 写一条 `AUDIT_REVEAL` action 的审计日志

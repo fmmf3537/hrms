@@ -341,6 +341,8 @@ erDiagram
     User ||--o| Employee : "1:1"
     User ||--o{ UserRole : "1:n"
     Role ||--o{ UserRole : "1:n"
+    Employee ||--o{ EmployeePositionHistory : "1:n（V1.2 新增）"
+    Employee ||--o{ SalaryHistory : "1:n（V1.2 新增）"
 
     Company {
         uuid id PK
@@ -396,6 +398,36 @@ erDiagram
     UserRole {
         uuid user_id PK,FK
         uuid role_id PK,FK
+        timestamp created_at
+    }
+
+    EmployeePositionHistory {
+        uuid id PK
+        uuid employee_id FK
+        uuid department_id FK
+        uuid position_id FK
+        string old_value "JSON：部门 / 岗位 / 汇报关系 / 角色"
+        string new_value "JSON"
+        date effective_from
+        date effective_to "null = 当前生效"
+        uuid approval_instance_id FK "关联审批单"
+        string change_reason
+        timestamp created_at
+    }
+
+    SalaryHistory {
+        uuid id PK
+        uuid employee_id FK
+        decimal old_base_salary
+        decimal new_base_salary
+        decimal old_performance_base
+        decimal new_performance_base
+        string old_fixed_floating_ratio "JSON"
+        string new_fixed_floating_ratio "JSON"
+        date effective_from
+        date effective_to "null = 当前生效"
+        uuid approval_instance_id FK
+        string change_reason
         timestamp created_at
     }
 ```

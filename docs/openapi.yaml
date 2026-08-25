@@ -281,6 +281,54 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /audit-logs/{id}/reveal:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      tags: [Audit]
+      summary: 申请查看某条审计的明文（V1.2 角色化脱敏）
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fields, reason]
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: string
+                  example: ["before.base_salary", "after.base_salary"]
+                reason:
+                  type: string
+                  minLength: 5
+                  example: "处理员工投诉，需要核对调薪记录"
+      responses:
+        '200':
+          description: 成功（仅返回请求字段的明文，其他仍 mask）
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    additionalProperties: true
+        '403':
+          description: 角色无权限（如 dept_head 不允许看明文）或字段不在脱敏白名单内
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   # ============== Approval Flow (M0.5-1) ==============
   /approval-flows:
     get:
@@ -980,9 +1028,14 @@ components:
           type: string
           format: uuid
           nullable: true
+        actorType:
+          type: string
+          enum: [USER, AGENT, SYSTEM, INTEGRATION]
+          default: USER
+          description: V1.2.1 新增 — 操作主体类型
         action:
           type: string
-          enum: [LOGIN, CREATE, UPDATE, DELETE, EXPORT]
+          enum: [LOGIN, CREATE, UPDATE, DELETE, EXPORT, AUDIT_REVEAL]
         resourceType:
           type: string
         resourceId:

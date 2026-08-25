@@ -51,8 +51,8 @@
 | 阶段 | 范围 | 说明 |
 |---|---|---|
 | **一期** | M0 脚手架 + M0.5 基础设施与 AI 底座 + M1 组织人事 + M2 考勤假勤 + M3 绩效管理 + M4 薪酬核算 + M5 联调上线 | 核心数据闭环 + 嵌入式 AI 能力，本文档重点 |
-| **二期** | 电子签 + 培训发展 + 员工自助 + 招聘系统接入 + 对话式 BI + 流失预测 | 体验增强与外部对接 |
-| **三期（预留）** | 人才盘点 9 宫格 + 继任梯队 + 高级薪酬公平性分析 | 视一/二期落地效果再启动 |
+| **二期** | 电子签 + 培训发展 + 员工自助 + 招聘系统接入 + **对话式 BI** + 流失预测 + **法人主体变更（合并 / 分立 / 注销）** | 体验增强与外部对接；**对话式 BI 为二期必做**（高管/HR 决策刚需），AI 入职 Copilot 推到三期 |
+| **三期（预留）** | 人才盘点 9 宫格 + 继任梯队 + 高级薪酬公平性分析 + **AI 入职 Copilot** | 视一/二期落地效果再启动 |
 
 **重要变更**（vs V1.0/V1.1）：AI 助手从"三期预留"提升到 **一期嵌入式**，详见 §三.3。
 
@@ -113,9 +113,15 @@
 | 用工形式 | 合同类型 | 结算通道 | 是否缴社保 | 个税方式 |
 |---|---|---|---|---|
 | 正式员工 | 劳动合同 | 薪酬模块 | 是 | 工资薪金所得 |
-| 实习生 | 实习协议 | 劳务费结算 | 否 | 劳务报酬所得 |
+| **研究院聘用人员**（新增） | 聘用合同 | 薪酬模块 | **是（机关事业单位养老保险，独立配置）** | 工资薪金所得 |
+| 实习生 | 实习协议 | 劳务费结算 | ⚠️ 见下 | 劳务报酬所得 |
 | 顾问 | 顾问协议 | 劳务费结算 | 否 | 劳务报酬所得 |
-| 劳务人员 | 劳务合同 | 劳务费结算 | 否 | 劳务报酬所得 |
+| 劳务人员 | 劳务合同 | 劳务费结算 | ⚠️ 见下 | 劳务报酬所得 |
+
+**用工形式判定风险注**（HR / 法务必读）：
+1. **研究院聘用人员**：北京平谷低空安全研究院属研究机构，员工走**机关事业单位养老保险**方案（费率、缴费基数上限与企业社保完全不同），必须在 `configs.social_insurance.research_institute.*` 单独配置；合同模板使用"聘用合同"而非"劳动合同"。
+2. **实习生**：月龄 ≥ 8 且年满 16 周岁、接受单位管理并支付报酬，可能构成事实劳动关系（依据劳社部发〔2005〕12 号《关于确立劳动关系有关事项的通知》），单位应缴社保。系统在"实习生"类型提交时弹窗提示 HR 二次确认"是否构成事实劳动关系"，若"是"则引导切换为"正式员工"。
+3. **劳务人员**：本系统定义的"劳务人员"是**与本公司直接签约的临时用工**（如短期项目工）；**劳务派遣**人员由派遣公司缴社保，与本表"劳务人员"是两种关系，须在 `employee.contract_type` 单独标记以区分。
 
 ### 2.2 模块 A：组织人事
 
@@ -153,6 +159,10 @@
 **入职流程**（走审批流）：
 1. HR 发起入职登记（可对接招聘系统 offer 数据，二期）
 2. 系统自动生成工号（规则：法人代码 + 入职年份 + 4 位流水号，配置化）
+  - **不复用**：离职员工工号永久保留（参见 `configs.employee_no.reuse_after_resign`）
+  - **自然年度重置**：每年 1 月从 `0001` 开始（参见 `configs.employee_no.yearly_reset`）
+  - **DB 唯一约束**：`employees` 表 `(company_id, EXTRACT(year FROM hire_date), seq)` 组合索引
+  - **并发安全**：使用 PostgreSQL `SEQUENCE` 对象（按 `(company_id, year)` 组合），事务内申请流水号
 3. AI OCR 收集资料（身份证、学历证书、银行卡、社保转移单、保密协议）
 4. 合同签订（电子签，二期；一期线下扫描上传）
 5. 开通系统账号 + 分配角色
@@ -174,7 +184,14 @@
 3. 设备归还 + 系统账号禁用 + 门禁权限回收
 4. 薪资结算（含未发工资 + 补偿金 + 调休折现）
 5. 社保减员 + 公积金封存
-6. 档案归档（保留 5 年）
+6. **离职证明生成**（《劳动合同法》§50 法定义务，A6 切片提供；带电子签章或防伪水印 PDF，可邮件推送 / 下载）
+7. 档案归档（保留 5 年）
+
+**A6 切片同步落地的账号生命周期 SOP**（V1.2 新增）：
+- 离职生效日 0 点自动禁用账号
+- 离职 1 年后档案访问权限：仅 admin + 原 HR 可见（其他角色 403）
+- 离职后员工邮箱保留 3 个月后归档（不删除历史邮件，便于法务追溯）
+- 在职 / 收入 / 实习证明推到二期**ESS 证明开具模块**
 
 #### 2.2.4 合同管理
 
@@ -307,28 +324,43 @@
 
 #### 2.4.3 社保公积金
 
-**多地方案**：
+**多地方案**（**示例值基于 2024 年 7 月数据**，具体由 `configs.social_insurance.city` 配置表维护，禁止硬编码；季度复核更新）：
 
-| 城市 | 养老保险 | 医疗保险 | 失业保险 | 公积金 |
-|---|---|---|---|---|
-| 西安 | 16% / 8% | 8% / 2% | 0.7% / 0.3% | 5%-12% |
-| 北京 | 16% / 8% | 9.8% / 2%+3 | 0.5% / 0.5% | 5%-12% |
-| 四川 | 16% / 8% | 8.5% / 2% | 0.6% / 0.4% | 5%-12% |
+| 城市 | 养老保险 单位/个人 | 医疗保险 单位/个人 | 失业保险 单位/个人 | 工伤 单位/个人 | 生育 | 公积金 单位/个人 | 调基月 |
+|---|---|---|---|---|---|---|---|
+| 西安 | 16% / 8% | 8% / 2% | 0.7% / 0.3% | 0.2%-1.9% / — | 并入医保 | 5%-12% / 5%-12% | 7 月 |
+| 北京 | 16% / 8% | **9.0% + 1%（大病）/ 2%** | 0.5% / 0.5% | 0.2%-1.9% / — | 并入医保 | 5%-12% / 5%-12% | 7 月 |
+| 四川 | 16% / 8% | 8.5% / 2% | 0.6% / 0.4% | 0.2%-1.9% / — | 并入医保 | 5%-12% / 5%-12% | 7 月 |
+
+**表头说明**：
+- 工伤单位/个人：`0.2%-1.9%` 是按行业基准费率（不固定），`/` 后 `—` 表示**个人不缴**
+- 生育：目前全国 31 省市**全部并入医疗保险**（不单独征缴），不展示具体数字
+- 公积金：单位/个人 5%-12% 区间，各地可在 5%-12% 内选档（详见 `configs.social_insurance.<city>.housing_fund_rate`）
+- 调基月：通常是 7 月（一年一次），但个别城市有差异（上海 4 月、深圳 7 月、成都 7 月、北京 7 月、西安 7 月），按 HR 实际配置
 
 注：单位比例 / 个人比例；比例为示例，实际按各地最新政策配置
 
 - 系统按员工参保地自动匹配方案
-- 每年 7 月支持批量调整基数（社保调基月）
+- **调基月配置化**：每个城市调基月走 `configs.social_insurance.<city>.base_adjustment_month`（如西安 7 月、北京 7 月、上海 4 月、深圳 7 月、成都 7 月；个别城市有差异，须按 HR 实际配置）
 - 支持社保增减员台账导出（用于社保局申报）
 
 #### 2.4.4 个税
 
 **工资薪金（累计预扣法）**：
 - 起征点：5000 元/月
-- 专项附加扣除：子女教育 2000/月、赡养老人 3000/月、房贷利息 1000/月、房租 1500/月、继续教育 400/月、大病医疗（年度 8 万限额）
+- 专项附加扣除（6 项 + 婴幼儿照护，共 7 项）：
+ - 子女教育：2000 元/月（每个子女）
+ - **3 岁以下婴幼儿照护：2000 元/月（每个婴幼儿，2023 年起新增）**
+ - 赡养老人：3000 元/月（独生子女）/ 兄弟姊妹分摊 ≤ 1500 元/月（非独生分摊）
+ - 房贷利息：1000 元/月（首套房贷款）
+ - 房租：1500 元/月（北上广深）/ 1100 元/月（其他城市）
+ - 继续教育：400 元/月（学历继续教育 ≤ 48 个月）/ 3600 元/年（职业资格）
+ - 大病医疗：年度 8 万元限额（据实扣除）
+- **个人养老金扣除**（2022 年起新增）：12000 元/年
 - 税率表：3% / 10% / 20% / 25% / 30% / 35% / 45%（7 级超额累进）
 
 **年终奖**：单独计税或并入综合所得，员工自选（系统默认单独计税，12 月可切换）。
+- ⚠️ **政策有效期注**：依据《财政部 税务总局关于延续实施全年一次性奖金等个人所得税优惠政策的公告》（财税〔2023〕30 号），单独计税政策有效期至 **2027 年 12 月 31 日**；2028 年起若未续期，HR / 系统须自动切换为"并入综合所得"。建议在 M3 切片加"政策有效性预警"，由 `configs.tax.year_end_bonus_policy` 控制。
 
 **劳务报酬**：
 - 预扣率：≤4000 元 800 元起征；>4000 元 20% 起征
@@ -480,11 +512,11 @@
 | 数据库 | PostgreSQL 15+ | 与招聘系统一致 |
 | 缓存/队列 | Redis + BullMQ | 报表生成、消息推送、定时任务 |
 | 前端 | Vue 3 + Vite + Element Plus + Pinia + ECharts | 与招聘系统一致 |
-| 移动端 | H5（一期）→ 小程序/App（二期） | Vue 3 H5 自适应 |
+| 移动端 | H5（一期）→ **钉钉 H5 微应用优先（二期 2027 H1）→ 飞书/企微微应用（2027 H2）→ 独立小程序/App（三期 2028+ 评估）** | Vue 3 H5 自适应 |
 | 认证 | JWT + Refresh Token（已升级为 rotation + reuse 检测） | 支持单点登录（二期） |
 | 项目结构 | pnpm monorepo（client / server / mobile） | 与招聘系统一致 |
 | 测试 | Vitest + Supertest + Playwright | 单元 + 接口 + E2E |
-| **AI 能力**（V1.2 新增） | LLM 网关（OpenAI 兼容）+ 向量库（Pinecone / 腾讯云）+ OCR（腾讯云/百度） | 4 个点状能力 |
+| **AI 能力**（V1.2 新增） | LLM 网关（OpenAI 兼容）+ 向量库（**pgvector**）+ OCR（腾讯云/百度） | 4 个点状能力 |
 
 **代码范式统一**（V1.2 明确）：采用当前 HRMS 已落地的 **function 导出** 模式（`export function xxx() {}`），**不再沿用招聘系统的 class + 静态方法**。AI Coding Prompt 模板同步更新。
 
@@ -500,7 +532,7 @@
 
 | 模块 | 核心表 | 说明 |
 |---|---|---|
-| 组织人事 | companies / departments / positions / employees / contracts | 法人、部门、岗位、员工、合同（employees / departments 含 external_id 关联得力 e+） |
+| 组织人事 | companies / departments / positions / employees / contracts / **employee_position_history** / **salary_history** | 法人、部门、岗位、员工、合同、**员工岗位历史快照、调薪历史快照**（employees / departments 含 external_id 关联得力 e+） |
 | 考勤假勤 | shifts / schedules / attendance_records / leaves / overtimes / business_trips | 班次、排班、打卡、请假、加班、出差（attendance_records 含 source 来源标记：导入 / API） |
 | 薪酬核算 | salary_grades / payslips / payslip_items / social_insurance / tax_records / service_fees | 薪级、工资单、工资项、社保、个税、劳务费 |
 | 绩效管理 | performance_cycles / performance_indicators / performance_scores / sales_commissions | 考核周期、指标、评分、销售提成 |
@@ -517,6 +549,8 @@ employees 1───n contracts
 employees 1───n attendance_records
 employees 1───n payslips
 employees 1───n performance_scores
+employees 1───n employee_position_history（员工岗位历史快照：每次部门 / 岗位 / 汇报关系变更写入）
+employees 1───n salary_history（调薪历史快照：每次调薪 / 固浮比变更写入）
 payslips 1───n payslip_items
 
 employees.external_id   ↔ 得力 e+ employee_ext_id（打卡数据回匹配主键）
@@ -545,7 +579,7 @@ approval_instances 1───n approval_records
 #### 3.3.3 共同技术底座（M0.5 阶段搭好）
 
 - **LLM 网关**：统一封装 OpenAI / 国产模型（DeepSeek / 通义千问）调用，token 用量监控、限速、错误重试
-- **向量库**：Pinecone / 腾讯云向量数据库，用于 RAG 检索
+- **向量库**：**pgvector**（PostgreSQL 内置扩展，避免引入外部依赖），用于 RAG 检索
 - **OCR 适配层**：腾讯云 OCR / 百度 OCR 抽象，业务模块接统一接口
 - **Prompt 模板库**：每个 AI 能力对应 1 个 prompt 模板，存数据库可热更新
 - **AI 调用审计**：所有 AI 调用写审计日志（userId / capability / tokens / cost / duration）
@@ -555,7 +589,7 @@ approval_instances 1───n approval_records
 | 项目 | 费用 |
 |---|---|
 | LLM API（GPT-4o-mini 或国产替代） | 200-500 元/月 |
-| 向量库（Pinecone / 腾讯云） | 100-300 元/月 |
+| 向量库（pgvector 自托管，扩展免费） | ≈0 元/月 |
 | OCR（按调用量） | 50-200 元/月 |
 | **合计** | **350-1000 元/月** |
 
@@ -612,6 +646,9 @@ approval_instances 1───n approval_records
 | 规则 | category | key 示例 | 默认值 |
 |---|---|---|---|
 | 工号生成规则 | `employee_no` | `format` | `{company_code}{year}{seq:4}` |
+| 工号不复用 | `employee_no` | `reuse_after_resign` | `false`（离职员工工号永久保留，避免历史数据混淆） |
+| 工号年度重置 | `employee_no` | `yearly_reset` | `true`（每年 1 月从 `0001` 开始；按自然年度） |
+| 工号并发安全 | `employee_no` | `concurrent_strategy` | `pg_sequence`（用 PG `SEQUENCE` 对象，按 `(company_id, year)` 组合生成序列；DB 层硬约束 + 应用层事务内申请） |
 | 合同到期预警天数 | `contract` | `warning_days` | `[30, 15, 7]` |
 | 试用期时长 | `probation` | `months` | `3` |
 | 转正提前提醒天数 | `probation` | `remind_days` | `15` |
@@ -623,6 +660,11 @@ approval_instances 1───n approval_records
 | 年假额度（按工龄） | `leave` | `annual_days` | `{1-10年:5, 10-20年:10, >20年:15}` |
 | 加班上限 | `overtime` | `monthly_hours_cap` | `36` |
 | 排班冲突规则 | `schedule` | `conflict_rule` | `{连续工作≤6天, 最小休息≥12h}` |
+| 加班费占比预警阈值 | `hr_attrition` | `overtime_ratio_threshold` | `0.20`（劳动法建议阈值） |
+| 月度离职率预警阈值 | `hr_attrition` | `monthly_threshold` | `0.05` |
+| 社保方案（按城市） | `social_insurance` | `<city>` | 各城市费率表（含五险 + 调基月配置化） |
+| 机关事业单位社保（研究院） | `social_insurance` | `research_institute` | 北京平谷低空安全研究院独立配置 |
+| 年终奖计税方式政策有效期 | `tax` | `year_end_bonus_policy` | `{mode: 'separate', valid_until: '2027-12-31', auto_fallback: 'merged'}` |
 
 #### 3.5.3 业务取值规范（强制）
 
@@ -654,12 +696,33 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 | 阶段 | 周期 | 核心目标 | 交付物 |
 |---|---|---|---|
 | **M0 脚手架** | 第 1 周（已完成 8/9） | 项目骨架 + 基础设施 | 可登录、可连库、可部署的空壳系统 |
-| **M0.5 公共底座**（V1.2 新增） | 第 2 周 | 审批流 / 通知 / 字段加密 / 第三方对接 / AI 底座 | 5 个公共模块 + AI 网关 + 知识库骨架 |
+| **M0.5 公共底座**（V1.2 新增） | 第 2-3 周 | 审批流 / 通知 / 字段加密 / 第三方对接 / AI 底座 / **配置中心 / 改密 + 二次验证** | **7** 个公共模块 + AI 网关 + 知识库骨架 |
 | **M1 组织人事** | 第 3-5 周 | 模块 A 完整落地（含 AI OCR） | 组织架构 + 员工档案 + 入转调离 + 合同管理可用 |
 | **M2 考勤假勤** | 第 6-8 周 | 模块 B 完整落地 | 打卡 + 排班 + 请假/加班/出差 + 月度汇总可用 |
 | **M3 绩效管理** | 第 9-11 周 | 模块 D 完整落地（含 AI 评分建议） | KPI+OKR 考核 + 系数配置 + 五档评分可用 |
 | **M4 薪酬核算** | 第 12-15 周 | 模块 C 完整落地（含 AI 算薪校验） | 自动核算 + 社保三地 + 个税 + 工资条可用 |
 | **M5 联调上线** | 第 16-18 周 | 集成测试 + 数据迁移 + 试运行 | 正式上线 |
+
+#### 4.1.1 里程碑日历（V1.2 新增，对齐 §4.1 相对时间）
+
+> 编制日期 2026-08-25，一期总周期 18 周；以周一为周首。
+
+| 阶段 | 起始 | 结束 | 周数 | 状态 |
+|---|---|---|---|---|
+| M0 脚手架 | 2026-08-25 | 2026-08-29 | 1 周 | 已完成 8/9（M0-09 待部署）|
+| M0.5 公共底座 | 2026-08-30 | 2026-09-12 | 2 周 | ⏳ 规划中 |
+| M1 组织人事 | 2026-09-13 | 2026-10-03 | 3 周 | ⏳ |
+| M2 考勤假勤 | 2026-10-04 | 2026-10-24 | 3 周 | ⏳ |
+| M3 绩效管理 | 2026-10-25 | 2026-11-14 | 3 周 | ⏳ |
+| M4 薪酬核算 | 2026-11-15 | 2026-12-19 | 5 周（+ 1 周缓冲，因 C4 含人力成本预警） | ⏳ |
+| M5 联调上线 | 2026-12-20 | 2027-01-17 | 4 周（含 2 周并行试运行） | ⏳ |
+
+**预计正式上线日**：**2027-01-17**（星期六，含缓冲；如需更精确可向 CTO 申请延期）
+
+**M0 已完成项实际日期**（截至 2026-08-25）：
+- M0-01 ~ M0-04：2026-08-25 当日完成（按 git log 核查）
+- M0-05 / M0-06 / M0-07 / M0-08：M0 文档合并日（2026-08-25）
+- M0-09：Nginx + Docker 部署，**下一开工日**
 
 **总周期 18 周**（含 3 周试运行）。M3 绩效在 M4 薪酬之前，因为薪酬依赖绩效系数。
 
@@ -698,7 +761,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 
 ---
 
-### 4.4 M0.5 公共底座 + AI 底座（第 2 周）—— V1.2 新增
+### 4.4 M0.5 公共底座 + AI 底座（第 2-3 周）—— V1.2 新增
 
 > **为什么独立成阶段**：M1+ 所有业务模块都依赖审批流 / 通知 / 字段加密 / 第三方对接，缺失会让所有业务写一半推倒重来。M0.5 把这些公共能力做扎实，业务模块专注业务逻辑。
 
@@ -710,9 +773,16 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 | **M0.5-2** | **消息通知基础设施** | notification_templates / notification_logs 两张表 + 短信/邮件/站内信三个通道适配器 + BullMQ 队列 + REST API | 6 | 2.5d | 1) 配置化模板（Handlebars）；2) 异步发送，失败重试 3 次；3) 各通道适配器可独立开关；4) 单测覆盖发送/失败重试/模板渲染 |
 | **M0.5-3** | **字段级加密** | encrypted_fields 表 + AES-256-GCM 加解密 service + 自动加密 ORM 中间件 + REST API（管理加密字段） | 5 | 2d | 1) 加密身份证/银行卡/薪资字段，密文存储；2) 解密按角色授权（HR 全显，本人显，其他人 mask）；3) 单测覆盖加解密/密钥轮转 |
 | **M0.5-4** | **第三方对接框架** | external_integrations 表 + 适配器接口 + 腾讯云短信/邮件/地图 SDK 封装 + BullMQ 定时任务调度器 | 5 | 2d | 1) 适配器统一接口（调用/重试/限流/日志）；2) 各外部依赖配置走 .env；3) 单测覆盖适配器 mock + 重试逻辑 |
-| **M0.5-5** | **AI 底座**（V1.2 核心新增） | ai_documents / ai_embeddings / ai_conversations / ai_summaries 四张表 + LLM 网关 + 向量库 + OCR 适配层 + Prompt 模板管理 + AI 调用审计 | 7 | 3d | 1) LLM 网关支持 OpenAI 兼容接口（国产模型可替换）；2) 向量库支持 PGVECTOR / Pinecone；3) OCR 适配腾讯云/百度；4) 所有 AI 调用写审计（userId/capability/tokens/cost/duration）；5) 知识库初始化脚本 |
+| **M0.5-5** | **AI 底座**（V1.2 核心新增） | ai_documents / ai_embeddings / ai_conversations / ai_summaries 四张表 + LLM 网关 + 向量库（**pgvector**）+ OCR 适配层 + Prompt 模板管理 + AI 调用审计 | 7 | 3d | 1) LLM 网关支持 OpenAI 兼容接口（国产模型可替换）；2) 向量库使用 pgvector（PostgreSQL 内置扩展）；3) OCR 适配腾讯云/百度；4) 所有 AI 调用写审计（userId/capability/tokens/cost/duration + actor_type 区分 USER/AGENT/SYSTEM/INTEGRATION）；5) 知识库冷启动 ≥ 28 篇文档入库（详见 [`knowledge-base-seed.md`](./knowledge-base-seed.md)） |
+| **M0.5-6** | **配置中心**（V1.2 新增补） | `configs` 表（含 effective_from / effective_to 版本回溯字段）+ `configService` + 内存缓存（启动时全量加载 + 每 5 分钟刷新）+ 历史版本查询 API + 12 类必配置化业务规则 seed 初始化 | 5 | 2d | 1) Prisma model `Config` 含 §3.5.1 全部字段；2) `configService.getValue(category, key, atDate?)` 返回当前生效值；3) 历史版本查询 `getHistory(category, key)` ；4) 配置项变更写审计（actor_type=SYSTEM）；5) 单测覆盖当前生效 / 版本回溯 / 缓存刷新 / 并发安全 |
 
-**M0.5 总工时**：约 12d（第 2 周 5 个工作日 + 第 3 周前半周）
+**M0.5 总工时**：约 15.5d（第 2 周 5 个工作日 + 第 3 周 5 个工作日前半周+）
+
+**M0.5-7**（V1.2 新增）— **改密接口 + 二次验证基础设施**：
+
+| # | 切片 | 范围 | 子任务 | 工时 | 验收 |
+|---|---|---|---|---|---|
+| **M0.5-7** | **改密接口 + 二次验证** | `POST /auth/change-password` + `POST /auth/verify-2fa`（短信 / 邮箱）+ admin 后台强制改密接口 | 4 | 1.5d | 1) 用户自助改密（验证旧密码 → 新密码 → zod 强度校验 → 重哈希 cost=12）；2) `must_change_password=true` 用户登录强制返回 `10112 MUST_CHANGE_PASSWORD`，前端跳转改密页；3) admin 后台代改密（写入审计 actor_type=USER action=UPDATE_PASSWORD）；4) 单测覆盖正常改密 / 旧密码错 / 强度不足 / must_change 强制 |
 
 #### 4.4.2 关键技术决策
 
@@ -752,7 +822,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 | A3 | 入职流程（含工号自动生成 + AI OCR 资料收集） | 5 | 2.5d |
 | A4 | 转正流程 | 4 | 1.5d |
 | A5 | 调动流程（含权限/薪酬联动） | 5 | 2.5d |
-| A6 | 离职流程（含档案归档） | 5 | 2.5d |
+| A6 | 离职流程（含档案归档 + **离职证明生成** + 账号生命周期 SOP） | 6 | 3d |
 | A7 | 合同管理（模板 + 到期预警 + **电子签**） | 5 | 3d |
 
 **A2 切片内嵌 AI OCR 能力**（M0.5 底座已搭好）：
@@ -850,7 +920,7 @@ performance_coefficients
 | C3 | 个税引擎（工资薪金累计预扣 + 年终奖 + 劳务报酬） | 4 | 3d |
 | C4 | 薪酬核算主流程（应发-应扣-实发 + **AI 校验摘要**） | 5 | 4.5d |
 | C5 | 劳务费结算通道（独立） | 3 | 2d |
-| C6 | 工资条生成 + 银行代发文件 | 3 | 2.5d |
+| C6 | 工资条生成 + 银行代发文件 + **ESS 员工自助最小集（工资条 + 调休/假期查询 tab）** | 4 | 3d |
 | C7 | 薪酬审批流（HR→财务→总经理，走 M0.5 基础设施） | 3 | 2d |
 | C8 | 薪酬数据加密 + 二次授权 | 3 | 2d |
 
@@ -859,6 +929,10 @@ performance_coefficients
 - 输入：本月 vs 上月 工资单 + 本月考勤 + 本月绩效
 - 输出：差异项 + 原因分析（如"事假 2 天扣 800""绩效 B→C 影响 1000"）
 - 节省 HR 80% 异常排查时间
+
+**C4 切片同步落地的人力成本预警**（V1.2 补充，2 项高频预警；其他维度预算/调薪池/倒挂 推到二期 BI）：
+- **加班费占比预警**：每月加班费 / 工资总额 > 20% → BullMQ 每日 02:00 任务触发告警（劳动法建议阈值）
+- **离职率预警**：月度 / 季度离职率超阈值（阈值走 `configs.hr_attrition.monthly_threshold` 默认 5%）→ 触发通知 + 写审计
 
 #### 4.8.2 测试前置（关键）
 
@@ -953,7 +1027,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | 单元测试 | Vitest | Service 层 ≥80% |
 | 接口测试 | Supertest | 所有 REST 接口 100% |
 | E2E 测试 | Playwright | 5 条主流程 + AI 能力 4 条 |
-| 薪酬测试用例库 | Vitest | ≥50 个场景 |
+| **薪酬测试用例库**（V1.2 加强） | Vitest | **≥200 核心场景 + ≥500 组合场景**（M4 启动前必须先产出 [`docs/payroll-test-cases.md`](./payroll-test-cases.md) 完整清单，由 HR + 财务 + AI 协作） |
 | **AI 能力验证**（V1.2 新增） | 人工评估 + A/B | OCR 准确率 / 算薪摘要满意度 / Q&A 自助率 / 评分建议采纳率 |
 
 ---
@@ -1006,6 +1080,7 @@ AI 生成的代码必须经人工评审，重点检查：
 
 - 云平台：阿里云 或 腾讯云（待最终选定）
 - 容器化：Docker + docker-compose
+- **PostgreSQL 镜像必须使用 `pgvector/pgvector:pg16`**（V1.2.1 强制）：M0.5-5 AI 底座依赖 pgvector 扩展，普通 `postgres:16-alpine` 镜像无法启用。`docker-compose.yml` 已切到 pgvector 镜像，并在 `server/prisma/init-scripts/01-pgvector.sql` 自动 `CREATE EXTENSION vector`
 - 反向代理：Nginx
 - SSL 证书：Let's Encrypt 或云厂商免费证书
 - CI/CD：GitHub Actions 或 Gitee Go（V1.2 推荐 GitHub Actions）
@@ -1091,6 +1166,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | V1.0 | 2026-08-23 | 三份独立文档初稿（需求/PRD/开发计划） | WorkBuddy AI |
 | V1.1 | 2026-08-25 | 考勤数据源决策（方案 B）：一期得力 e+ 导出格式手工导入跑通闭环 | WorkBuddy AI |
 | **V1.2** | **2026-08-25** | **三份文档合并；新增 M0.5 阶段（5 个公共切片 + AI 底座）；AI 原生能力从"三期预留"提升为 M0.5~M4 嵌入式 4 个点状能力；电子签从二期提前到一期；统一配置表 + 版本回溯约定；统一代码范式（function 导出）；统一工期口径 18 周；M0 安全补丁（JWT rotation + reuse detection 等）** | **WorkBuddy AI + 辰航 IT** |
+| **V1.2.1** | **2026-08-25** | **数据库：audit_logs 加 `actor_type` 字段（USER/AGENT/SYSTEM/INTEGRATION）+ 2 个新 index；切换 PostgreSQL 镜像到 `pgvector/pgvector:pg16` + 自动启用 vector 扩展；新增 M0.5-6 配置中心切片（configs 表 + configService + 内存缓存）<br>**安全：auth.service 渐进式重哈希（bcrypt cost 10 → 12 异步升级）+ 修复账号枚举漏洞（账号禁用统一 401+10110）<br>**业务：法人主体变更（二期） / 移动端 4 阶段（钉钉 H1 → 飞书 H2 → 独立 App 2028+） / AI 入职 Copilot 推到三期 / 离职证明自动生成（A6）/ 个税政策有效期（2027-12-31 单独计税到期）<br>**配套：新增 `knowledge-base-seed.md`（AI 智能问答冷启动 ≥ 28 篇）；api-spec.md + openapi.yaml + flow-diagrams.md + error-codes.md + audit-masking.md 全部同步 actor_type / reveal 接口 / 历史表 ER 图；M0 测试从 26 → 29 个** | **WorkBuddy AI** |
 
 ### 7.4 历史文档归档说明
 
