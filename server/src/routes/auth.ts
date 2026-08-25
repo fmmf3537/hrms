@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { PERMISSIONS } from '../constants/permissions';
 import * as authController from '../controllers/auth.controller';
 import { authenticate, requirePermission } from '../middleware/auth';
-import { loginLimiter } from '../middleware/rate-limit';
+import { loginLimiter, refreshLimiter } from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
@@ -28,9 +28,9 @@ router.post('/login', loginLimiter, validate(loginSchema), authController.login)
 
 /**
  * POST /api/auth/refresh
- * 刷新 Access Token
+ * 刷新 Access Token（同时换新 refreshToken，原 token 立即失效）
  */
-router.post('/refresh', validate(refreshSchema), authController.refresh);
+router.post('/refresh', refreshLimiter, validate(refreshSchema), authController.refresh);
 
 /**
  * POST /api/auth/logout

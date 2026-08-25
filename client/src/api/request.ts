@@ -15,7 +15,9 @@ let refreshPromise: Promise<string | null> | null = null;
 
 /**
  * 用 refreshToken 换取新的 accessToken
- * 返回新 token；失败返回 null（调用方负责跳登录页）
+ * 服务端做 refresh token rotation：返回的 refreshToken 也会更新，
+ * 本函数把新的 refreshToken 同步写入 localStorage，避免下次 refresh 失败
+ * 返回新 accessToken；失败返回 null（调用方负责跳登录页）
  */
 function doRefreshToken(): Promise<string | null> {
   if (!refreshPromise) {
@@ -25,12 +27,19 @@ function doRefreshToken(): Promise<string | null> {
     }
     // 注意：这里用裸 axios 而不是 request 实例，避免进入拦截器死循环
     refreshPromise = axios
-      .post<ApiResponse<{ accessToken: string }>>('/api/auth/refresh', { refreshToken })
+      .post<ApiResponse<{ accessToken: string; refreshToken: string }>>(
+        '/api/auth/refresh',
+        { refreshToken },
+      )
       .then((res) => {
-        const newToken = res.data?.data?.accessToken;
-        if (res.data?.success && newToken) {
-          localStorage.setItem('hrms_access_token', newToken);
-          return newToken;
+        const newAccess = res.data?.data?.accessToken;
+        const newRefresh = res.data?.data?.refreshToken;
+        if (res.data?.success && newAccess) {
+          localStorage.setItem('hrms_access_token', newAccess);
+          if (newRefresh) {
+            localStorage.setItem('hrms_refresh_token', newRefresh);
+          }
+          return newAccess;
         }
         return null;
       })

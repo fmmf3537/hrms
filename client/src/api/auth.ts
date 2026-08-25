@@ -1,5 +1,7 @@
 import request from './request';
-import type { ApiResponse, LoginParams, LoginResponse, UserInfo } from '@/types';
+import type {
+  ApiResponse, LoginParams, LoginResponse, RefreshTokenResponse, UserInfo,
+} from '@/types';
 
 /**
  * 用户登录
@@ -9,12 +11,12 @@ export function login(params: LoginParams): Promise<ApiResponse<LoginResponse>> 
 }
 
 /**
- * 刷新 accessToken
+ * 刷新 accessToken（服务端会同时返回新的 refreshToken，前端必须同步更新本地存储）
  */
-export function refreshToken(refreshTokenValue: string): Promise<ApiResponse<{ accessToken: string }>> {
+export function refreshToken(refreshTokenValue: string): Promise<ApiResponse<RefreshTokenResponse>> {
   return request.post('/auth/refresh', {
     refreshToken: refreshTokenValue,
-  }) as unknown as Promise<ApiResponse<{ accessToken: string }>>;
+  }) as unknown as Promise<ApiResponse<RefreshTokenResponse>>;
 }
 
 /**

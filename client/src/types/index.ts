@@ -28,6 +28,15 @@ export interface LoginResponse {
   refreshToken: string;
 }
 
+/**
+ * /api/auth/refresh 的响应：服务端做 refresh token rotation，
+ * 每次刷新都返回新的 refreshToken，前端必须同步更新本地存储
+ */
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   code?: number;

@@ -99,14 +99,14 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * 刷新 accessToken
+   * 刷新 accessToken（服务端 rotation：同时更新 refreshToken）
    */
   async function refreshAccessToken(): Promise<boolean> {
     if (!refreshToken.value) return false;
     try {
       const res = await refreshTokenApi(refreshToken.value);
       if (res.success && res.data?.accessToken) {
-        setTokens(res.data.accessToken);
+        setTokens(res.data.accessToken, res.data.refreshToken);
         return true;
       }
       return false;

@@ -1,28 +1,17 @@
 import type { Request, Response } from 'express';
 
 import { asyncHandler } from '../middleware/errorHandler';
-import * as auditService from '../services/audit.service';
 import * as authService from '../services/auth.service';
 
 /**
  * POST /api/auth/login
+ * 审计埋点已下沉到 auth.service.login（成功与失败均记录）
  */
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const { username, password } = req.body as { username: string; password: string };
-  const result = await authService.login(username, password);
-
-  // M0-08 示范埋点：登录成功写审计日志（fire-and-forget，失败不影响登录响应）
-  auditService.auditLog({
-    userId: result.user.id,
-    action: auditService.AUDIT_ACTIONS.LOGIN,
-    resourceType: 'Auth',
-    resourceId: result.user.id,
-    description: `用户 ${result.user.username} 登录成功`,
+  const result = await authService.login(username, password, {
     ipAddress: req.ip ?? null,
     userAgent: req.headers['user-agent'] ?? null,
-    status: auditService.AUDIT_STATUS.SUCCESS,
-  }).catch(() => {
-    // auditLog 内部已兜底，此处仅防御性吞掉异常，保证不阻塞登录响应
   });
 
   res.json({
@@ -34,6 +23,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
 /**
  * POST /api/auth/refresh
+ * 每次刷新都换发新 refreshToken（rotation），旧 token 立即失效
  */
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
   const { refreshToken } = req.body as { refreshToken: string };
