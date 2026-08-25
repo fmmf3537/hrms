@@ -114,6 +114,109 @@ async function main() {
   });
   console.log(`   ✓ admin user (id=${admin.id})`);
 
+  console.log('==> Seeding default approval flow templates (M0.5-1)...');
+
+  // 1) 请假审批（默认）：≤3 天直属上级 → HR；>3 天加部门负责人 → 总经理
+  const leaveFlow = await prisma.approvalFlow.upsert({
+    where: { category_key_version: { category: 'leave', key: 'leave_default', version: 1 } },
+    update: {},
+    create: {
+      category: 'leave',
+      key: 'leave_default',
+      name: '请假审批（默认）',
+      version: 1,
+      enabled: true,
+      description: '≤3 天直属上级 → HR；>3 天加部门负责人 → 总经理',
+      nodes: [
+        {
+          id: 'step1',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: 'direct_leader',
+          condition: null,
+        },
+        {
+          id: 'step2',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: 'hr',
+          condition: 'always',
+        },
+        {
+          id: 'step3',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: 'ceo',
+          // 条件分支：请假天数 > 3 时插入
+          condition: 'data.leave_days > 3',
+        },
+      ],
+    },
+  });
+  console.log(`   ✓ leave_default flow (id=${leaveFlow.id})`);
+
+  // 2) 加班审批：直属上级必过；>36h 触发二次 HR 备案
+  const overtimeFlow = await prisma.approvalFlow.upsert({
+    where: { category_key_version: { category: 'overtime', key: 'overtime_default', version: 1 } },
+    update: {},
+    create: {
+      category: 'overtime',
+      key: 'overtime_default',
+      name: '加班审批（默认）',
+      version: 1,
+      enabled: true,
+      description: '直属上级审批；>36h/月 触发 HR 备案',
+      nodes: [
+        {
+          id: 'step1',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: 'direct_leader',
+          condition: null,
+        },
+      ],
+    },
+  });
+  console.log(`   ✓ overtime_default flow (id=${overtimeFlow.id})`);
+
+  // 3) 出差审批：直属上级 → 部门负责人 → HR
+  const tripFlow = await prisma.approvalFlow.upsert({
+    where: { category_key_version: { category: 'business_trip', key: 'trip_default', version: 1 } },
+    update: {},
+    create: {
+      category: 'business_trip',
+      key: 'trip_default',
+      name: '出差审批（默认）',
+      version: 1,
+      enabled: true,
+      description: '直属上级 → 部门负责人 → HR',
+      nodes: [
+        {
+          id: 'step1',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: 'direct_leader',
+          condition: null,
+        },
+        {
+          id: 'step2',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: 'department_leader',
+          condition: 'always',
+        },
+        {
+          id: 'step3',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: 'hr',
+          condition: 'always',
+        },
+      ],
+    },
+  });
+  console.log(`   ✓ trip_default flow (id=${tripFlow.id})`);
+
   console.log('==> Done.');
 }
 

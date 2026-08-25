@@ -769,7 +769,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 
 | # | 切片 | 范围 | 子任务 | 工时 | 验收 |
 |---|---|---|---|---|---|
-| **M0.5-1** | **审批流基础设施** | approval_flows / approval_instances / approval_records 三张表 + 配置化 JSON 模板 + 服务层 + REST API | 6 | 2.5d | 1) 创建请假审批流 JSON 模板；2) 提交请假时自动创建 approval_instance；3) 审批通过后回调业务表更新状态；4) 单测覆盖 5 个场景（提交/通过/驳回/超时/转交） |
+| **M0.5-1** | **审批流基础设施**（**已实现**） | approval_flows / approval_instances / approval_records 三张表 + 配置化 JSON 模板（支持 4 种 approverType + 4 种 condition 表达式）+ service（状态机：pending → approved/rejected/withdrawn）+ REST API | 6 | 2.5d | 1) 创建请假审批流 JSON 模板（已 seed：direct_leader → hr → ceo 含"data.leave_days > 3"条件分支）；2) 提交请假时自动创建 approval_instance；3) 审批通过/驳回/转交/撤回/列表 5 个核心场景；4) 单测 23 个全通过（详见 [`server/src/services/approval.README.md`](../../server/src/services/approval.README.md)） |
 | **M0.5-2** | **消息通知基础设施** | notification_templates / notification_logs 两张表 + 短信/邮件/站内信三个通道适配器 + BullMQ 队列 + REST API | 6 | 2.5d | 1) 配置化模板（Handlebars）；2) 异步发送，失败重试 3 次；3) 各通道适配器可独立开关；4) 单测覆盖发送/失败重试/模板渲染 |
 | **M0.5-3** | **字段级加密** | encrypted_fields 表 + AES-256-GCM 加解密 service + 自动加密 ORM 中间件 + REST API（管理加密字段） | 5 | 2d | 1) 加密身份证/银行卡/薪资字段，密文存储；2) 解密按角色授权（HR 全显，本人显，其他人 mask）；3) 单测覆盖加解密/密钥轮转 |
 | **M0.5-4** | **第三方对接框架** | external_integrations 表 + 适配器接口 + 腾讯云短信/邮件/地图 SDK 封装 + BullMQ 定时任务调度器 | 5 | 2d | 1) 适配器统一接口（调用/重试/限流/日志）；2) 各外部依赖配置走 .env；3) 单测覆盖适配器 mock + 重试逻辑 |

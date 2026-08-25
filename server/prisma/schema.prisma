@@ -165,3 +165,77 @@ model AuditLog {
   @@index([actorType, createdAt])
   @@map("audit_logs")
 }
+
+// ==================== 审批流基础设施（M0.5-1）====================
+// 三张表：模板（ApprovalFlow）→ 实例（ApprovalInstance）→ 节点操作记录（ApprovalRecord）
+// 模板用 JSON 描述节点（含条件分支、审批人解析），实例挂任意业务对象
+
+model ApprovalFlow {
+  id          String   @id @default(uuid()) @db.Uuid
+  category    String   @db.VarChar(50) // leave / onboarding / transfer / offboarding / overtime / performance / payslip ...
+  key         String   @db.VarChar(100) // 同 category 内唯一（如 leave_default）
+  name        String   @db.VarChar(200) // 模板显示名
+  version     Int      @default(1) // 修订版本号（同 key 多次 update 自增）
+  nodes       Json     // 节点数组：[{id, type, approverType, approverValue, condition, ...}]
+  enabled     Boolean  @default(true)
+  description String?  @db.Text
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6) // 软删除
+
+  // 关系
+  instances ApprovalInstance[]
+
+  @@unique([category, key, version]) // 同一 (category, key) 不能重复 version
+  @@index([category, key, enabled])
+  @@index([enabled])
+  @@map("approval_flows")
+}
+
+model ApprovalInstance {
+  id             String   @id @default(uuid()) @db.Uuid
+  flowId         String   @map("flow_id") @db.Uuid
+  flowKey        String   @map("flow_key") @db.VarChar(100) // 冗余存储便于查询
+  businessType   String   @map("business_type") @db.VarChar(50) // leave / onboarding / transfer ...
+  businessId     String   @map("business_id") @db.Uuid // 关联业务记录 ID
+  title          String   @db.VarChar(200)
+  initiatorId    String   @map("initiator_id") @db.Uuid
+  currentNodeId  String?  @map("current_node_id") @db.VarChar(64) // null 表示已完成
+  status         String   @default("pending") @db.VarChar(20) // pending / approved / rejected / withdrawn
+  data           Json     // 业务数据快照（用于条件分支判断，如请假天数）
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  finishedAt     DateTime? @map("finished_at") @db.Timestamptz(6) // status != pending 时填充
+
+  // 关系
+  flow    ApprovalFlow       @relation(fields: [flowId], references: [id], onDelete: Restrict)
+  records ApprovalRecord[]
+
+  @@index([flowKey])
+  @@index([businessType, businessId])
+  @@index([initiatorId, status])
+  @@index([status])
+  @@index([currentNodeId])
+  @@map("approval_instances")
+}
+
+model ApprovalRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  instanceId  String   @map("instance_id") @db.Uuid
+  nodeId      String   @map("node_id") @db.VarChar(64)
+  approverId  String   @map("approver_id") @db.Uuid
+  action      String   @db.VarChar(20) // approve / reject / transfer / withdraw / auto_approve / auto_reject
+  fromUserId  String?  @map("from_user_id") @db.Uuid // transfer 动作的转出方
+  toUserId    String?  @map("to_user_id") @db.Uuid // transfer 动作的转入方
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // 关系
+  instance ApprovalInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([instanceId])
+  @@index([approverId, action])
+  @@index([createdAt])
+  @@map("approval_records")
+}

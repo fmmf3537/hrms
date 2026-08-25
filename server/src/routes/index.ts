@@ -1,5 +1,6 @@
 import { Router, type Router as RouterType } from 'express';
 
+import approvalRoutes from './approval';
 import auditRoutes from './audit';
 import authRoutes from './auth';
 
@@ -20,5 +21,7 @@ router.get('/health', (_req, res) => {
 // 挂载各模块路由
 router.use('/auth', authRoutes);
 router.use('/audit-logs', auditRoutes);
+// M0.5-1: 审批流
+router.use('/approvals', approvalRoutes);
 
 export default router;
