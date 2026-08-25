@@ -66,6 +66,28 @@ const envSchema = z.object({
     })
     .default(isProd ? '' : 'a'.repeat(64)), // 开发占位（64 个 a），生产必须显式提供
 
+  // 第三方对接（M0.5-4）
+  // e-签宝 SaaS API
+  ESIGN_APP_ID: z.string().default(''),
+  ESIGN_APP_SECRET: z.string().default(''),
+  ESIGN_ENDPOINT: z.string().default('https://openapi.esign.cn'),
+  // 短信（阿里云 / 腾讯云）
+  SMS_PROVIDER: z.enum(['mock', 'aliyun', 'tencent']).default('mock'),
+  SMS_ACCESS_KEY: z.string().default(''),
+  SMS_ACCESS_SECRET: z.string().default(''),
+  SMS_SIGN_NAME: z.string().default(''),
+  // 邮件 SMTP
+  SMTP_HOST: z.string().default(''),
+  SMTP_PORT: z.string().default('587').transform((v) => parseInt(v, 10)),
+  SMTP_USER: z.string().default(''),
+  SMTP_PASSWORD: z.string().default(''),
+  SMTP_FROM: z.string().default('noreply@chenhang-zhuoyue.local'),
+  // LLM 网关
+  LLM_PROVIDER: z.enum(['mock', 'openai', 'deepseek', 'tongyi']).default('mock'),
+  LLM_API_KEY: z.string().default(''),
+  LLM_BASE_URL: z.string().default('https://api.openai.com/v1'),
+  LLM_MODEL: z.string().default('gpt-4o-mini'),
+
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });

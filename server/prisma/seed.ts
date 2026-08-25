@@ -399,6 +399,67 @@ async function main() {
 
   console.log('   ✓ 5 encrypted fields registered');
 
+  console.log('==> Seeding default integrations (M0.5-4)...');
+
+  // 6 个集成默认配置（dev 时 enabled=true 走 mock，prod 由运维配置真实凭证后启用）
+  const integrations = [
+    {
+      code: 'esign',
+      name: 'e-签宝',
+      type: 'http_api',
+      config: { endpoint: 'https://openapi.esign.cn', appId: '', appSecret: '' },
+      description: '电子签（合同 / 工资条签署）— 见 docs/e-sign-cost.md',
+    },
+    {
+      code: 'sms',
+      name: '短信网关（阿里云/腾讯云）',
+      type: 'http_api',
+      config: { provider: 'mock', accessKey: '', accessSecret: '', signName: '' },
+      description: '短信（验证码 / 紧急提醒）— 替换 M0.5-2 的 console.log mock',
+    },
+    {
+      code: 'email',
+      name: 'SMTP 邮件',
+      type: 'http_api',
+      config: { host: '', port: 587, user: '', password: '', from: 'noreply@chenhang-zhuoyue.local' },
+      description: '邮件（合同到期 / 工资条推送）— 替换 M0.5-2 的 console.log mock',
+    },
+    {
+      code: 'llm',
+      name: 'LLM 网关（OpenAI 兼容）',
+      type: 'http_api',
+      config: { provider: 'mock', baseUrl: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-4o-mini' },
+      description: '大语言模型（智能问答 / 算薪校验 / 评分建议）— 见 V1.2 §三.3',
+    },
+    {
+      code: 'ocr',
+      name: 'OCR 服务（腾讯云）',
+      type: 'http_api',
+      config: { provider: 'mock', secretId: '', secretKey: '' },
+      description: 'OCR 识别（身份证 / 银行卡 / 资质证书）— V1.2 §四.4.1 M0.5-5 集成',
+    },
+    {
+      code: 'map',
+      name: '腾讯地图 API',
+      type: 'http_api',
+      config: { provider: 'mock', key: '' },
+      description: '地图（GPS 反解析地址）— V1.2 §二.3.1 考勤打卡',
+    },
+  ];
+
+  for (const integ of integrations) {
+    await prisma.integration.upsert({
+      where: { code: integ.code },
+      update: {},
+      create: {
+        ...integ,
+        enabled: true,
+        config: integ.config as never,
+      },
+    });
+  }
+  console.log(`   ✓ ${integrations.length} integrations registered`);
+
   console.log('==> Done.');
 }
 

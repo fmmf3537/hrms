@@ -341,3 +341,48 @@ model EncryptedFieldAudit {
   @@index([createdAt])
   @@map("encrypted_field_audits")
 }
+
+// ==================== 第三方对接（M0.5-4）====================
+// 集成配置（Integration）→ 同步日志（IntegrationSyncLog）
+// 适配器类型：http_api / webhook / database / file
+// config 字段存储敏感凭证（按 M0.5-3 加密规范走 AES-256-GCM）
+
+model Integration {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @db.VarChar(50) // esign / sms / email / llm / ocr / map
+  name        String   @db.VarChar(200)
+  type        String   @db.VarChar(20) // http_api / webhook / database / file
+  config      Json     // 配置（API Key / endpoint 等敏感字段）
+  enabled     Boolean  @default(true)
+  description String?  @db.Text
+  lastSyncAt  DateTime? @map("last_sync_at") @db.Timestamptz(6)
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+
+  // 关系
+  syncLogs IntegrationSyncLog[]
+
+  @@unique([code])
+  @@index([enabled])
+  @@map("integrations")
+}
+
+model IntegrationSyncLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  integrationId String   @map("integration_id") @db.Uuid
+  status        String   @db.VarChar(20) // success / failed / partial
+  operation     String   @db.VarChar(50) // send / sync / test_connection / pull
+  recordCount   Int      @default(0) @map("record_count")
+  duration      Int      @default(0) // 毫秒
+  errorMessage  String?  @map("error_message") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // 关系
+  integration Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@index([integrationId, createdAt])
+  @@index([status, createdAt])
+  @@map("integration_sync_logs")
+}

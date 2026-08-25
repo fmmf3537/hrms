@@ -4,6 +4,7 @@ import approvalRoutes from './approval';
 import auditRoutes from './audit';
 import authRoutes from './auth';
 import encryptedFieldRoutes from './encryptedField';
+import integrationRoutes from './integration';
 import notificationRoutes from './notification';
 
 const router: RouterType = Router();
@@ -29,5 +30,7 @@ router.use('/approvals', approvalRoutes);
 router.use('/notifications', notificationRoutes);
 // M0.5-3: 字段加密
 router.use('/encrypted-fields', encryptedFieldRoutes);
+// M0.5-4: 第三方对接
+router.use('/integrations', integrationRoutes);
 
 export default router;
