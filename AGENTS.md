@@ -158,7 +158,17 @@ V1.2 之前的 6 个严重项全部修复：
   + 3 个新端点 + 19 个新单测（359 → 378）
   + **B5 不联动 B2 GPS 打卡** / **B5 不联动 M4 薪酬** / **不创建 projects 表**
   + **B5 不实现月度汇总**（B6 范围）
-- 后续：B6（月度汇总，M2 收尾切片）
+- **B6 月度考勤汇总（已完成，M2 收尾切片）**：monthly_summaries 1 张表
+  + 报表生成（聚合 B1 attendance + B3 leave + B4 overtime + B5 trip 数据）
+  + 员工确认（draft → employee_confirmed）
+  + HR 锁定（employee_confirmed → hr_locked，**M4 薪酬读取**）
+  + **【B3 调休余额承诺】** 调休余额聚合（B6 自己实现 calculateCompBalance 函数）
+  + 4 个新端点 + 22 个新单测（378 → 400）
+  + **未修改 leave.service.ts 的 calculateLeaveBalance 函数**（红线 6 强约束）
+  + **未 import leave.service**（红线 5 强约束）
+  + **未实现 BullMQ 每月 1 日自动生成**（留独立任务）
+- **M2 阶段全部完成**（V1.2 §四.6 B1-B6 全部落地）
+- **下一阶段 M3 绩效管理**（V1.2 §四.7 D1-D6 切片）
 
 ### 工程强约束（V1.2 时代）
 

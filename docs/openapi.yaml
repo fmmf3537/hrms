@@ -1897,6 +1897,94 @@ paths:
         '200':
           description: 成功
 
+  /monthly-summaries/generate:
+    post:
+      tags: [MonthlySummary]
+      summary: 生成月度考勤汇总（HR）
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MonthlySummaryGenerateInput'
+      responses:
+        '201':
+          description: 已生成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlySummaryGenerateResponse'
+  /monthly-summaries:
+    get:
+      tags: [MonthlySummary]
+      summary: 查询月度考勤汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema: { type: integer }
+        - name: month
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1, maximum: 12 }
+        - name: employeeId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: companyId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: departmentId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, employee_confirmed, hr_locked]
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlySummaryListResponse'
+  /monthly-summaries/{id}/confirm:
+    post:
+      tags: [MonthlySummary]
+      summary: 员工确认月度汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlySummaryResponse'
+  /monthly-summaries/{id}/lock:
+    post:
+      tags: [MonthlySummary]
+      summary: HR 锁定月度汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlySummaryResponse'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2723,3 +2811,66 @@ components:
       required: [reason]
       properties:
         reason: { type: string }
+
+    MonthlySummaryGenerateInput:
+      type: object
+      required: [year, month]
+      properties:
+        year: { type: integer, minimum: 1970 }
+        month: { type: integer, minimum: 1, maximum: 12 }
+        employeeId: { type: string, format: uuid }
+
+    MonthlySummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        companyId: { type: string, format: uuid }
+        departmentId: { type: string, format: uuid }
+        year: { type: integer }
+        month: { type: integer }
+        workDays: { type: number }
+        lateCount: { type: integer }
+        earlyLeaveCount: { type: integer }
+        missingCount: { type: integer }
+        leaveDays: { type: number }
+        leaveHours: { type: number }
+        overtimeHours: { type: number }
+        tripDays: { type: number }
+        compBalance: { type: number }
+        status:
+          type: string
+          enum: [draft, employee_confirmed, hr_locked]
+        employeeConfirmedAt: { type: string, format: date-time }
+        hrLockedAt: { type: string, format: date-time }
+
+    MonthlySummaryGenerateResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          type: object
+          properties:
+            generated: { type: integer }
+            summaries:
+              type: array
+              items:
+                $ref: '#/components/schemas/MonthlySummary'
+
+    MonthlySummaryResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          $ref: '#/components/schemas/MonthlySummary'
+
+    MonthlySummaryListResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/MonthlySummary'
+            - type: array
+              items:
+                $ref: '#/components/schemas/MonthlySummary'

@@ -754,6 +754,21 @@
 | GET | `/business-trips/requests` | 是 | 出差记录列表（分页 + 多维过滤） |
 | POST | `/business-trips/requests/:id/cancel` | 是 | 撤回（draft/submitted） |
 
+### 3.18 Monthly Summary API（M2-B6）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/monthly-summaries/generate` | 是 | summary:lock | 生成月度报表（HR 手动 / 月初自动留 BullMQ） |
+| GET | `/monthly-summaries` | 是 | summary:read | 查月度报表（employeeId 查自己 / companyId 查全公司） |
+| POST | `/monthly-summaries/:id/confirm` | 是 | summary:read | 员工确认（draft → employee_confirmed） |
+| POST | `/monthly-summaries/:id/lock` | 是 | summary:lock | HR 锁定（employee_confirmed → hr_locked） |
+
+**Query（GET）**：`year`、`month` 必填；`employeeId` 或 `companyId` 二选一；可选 `departmentId`、`status`。
+
+**Body（POST /generate）**：`{ year, month, employeeId? }` — employeeId 缺省为全员。
+
+**错误码**：72301-72310（B6 子区）。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

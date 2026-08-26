@@ -849,7 +849,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 
 ---
 
-### 4.6 M2 考勤假勤模块（第 6-8 周）
+### 4.6 M2 考勤假勤模块（第 6-8 周）**（已完成）**
 
 #### 4.6.1 垂直切片
 
@@ -860,7 +860,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 | B3 | 请假（8 类假期 + 额度管理 + **走 M0.5 审批流**）**已实现** — [`leave/README.md`](../server/src/services/leave/README.md) | 5 | 3.5d |
 | B4 | 加班（申请 + 补偿二选一 + 走 M0.5 审批流）**已实现** — [`overtime/README.md`](../server/src/services/overtime/README.md) | 3 | 2d |
 | B5 | 出差（含差旅补助联动）**已实现** — [`business_trip/README.md`](../server/src/services/business_trip/README.md) | 3 | 2d |
-| B6 | 月度考勤汇总（含员工确认 + HR 锁定） | 4 | 3d |
+| B6 | 月度考勤汇总（含员工确认 + HR 锁定）**已实现** — [`monthly_summary/README.md`](../server/src/services/monthly_summary/README.md) | 4 | 3d |
 
 #### 4.6.2 关键约束
 
@@ -1182,6 +1182,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M2.0.3** | **2026-08-29** | **feat(leave): M2-B3 请假（Cursor 交付）<br>**范围**：leave_requests 1 张表 + 8 类假期（annual/sick/personal/compensatory/marriage/maternity/paternity/bereavement）+ 假期额度管理（按工龄的年假规则 + service 函数计算，**不存表**）+ 2 级审批流（≤3 天 short / >3 天 long）+ 余额校验（年假/调休不足禁止提交）+ 工作日计算（排除周末）+ 9 类 configs 业务规则 + 5 个新端点 + 22 个新单测（314→336）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1/B2 + employees.hireDate 工龄计算<br>**强约束**：员工/部门关联走 prisma 直接操作（不 import 跨 service），**假期余额不存表**（V1.2 §四.6.2），调休余额留 B4 加班后实现，BullMQ 余额重置/调休清理留独立任务 | **Cursor + WorkBuddy** |
 | **M2.0.4** | **2026-08-30** | **feat(overtime): M2-B4 加班管理（Cursor 交付）<br>**范围**：overtime_requests 1 张表 + 加班补偿二选一（pay 加班费 / comp 调休 1:1）+ 单日 ≤3h / 单月 ≤36h 加班上限（劳动法）+ 加班费倍数计算（工作日 1.5x / 周末 2.0x，**法定假日 3.0x 留二期**）+ 至少提前 4h 申请 + 7 类 configs 业务规则 + 3 个新端点 + 23 个新单测（336→359）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1/B2/B3 + employee_salary_history（加班费计算）<br>**强约束**：员工/部门关联走 prisma 直接操作（不 import 跨 service），**未实现调休余额累计**（B6 月度汇总或独立任务），未修改 leave.service.ts 的 calculateLeaveBalance 函数 | **Cursor + WorkBuddy** |
 | **M2.0.5** | **2026-08-31** | **feat(trip): M2-B5 出差管理（Cursor 交付）<br>**范围**：business_trips 1 张表 + 出差申请（地点/起止日期/事由/项目）+ 差旅补助计算（城市 tier × 职级系数，service 函数，写 allowance_amount 字段）+ 走 M0.5-1 审批流 + 至少提前 3 天申请 + 区间重叠校验 + 7 类 configs 业务规则 + 3 个新端点 + 19 个新单测（359→378）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1/B2/B3/B4 + employees 表（**B5 不创建 projects 表**，projectCode 简化为字符串）<br>**强约束**：员工/部门关联走 prisma 直接操作（不 import 跨 service），**B5 不联动 B2 attendance_records GPS 打卡**，**B5 不联动 M4 薪酬**（差旅补助仅写字段），**B5 不实现月度汇总**（B6 范围） | **Cursor + WorkBuddy** |
+| **M2.0.6** | **2026-09-01** | **feat(summary): M2-B6 月度考勤汇总（Cursor 交付，M2 收尾切片）<br>**范围**：monthly_summaries 1 张表 + 报表生成（聚合 B1 attendance + B3 leave + B4 overtime + B5 trip 数据）+ 员工确认（draft → employee_confirmed）+ HR 锁定（employee_confirmed → hr_locked，**M4 薪酬切片读取 locked 数据**）+ **【B3 调休余额承诺】调休余额聚合**（B6 自己实现 calculateCompBalance 函数，**不调 leave.service，不修改 leave.service.calculateLeaveBalance**）+ 4 个新端点 + 22 个新单测（378→400）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1/B2/B3/B4/B5 + B3 leave_requests / B4 overtime_requests（聚合源）<br>**强约束**：员工/部门关联走 prisma 直接查询（不 import 跨 service），**未修改 leave.service.ts**，**B6 自己实现 calculateCompBalance 函数**（不调 leave.service.calculateLeaveBalance），BullMQ 每月 1 日自动生成留独立任务 | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

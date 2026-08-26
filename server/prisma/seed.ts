@@ -499,6 +499,36 @@ const DEFAULT_CONFIGS: Array<{
     value: false,
     remark: '出差天数是否含周末',
   },
+  {
+    category: 'summary',
+    key: 'auto_generate_day',
+    value: 1,
+    remark: '每月自动生成日（B6 不实现 BullMQ 调度）',
+  },
+  {
+    category: 'summary',
+    key: 'employee_confirm_deadline',
+    value: 3,
+    remark: '员工确认截止日（每月第 N 日前）',
+  },
+  {
+    category: 'summary',
+    key: 'hr_lock_day',
+    value: 5,
+    remark: 'HR 锁定日（每月第 N 日）',
+  },
+  {
+    category: 'summary',
+    key: 'default_confirm_strategy',
+    value: 'auto_confirm',
+    remark: '逾期确认策略 auto_confirm / manual_only',
+  },
+  {
+    category: 'summary',
+    key: 'work_days_per_month',
+    value: 21.75,
+    remark: '月平均工作日（劳动法）',
+  },
 ];
 
 async function main() {
@@ -1615,6 +1645,111 @@ async function main() {
       console.log('   ✓ 3 business trips');
     } else {
       console.log('   ✓ business trip demo already exists (skip)');
+    }
+  }
+
+  console.log('==> Seeding monthly summary demo (M2-B6)...');
+  const activeEmployees = await prisma.employee.findMany({
+    where: { deletedAt: null, status: { in: ['probation', 'active'] } },
+    take: 5,
+  });
+  if (activeEmployees.length > 0) {
+    const summaryExists = await prisma.monthlySummary.findFirst({
+      where: { year, month: 7, status: 'draft' },
+    });
+    if (!summaryExists) {
+      for (const emp of activeEmployees) {
+        if (!emp.departmentId) continue;
+        await prisma.monthlySummary.create({
+          data: {
+            employeeId: emp.id,
+            companyId: emp.companyId,
+            departmentId: emp.departmentId,
+            year,
+            month: 7,
+            workDays: 21,
+            lateCount: 1,
+            earlyLeaveCount: 0,
+            missingCount: 0,
+            leaveDays: 1,
+            leaveHours: 8,
+            overtimeHours: 4,
+            tripDays: 0,
+            compBalance: 0.5,
+            status: 'draft',
+            createdBy: admin.id,
+          },
+        });
+      }
+      console.log(`   ✓ ${activeEmployees.length} draft summaries (${year}-07)`);
+    }
+
+    const confirmedExists = await prisma.monthlySummary.findFirst({
+      where: { year: year - 1, month: 7, status: 'employee_confirmed' },
+    });
+    if (!confirmedExists && activeEmployees[0]) {
+      const emp = activeEmployees[0];
+      if (emp.departmentId) {
+        await prisma.monthlySummary.create({
+          data: {
+            employeeId: emp.id,
+            companyId: emp.companyId,
+            departmentId: emp.departmentId,
+            year: year - 1,
+            month: 7,
+            workDays: 22,
+            lateCount: 0,
+            earlyLeaveCount: 1,
+            missingCount: 0,
+            leaveDays: 2,
+            leaveHours: 16,
+            overtimeHours: 8,
+            tripDays: 3,
+            compBalance: 1,
+            status: 'employee_confirmed',
+            employeeConfirmedAt: new Date(`${year - 1}-08-02`),
+            employeeConfirmedBy: emp.userId ?? admin.id,
+            createdBy: admin.id,
+          },
+        });
+        console.log(`   ✓ 1 employee_confirmed summary (${year - 1}-07)`);
+      }
+    }
+
+    const lockedExists = await prisma.monthlySummary.findFirst({
+      where: { year: year - 1, month: 6, status: 'hr_locked' },
+    });
+    if (!lockedExists) {
+      for (const emp of activeEmployees.slice(0, 3)) {
+        if (!emp.departmentId) continue;
+        await prisma.monthlySummary.create({
+          data: {
+            employeeId: emp.id,
+            companyId: emp.companyId,
+            departmentId: emp.departmentId,
+            year: year - 1,
+            month: 6,
+            workDays: 20,
+            lateCount: 2,
+            earlyLeaveCount: 0,
+            missingCount: 1,
+            leaveDays: 0.5,
+            leaveHours: 4,
+            overtimeHours: 6,
+            tripDays: 2,
+            compBalance: 0,
+            status: 'hr_locked',
+            employeeConfirmedAt: new Date(`${year - 1}-07-02`),
+            employeeConfirmedBy: emp.userId ?? admin.id,
+            hrLockedAt: new Date(`${year - 1}-07-05`),
+            hrLockedBy: admin.id,
+            createdBy: admin.id,
+          },
+        });
+      }
+      console.log('   ✓ 3 hr_locked summaries (prior year-06)');
+    } else {
+      console.log('   ✓ monthly summary demo already exists (skip)');
     }
   }
 

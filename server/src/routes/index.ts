@@ -14,6 +14,7 @@ import employeeRoutes from './employee';
 import encryptedFieldRoutes from './encryptedField';
 import integrationRoutes from './integration';
 import leaveRoutes from './leave';
+import monthlySummaryRoutes from './monthly_summary';
 import notificationRoutes from './notification';
 import offboardingRoutes from './offboarding';
 import onboardingRoutes from './onboarding';
@@ -65,5 +66,6 @@ router.use('/attendance', attendanceRoutes);
 router.use('/leaves', leaveRoutes);
 router.use('/overtime', overtimeRoutes);
 router.use('/business-trips', businessTripRoutes);
+router.use('/monthly-summaries', monthlySummaryRoutes);
 
 export default router;

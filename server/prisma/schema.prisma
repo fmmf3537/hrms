@@ -1083,3 +1083,37 @@ model BusinessTrip {
   @@index([destination])
   @@map("business_trips")
 }
+
+// ==================== M2-B6 月度考勤汇总 ====================
+model MonthlySummary {
+  id            String   @id @default(uuid()) @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  departmentId  String   @map("department_id") @db.Uuid
+  year          Int      @db.SmallInt
+  month         Int      @db.SmallInt
+  workDays      Decimal  @map("work_days") @db.Decimal(4, 1)
+  lateCount     Int      @default(0) @map("late_count")
+  earlyLeaveCount Int    @default(0) @map("early_leave_count")
+  missingCount  Int      @default(0) @map("missing_count")
+  leaveDays     Decimal  @default(0) @map("leave_days") @db.Decimal(5, 1)
+  leaveHours    Decimal  @default(0) @map("leave_hours") @db.Decimal(6, 1)
+  overtimeHours Decimal  @default(0) @map("overtime_hours") @db.Decimal(6, 1)
+  tripDays      Decimal  @default(0) @map("trip_days") @db.Decimal(4, 1)
+  compBalance   Decimal  @default(0) @map("comp_balance") @db.Decimal(6, 1)
+  status        String   @default("draft") @db.VarChar(20)
+  employeeConfirmedAt DateTime? @map("employee_confirmed_at") @db.Timestamptz(6)
+  employeeConfirmedBy String?  @map("employee_confirmed_by") @db.Uuid
+  hrLockedAt    DateTime? @map("hr_locked_at") @db.Timestamptz(6)
+  hrLockedBy    String?  @map("hr_locked_by") @db.Uuid
+  remark        String?  @db.Text
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([employeeId, year, month])
+  @@index([companyId, year, month])
+  @@index([departmentId, year, month])
+  @@index([status])
+  @@map("monthly_summaries")
+}
