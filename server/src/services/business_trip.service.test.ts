@@ -6,7 +6,7 @@
    @typescript-eslint/no-unsafe-call */
 
 import {
-  beforeEach, describe, expect, it, vi,
+  afterEach, beforeEach, describe, expect, it, vi,
 } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -92,6 +92,13 @@ function defaultConfig(_cat: string, key: string): unknown {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // 修复 B5 跨 UTC 边界日期敏感测试（2026-08-27 发现的 72203 失败）
+  // 锁在 2026-09-01 12:00 UTC+8（= 04:00 UTC），保证：
+  //   1) toISOString().slice(0, 10) 不会跨日
+  //   2) TRIP_START='2026-09-08' > today 走正常校验
+  //   3) tomorrow = 2026-09-02 → advanceDays=0 < 3 → 抛 72203
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-09-01T12:00:00+08:00'));
   lastRecord = {};
   mocks.getValue.mockImplementation(defaultConfig);
   mocks.empFindFirst.mockResolvedValue(employee);
@@ -106,6 +113,10 @@ beforeEach(() => {
     return lastRecord;
   });
   mocks.auditLog.mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('createBusinessTrip', () => {

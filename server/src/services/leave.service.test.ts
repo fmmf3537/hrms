@@ -6,7 +6,7 @@
    @typescript-eslint/no-unsafe-call */
 
 import {
-  beforeEach, describe, expect, it, vi,
+  afterEach, beforeEach, describe, expect, it, vi,
 } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -79,6 +79,13 @@ const LEAVE_END_5 = '2026-09-14';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // 修复 B3 跨 UTC 边界日期敏感测试（2026-08-27 发现的 72009 失败）
+  // 锁在 2026-09-01 12:00 UTC+8（= 04:00 UTC），保证：
+  //   1) toISOString().slice(0, 10) 不会跨日
+  //   2) LEAVE_START='2026-09-08' > today 走正常校验（不会触发 72002 "日期不合法"）
+  //   3) startDate = 明天（2026-09-02 周三）→ advanceDays=1 < 7 → 抛 72009
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-09-01T12:00:00+08:00'));
   mocks.getValue.mockImplementation(async (_cat: string, key: string) => {
     const map: Record<string, unknown> = {
       types: ['annual', 'sick', 'personal', 'compensatory', 'marriage', 'maternity', 'paternity', 'bereavement'],
@@ -107,6 +114,10 @@ beforeEach(() => {
     ...data,
   }));
   mocks.auditLog.mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('createLeaveRequest', () => {
