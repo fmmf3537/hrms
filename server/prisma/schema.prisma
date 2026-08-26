@@ -975,3 +975,37 @@ model AttendanceRecord {
   @@index([importedExternalId])
   @@map("attendance_records")
 }
+
+// ==================== M2-B3 请假 ====================
+model LeaveRequest {
+  id            String   @id @default(uuid()) @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  departmentId  String   @map("department_id") @db.Uuid
+  leaveType     String   @map("leave_type") @db.VarChar(30)
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime @map("end_date") @db.Date
+  totalDays     Decimal  @map("total_days") @db.Decimal(4, 1)
+  reason        String?  @db.Text
+  attachments   Json?
+  status        String   @default("draft") @db.VarChar(20)
+  approvalInstanceId String? @unique @map("approval_instance_id") @db.Uuid
+  approvedAt    DateTime? @map("approved_at") @db.Timestamptz(6)
+  approvedBy    String?  @map("approved_by") @db.Uuid
+  rejectedAt    DateTime? @map("rejected_at") @db.Timestamptz(6)
+  rejectedBy    String?  @map("rejected_by") @db.Uuid
+  rejectedReason String? @map("rejected_reason") @db.Text
+  cancelledAt   DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy   String?  @map("cancelled_by") @db.Uuid
+  cancelledReason String? @map("cancelled_reason") @db.Text
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([employeeId, status])
+  @@index([companyId, status, startDate])
+  @@index([departmentId, status, startDate])
+  @@index([status, startDate])
+  @@index([leaveType, status])
+  @@map("leave_requests")
+}

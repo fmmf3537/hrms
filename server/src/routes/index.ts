@@ -12,6 +12,7 @@ import departmentRoutes from './department';
 import employeeRoutes from './employee';
 import encryptedFieldRoutes from './encryptedField';
 import integrationRoutes from './integration';
+import leaveRoutes from './leave';
 import notificationRoutes from './notification';
 import offboardingRoutes from './offboarding';
 import onboardingRoutes from './onboarding';
@@ -59,5 +60,6 @@ router.use('/transfers', transferRoutes);
 router.use('/contracts', contractRoutes);
 router.use('/shifts', shiftRoutes);
 router.use('/attendance', attendanceRoutes);
+router.use('/leaves', leaveRoutes);
 
 export default router;

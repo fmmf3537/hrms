@@ -357,6 +357,60 @@ const DEFAULT_CONFIGS: Array<{
     value: 3,
     remark: '每月补卡上限',
   },
+  {
+    category: 'leave',
+    key: 'types',
+    value: ['annual', 'sick', 'personal', 'compensatory', 'marriage', 'maternity', 'paternity', 'bereavement'],
+    remark: '8 类假期类型',
+  },
+  {
+    category: 'leave',
+    key: 'annual_leave_rules',
+    value: { '1-10': 5, '10-20': 10, '>20': 15 },
+    remark: '按工龄的年假天数规则',
+  },
+  {
+    category: 'leave',
+    key: 'comp_leave_validity_months',
+    value: 6,
+    remark: '调休有效期（月）',
+  },
+  {
+    category: 'leave',
+    key: 'approval_flow_short',
+    value: 'leave:leave_short',
+    remark: '≤3 天审批流',
+  },
+  {
+    category: 'leave',
+    key: 'approval_flow_long',
+    value: 'leave:leave_long',
+    remark: '>3 天审批流',
+  },
+  {
+    category: 'leave',
+    key: 'max_consecutive_days',
+    value: 30,
+    remark: '最长连续请假天数',
+  },
+  {
+    category: 'leave',
+    key: 'min_advance_days_annual',
+    value: 7,
+    remark: '年假最少提前申请天数',
+  },
+  {
+    category: 'leave',
+    key: 'workday_exclude_weekends',
+    value: true,
+    remark: '工作日计算排除周末',
+  },
+  {
+    category: 'leave',
+    key: 'sick_leave_max_days',
+    value: 90,
+    remark: '病假最长天数',
+  },
 ];
 
 async function main() {
@@ -1294,6 +1348,61 @@ async function main() {
     }
   } else if (!techEmp) {
     console.log('   ✓ no employee, skip attendance seed');
+  }
+
+  console.log('==> Seeding leave demo (M2-B3)...');
+  if (hrEmp) {
+    const leaveExists = await prisma.leaveRequest.findFirst({
+      where: { employeeId: hrEmp.id, leaveType: 'annual', status: 'draft' },
+    });
+    if (!leaveExists) {
+      await prisma.leaveRequest.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          leaveType: 'annual',
+          startDate: new Date(`${year}-10-08`),
+          endDate: new Date(`${year}-10-10`),
+          totalDays: 3,
+          reason: 'draft 年假申请 demo',
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.leaveRequest.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          leaveType: 'personal',
+          startDate: new Date(`${year}-10-15`),
+          endDate: new Date(`${year}-10-16`),
+          totalDays: 2,
+          reason: '事假 demo',
+          status: 'submitted',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.leaveRequest.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          leaveType: 'sick',
+          startDate: new Date(`${year}-08-20`),
+          endDate: new Date(`${year}-08-21`),
+          totalDays: 2,
+          reason: '病假 demo',
+          status: 'approved',
+          approvedAt: new Date(),
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 3 leave requests');
+    } else {
+      console.log('   ✓ leave demo already exists (skip)');
+    }
   }
 
   console.log('==> Done.');

@@ -728,6 +728,16 @@
 | POST | `/attendance/manual` | 是 | 补卡申请（走 M0.5-1 审批流） |
 | POST | `/attendance/import` | 是 | 考勤数据导入（得力 e+ Excel base64 解析） |
 
+### 3.15 Leave API（M2-B3）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/leaves/requests` | 是 | 提交请假申请（draft → submitted + 审批流） |
+| GET | `/leaves/requests` | 是 | 请假记录列表（分页 + 多维过滤） |
+| GET | `/leaves/requests/:id` | 是 | 请假详情 |
+| POST | `/leaves/requests/:id/cancel` | 是 | 撤回（draft/submitted） |
+| GET | `/leaves/balance` | 是 | 假期余额查询（employeeId + leaveType + year） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

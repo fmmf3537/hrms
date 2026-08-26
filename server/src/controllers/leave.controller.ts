@@ -1,0 +1,61 @@
+// M2-B3: 请假 controller | HRMS
+import type { Request, Response } from 'express';
+
+import { asyncHandler } from '../middleware/errorHandler';
+import * as leaveService from '../services/leave.service';
+
+export const create = asyncHandler(async (req: Request, res: Response) => {
+  const operatorId = req.user?.userId;
+  if (!operatorId) {
+    res.status(401).json({ success: false, message: '未认证' });
+    return;
+  }
+  const body = req.body as leaveService.CreateLeaveRequestInput;
+  const data = await leaveService.createLeaveRequest(body, operatorId);
+  res.status(201).json({ success: true, data });
+});
+
+export const list = asyncHandler(async (req: Request, res: Response) => {
+  const result = await leaveService.listLeaveRequests({
+    employeeId: req.query.employeeId as string | undefined,
+    companyId: req.query.companyId as string | undefined,
+    departmentId: req.query.departmentId as string | undefined,
+    leaveType: req.query.leaveType as string | undefined,
+    status: req.query.status as string | undefined,
+    dateFrom: req.query.dateFrom as string | undefined,
+    dateTo: req.query.dateTo as string | undefined,
+    page: req.query.page ? Number(req.query.page) : 1,
+    pageSize: req.query.pageSize ? Number(req.query.pageSize) : 20,
+  });
+  res.json({
+    success: true,
+    data: result.data,
+    total: result.total,
+    page: result.page,
+    pageSize: result.pageSize,
+  });
+});
+
+export const getById = asyncHandler(async (req: Request, res: Response) => {
+  const data = await leaveService.getLeaveRequestById(req.params.id);
+  res.json({ success: true, data });
+});
+
+export const cancel = asyncHandler(async (req: Request, res: Response) => {
+  const operatorId = req.user?.userId;
+  if (!operatorId) {
+    res.status(401).json({ success: false, message: '未认证' });
+    return;
+  }
+  const { reason } = req.body as { reason: string };
+  const data = await leaveService.cancelLeaveRequest(req.params.id, reason, operatorId);
+  res.json({ success: true, data });
+});
+
+export const balance = asyncHandler(async (req: Request, res: Response) => {
+  const employeeId = req.query.employeeId as string;
+  const leaveType = req.query.leaveType as string;
+  const year = req.query.year ? Number(req.query.year) : new Date().getFullYear();
+  const data = await leaveService.calculateLeaveBalance(employeeId, leaveType, year);
+  res.json({ success: true, data });
+});

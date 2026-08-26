@@ -857,7 +857,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 |---|---|---|---|
 | B1 | 班次与排班（班次定义 + 月排班）**已实现** — [`shift/README.md`](../server/src/services/shift/README.md) | 4 | 3d |
 | B2 | 打卡（WiFi + GPS + 补卡申请）+ 考勤数据导入（得力 e+ 导出格式解析）**已实现** — [`attendance/README.md`](../server/src/services/attendance/README.md) | 5 | 4d |
-| B3 | 请假（8 类假期 + 额度管理 + **走 M0.5 审批流**） | 5 | 3.5d |
+| B3 | 请假（8 类假期 + 额度管理 + **走 M0.5 审批流**）**已实现** — [`leave/README.md`](../server/src/services/leave/README.md) | 5 | 3.5d |
 | B4 | 加班（申请 + 补偿二选一 + 走 M0.5 审批流） | 3 | 2d |
 | B5 | 出差（含差旅补助联动） | 3 | 2d |
 | B6 | 月度考勤汇总（含员工确认 + HR 锁定） | 4 | 3d |
@@ -1179,6 +1179,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M1.0.7** | **2026-08-26** | **docs: M1 收尾（7 切片全部完成 + 提示词库 9 文件）<br>**M1 全部完成**：A1+A2/A3/A4/A5/A6/A7 全部落地（7 个 commit，0 越界，0 旧测试改动）<br>**测试演进**：140（M0.5 收尾）→ 178→195→213→234→255→**276**（M1 收尾，+136 / +97%）<br>**提示词库**：docs/cursor-prompts/ 累计 9 个 .md（~270KB）；模式演进 30-33KB（A1+A2/A3/A4 早期）→ 45-47KB（A5/A6/A7 详尽模式）<br>**关键经验**：1) 简化提示词 ≠ 优化（**A6 第一次瘦身 15KB 失败，反向优化回 45KB 验证成功**）；2) 4 类关键决策点必须详尽（schema 完整定义 / JSDoc+校验链 / 错误码触发条件 / 测试断言细节）；3) 样板可省（Zod/controller/routes 挂载/5 角色 RBAC）引用前切片<br>**M1 收尾报告**：[`docs/cursor-prompts/M1-wrap-up.md`](./cursor-prompts/M1-wrap-up.md)<br>**下一阶段 M2 考勤假勤**（V1.2 §四.6 B1-B6） | **WorkBuddy** |
 | **M2.0.1** | **2026-08-27** | **feat(shift): M2-B1 班次定义与排班（Cursor 交付，M2 首个切片）<br>**范围**：shift_templates + shift_assignments 2 张表 + 3 类工时制（standard/comprehensive/flexible）+ 状态机 draft→active→archived + 5 端点（4 班次 CRUD + 1 批量排班）+ 排班冲突检测（连续工作 ≤6 天 / 休息间隔 ≥12 小时 / 同员工同范围不可重复）+ 9 类 configs 业务规则 + 17 个新单测（276→293）<br>**依赖**：M1 全部 + M0.5 全部 + employees / companies / departments 关联<br>**强约束**：员工/部门/公司关联走 prisma 直接操作（不 import 跨 service），B1 不实现打卡/请假/加班/出差/月度汇总（留 B2-B6），BullMQ 冲突扫描调度留独立任务 | **Cursor + WorkBuddy** |
 | **M2.0.2** | **2026-08-28** | **feat(attendance): M2-B2 打卡管理（Cursor 交付）<br>**范围**：attendance_records 1 张表 + 4 打卡方式（WiFi/GPS/manual/imported）+ 异常判定（迟到/早退/缺卡，service 层函数）+ 补卡申请（走 M0.5-1 审批流，月度上限 3 次）+ 得力 e+ Excel 解析（mock，不接真实 SaaS，留二期）+ 8 类 configs 业务规则 + 5 个新端点 + 21 个新单测（293→314）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1 班次定义 + shiftAssignment 关联<br>**强约束**：员工/部门/班次关联走 prisma 直接操作（不 import 跨 service），B2 不实现 B3-B6 业务，得力 e+ 只 Excel 解析（不接 API），employees 表未修改（未加 external_id 字段，imported_external_id 存在 attendance_records 表） | **Cursor + WorkBuddy** |
+| **M2.0.3** | **2026-08-29** | **feat(leave): M2-B3 请假（Cursor 交付）<br>**范围**：leave_requests 1 张表 + 8 类假期（annual/sick/personal/compensatory/marriage/maternity/paternity/bereavement）+ 假期额度管理（按工龄的年假规则 + service 函数计算，**不存表**）+ 2 级审批流（≤3 天 short / >3 天 long）+ 余额校验（年假/调休不足禁止提交）+ 工作日计算（排除周末）+ 9 类 configs 业务规则 + 5 个新端点 + 22 个新单测（314→336）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1/B2 + employees.hireDate 工龄计算<br>**强约束**：员工/部门关联走 prisma 直接操作（不 import 跨 service），**假期余额不存表**（V1.2 §四.6.2），调休余额留 B4 加班后实现，BullMQ 余额重置/调休清理留独立任务 | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 
