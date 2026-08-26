@@ -718,6 +718,16 @@
 | PUT | `/shifts/:id` | 是 | 更新班次（仅 draft/active；status='archived' 触发归档） |
 | POST | `/shifts/assignments` | 是 | 批量排班（按 employee / department / 日期范围） |
 
+### 3.14 Attendance API（M2-B2）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/attendance/clock-in` | 是 | 打卡（WiFi / GPS） |
+| GET | `/attendance/records` | 是 | 打卡记录列表（分页 + 多维过滤） |
+| GET | `/attendance/records/:id` | 是 | 打卡记录详情 |
+| POST | `/attendance/manual` | 是 | 补卡申请（走 M0.5-1 审批流） |
+| POST | `/attendance/import` | 是 | 考勤数据导入（得力 e+ Excel base64 解析） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

@@ -117,6 +117,10 @@ export const PERMISSIONS = {
   SHIFT_READ: 'shift:read',
   SHIFT_WRITE: 'shift:write',
   SHIFT_ASSIGN: 'shift:assign',
+
+  // M2-B2 打卡管理
+  ATTENDANCE_CLOCK: 'attendance:clock',
+  ATTENDANCE_MANUAL: 'attendance:manual',
 } as const;
 
 /** 权限点字面量联合类型 */
@@ -179,6 +183,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.SHIFT_READ,
     PERMISSIONS.SHIFT_WRITE,
     PERMISSIONS.SHIFT_ASSIGN,
+    PERMISSIONS.ATTENDANCE_CLOCK,
+    PERMISSIONS.ATTENDANCE_MANUAL,
   ],
   dept_head: [
     PERMISSIONS.EMPLOYEE_READ_SELF_DEPT,
@@ -196,6 +202,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.CONTRACT_READ,
     PERMISSIONS.SHIFT_READ,
     PERMISSIONS.SHIFT_ASSIGN,
+    PERMISSIONS.ATTENDANCE_MANUAL,
   ],
   executive: [
     PERMISSIONS.EMPLOYEE_READ,
@@ -227,5 +234,6 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.AI_SCORE,
     PERMISSIONS.AI_DOCUMENT_READ,
     PERMISSIONS.AI_CONVERSATION_READ,
+    PERMISSIONS.ATTENDANCE_CLOCK,
   ],
 };

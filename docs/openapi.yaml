@@ -1662,6 +1662,83 @@ paths:
         '200':
           description: 成功
 
+  /attendance/clock-in:
+    post:
+      tags: [Attendance]
+      summary: 打卡（WiFi / GPS）
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceClockInInput'
+      responses:
+        '201':
+          description: 已创建
+  /attendance/records:
+    get:
+      tags: [Attendance]
+      summary: 打卡记录列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: companyId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [approved, pending, rejected] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: 成功
+  /attendance/records/{id}:
+    get:
+      tags: [Attendance]
+      summary: 打卡记录详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /attendance/manual:
+    post:
+      tags: [Attendance]
+      summary: 补卡申请
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceManualInput'
+      responses:
+        '201':
+          description: 已创建
+  /attendance/import:
+    post:
+      tags: [Attendance]
+      summary: 考勤数据导入（得力 e+ base64）
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttendanceImportInput'
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2384,3 +2461,43 @@ components:
         effectiveFrom: { type: string, format: date }
         effectiveTo: { type: string, format: date }
         remark: { type: string }
+
+    AttendanceClockInInput:
+      type: object
+      required: [employeeId, clockType, clockInTime]
+      properties:
+        employeeId: { type: string, format: uuid }
+        clockType:
+          type: string
+          enum: [wifi, gps]
+        clockInTime: { type: string, format: date-time }
+        clockOutTime: { type: string, format: date-time }
+        wifiSsid: { type: string }
+        wifiMac: { type: string }
+        gpsLat: { type: number }
+        gpsLng: { type: number }
+        gpsAccuracy: { type: number }
+        gpsAddress: { type: string }
+
+    AttendanceManualInput:
+      type: object
+      required: [employeeId, clockInTime, clockType, manualReason]
+      properties:
+        employeeId: { type: string, format: uuid }
+        clockInTime: { type: string, format: date-time }
+        clockOutTime: { type: string, format: date-time }
+        clockType:
+          type: string
+          enum: [manual]
+        manualReason: { type: string }
+        wifiSsid: { type: string }
+        gpsLat: { type: number }
+        gpsLng: { type: number }
+
+    AttendanceImportInput:
+      type: object
+      required: [fileContent, format]
+      properties:
+        fileContent: { type: string, description: base64 encoded CSV mock }
+        format: { type: string, enum: [deli-e-plus-v1] }
+        effectiveDate: { type: string, format: date }

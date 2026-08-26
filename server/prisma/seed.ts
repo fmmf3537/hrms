@@ -309,6 +309,54 @@ const DEFAULT_CONFIGS: Array<{
     value: 30,
     remark: '早退阈值（分钟，B2 用）',
   },
+  {
+    category: 'attendance',
+    key: 'wifi_ssids',
+    value: ['Office-WiFi-XACH', 'Office-WiFi-XACX'],
+    remark: 'WiFi SSID 白名单',
+  },
+  {
+    category: 'attendance',
+    key: 'gps_max_distance',
+    value: 100,
+    remark: 'GPS 打卡最大距离（米）',
+  },
+  {
+    category: 'attendance',
+    key: 'late_threshold',
+    value: 30,
+    remark: '迟到阈值（分钟）',
+  },
+  {
+    category: 'attendance',
+    key: 'early_leave_threshold',
+    value: 30,
+    remark: '早退阈值（分钟）',
+  },
+  {
+    category: 'attendance',
+    key: 'missing_threshold',
+    value: 4,
+    remark: '缺卡判定阈值（小时）',
+  },
+  {
+    category: 'attendance',
+    key: 'import_formats',
+    value: ['deli-e-plus-v1'],
+    remark: '导入格式版本',
+  },
+  {
+    category: 'attendance',
+    key: 'manual_clock_flow_key',
+    value: 'attendance:manual_clock_approval',
+    remark: '补卡审批流 key',
+  },
+  {
+    category: 'attendance',
+    key: 'monthly_max_manual',
+    value: 3,
+    remark: '每月补卡上限',
+  },
 ];
 
 async function main() {
@@ -1179,6 +1227,73 @@ async function main() {
     }
   } else {
     console.log('   ✓ no HR employee, skip shift seed');
+  }
+
+  console.log('==> Seeding attendance demo (M2-B2)...');
+  const hrEmp = await prisma.employee.findUnique({
+    where: { employeeNo: `XACH${year}0002` },
+  });
+  const techEmp = await prisma.employee.findUnique({
+    where: { employeeNo: `XACH${year}0005` },
+  });
+  if (hrEmp) {
+    const attExists = await prisma.attendanceRecord.findFirst({
+      where: { employeeId: hrEmp.id, source: 'app' },
+    });
+    if (!attExists) {
+      await prisma.attendanceRecord.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId,
+          clockInTime: new Date(`${year}-08-28T09:00:00.000Z`),
+          clockOutTime: new Date(`${year}-08-28T18:00:00.000Z`),
+          clockType: 'wifi',
+          source: 'app',
+          wifiSsid: 'Office-WiFi-XACH',
+          isLate: false,
+          lateMinutes: 0,
+          status: 'approved',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.attendanceRecord.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId,
+          clockInTime: new Date(`${year}-08-27T09:15:00.000Z`),
+          clockOutTime: new Date(`${year}-08-27T18:00:00.000Z`),
+          clockType: 'gps',
+          source: 'app',
+          gpsLat: 34.3416,
+          gpsLng: 108.9398,
+          isLate: true,
+          lateMinutes: 15,
+          status: 'approved',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.attendanceRecord.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId,
+          clockInTime: new Date(`${year}-08-26T09:00:00.000Z`),
+          clockType: 'manual',
+          source: 'admin',
+          isManual: true,
+          manualReason: '外出办事忘记打卡，申请补卡',
+          status: 'pending',
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 3 attendance records');
+    } else {
+      console.log('   ✓ attendance demo already exists (skip)');
+    }
+  } else if (!techEmp) {
+    console.log('   ✓ no employee, skip attendance seed');
   }
 
   console.log('==> Done.');

@@ -928,3 +928,50 @@ model ShiftAssignment {
   @@index([departmentId, effectiveFrom])
   @@map("shift_assignments")
 }
+
+// ==================== M2-B2 打卡管理 ====================
+model AttendanceRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  employeeId    String   @map("employee_id") @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  departmentId  String   @map("department_id") @db.Uuid
+  shiftAssignmentId String? @map("shift_assignment_id") @db.Uuid
+  clockInTime   DateTime? @map("clock_in_time") @db.Timestamptz(6)
+  clockOutTime  DateTime? @map("clock_out_time") @db.Timestamptz(6)
+  clockType     String   @map("clock_type") @db.VarChar(20)
+  source        String   @map("source") @db.VarChar(20)
+  wifiSsid      String?  @map("wifi_ssid") @db.VarChar(100)
+  wifiMac       String?  @map("wifi_mac") @db.VarChar(50)
+  gpsLat        Decimal? @map("gps_lat") @db.Decimal(10, 7)
+  gpsLng        Decimal? @map("gps_lng") @db.Decimal(10, 7)
+  gpsAccuracy   Decimal? @map("gps_accuracy") @db.Decimal(10, 2)
+  gpsAddress    String?  @map("gps_address") @db.VarChar(500)
+  importedExternalId String? @unique @map("imported_external_id") @db.VarChar(100)
+  importedFrom  String?  @map("imported_from") @db.VarChar(50)
+  importedAt    DateTime? @map("imported_at") @db.Timestamptz(6)
+  isLate        Boolean  @default(false) @map("is_late")
+  lateMinutes   Int      @default(0) @map("late_minutes")
+  isEarlyLeave  Boolean  @default(false) @map("is_early_leave")
+  earlyLeaveMinutes Int  @default(0) @map("early_leave_minutes")
+  isMissing     Boolean  @default(false) @map("is_missing")
+  status        String   @default("approved") @db.VarChar(20)
+  isManual      Boolean  @default(false) @map("is_manual")
+  manualReason  String?  @map("manual_reason") @db.Text
+  approvalInstanceId String? @unique @map("approval_instance_id") @db.Uuid
+  remark        String?  @db.Text
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  rejectedAt    DateTime? @map("rejected_at") @db.Timestamptz(6)
+  rejectedBy    String?  @map("rejected_by") @db.Uuid
+  rejectedReason String? @map("rejected_reason") @db.Text
+
+  @@unique([employeeId, clockInTime])
+  @@index([employeeId, clockInTime])
+  @@index([companyId, clockInTime])
+  @@index([departmentId, clockInTime])
+  @@index([status, clockInTime])
+  @@index([isManual, status])
+  @@index([importedExternalId])
+  @@map("attendance_records")
+}

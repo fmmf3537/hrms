@@ -2,6 +2,7 @@ import { Router, type Router as RouterType } from 'express';
 
 import aiRoutes from './ai';
 import approvalRoutes from './approval';
+import attendanceRoutes from './attendance';
 import auditRoutes from './audit';
 import authRoutes from './auth';
 import companyRoutes from './company';
@@ -57,5 +58,6 @@ router.use('/offboarding', offboardingRoutes);
 router.use('/transfers', transferRoutes);
 router.use('/contracts', contractRoutes);
 router.use('/shifts', shiftRoutes);
+router.use('/attendance', attendanceRoutes);
 
 export default router;
