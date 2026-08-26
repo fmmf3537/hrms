@@ -1815,6 +1815,47 @@ paths:
         '200':
           description: 成功
 
+  /overtime/requests:
+    get:
+      tags: [Overtime]
+      summary: 加班记录列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Overtime]
+      summary: 提交加班申请
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OvertimeCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /overtime/requests/{id}/cancel:
+    post:
+      tags: [Overtime]
+      summary: 撤回加班申请
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OvertimeCancelInput'
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2595,6 +2636,31 @@ components:
             type: object
 
     LeaveCancelInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+
+    OvertimeCreateInput:
+      type: object
+      required: [employeeId, startTime, endTime, compensationType, reason]
+      properties:
+        employeeId: { type: string, format: uuid }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        overtimeType:
+          type: string
+          enum: [weekday, weekend, holiday]
+        compensationType:
+          type: string
+          enum: [pay, comp]
+        reason: { type: string }
+        attachments:
+          type: array
+          items:
+            type: object
+
+    OvertimeCancelInput:
       type: object
       required: [reason]
       properties:

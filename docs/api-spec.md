@@ -738,6 +738,14 @@
 | POST | `/leaves/requests/:id/cancel` | 是 | 撤回（draft/submitted） |
 | GET | `/leaves/balance` | 是 | 假期余额查询（employeeId + leaveType + year） |
 
+### 3.16 Overtime API（M2-B4）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/overtime/requests` | 是 | 提交加班申请（draft → submitted + 审批流） |
+| GET | `/overtime/requests` | 是 | 加班记录列表（分页 + 多维过滤） |
+| POST | `/overtime/requests/:id/cancel` | 是 | 撤回（draft/submitted） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

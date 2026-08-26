@@ -411,6 +411,48 @@ const DEFAULT_CONFIGS: Array<{
     value: 90,
     remark: '病假最长天数',
   },
+  {
+    category: 'overtime',
+    key: 'max_daily_hours',
+    value: 3,
+    remark: '单日加班上限（小时）',
+  },
+  {
+    category: 'overtime',
+    key: 'max_monthly_hours',
+    value: 36,
+    remark: '单月加班上限（小时）',
+  },
+  {
+    category: 'overtime',
+    key: 'pay_multiplier_weekday',
+    value: 1.5,
+    remark: '工作日加班费倍数',
+  },
+  {
+    category: 'overtime',
+    key: 'pay_multiplier_weekend',
+    value: 2.0,
+    remark: '周末加班费倍数',
+  },
+  {
+    category: 'overtime',
+    key: 'pay_multiplier_holiday',
+    value: 3.0,
+    remark: '法定假日加班费倍数',
+  },
+  {
+    category: 'overtime',
+    key: 'approval_flow_key',
+    value: 'overtime:overtime_default',
+    remark: '加班审批流 key',
+  },
+  {
+    category: 'overtime',
+    key: 'min_advance_hours',
+    value: 4,
+    remark: '最少提前申请小时数',
+  },
 ];
 
 async function main() {
@@ -1402,6 +1444,67 @@ async function main() {
       console.log('   ✓ 3 leave requests');
     } else {
       console.log('   ✓ leave demo already exists (skip)');
+    }
+  }
+
+  console.log('==> Seeding overtime demo (M2-B4)...');
+  if (hrEmp) {
+    const overtimeExists = await prisma.overtimeRequest.findFirst({
+      where: { employeeId: hrEmp.id, status: 'draft' },
+    });
+    if (!overtimeExists) {
+      await prisma.overtimeRequest.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          startTime: new Date(`${year}-09-10T19:00:00.000Z`),
+          endTime: new Date(`${year}-09-10T21:00:00.000Z`),
+          totalHours: 2,
+          overtimeType: 'weekday',
+          compensationType: 'pay',
+          overtimePay: 172.41,
+          reason: 'draft 工作日加班 pay demo',
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.overtimeRequest.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          startTime: new Date(`${year}-09-12T10:00:00.000Z`),
+          endTime: new Date(`${year}-09-12T12:00:00.000Z`),
+          totalHours: 2,
+          overtimeType: 'weekend',
+          compensationType: 'comp',
+          compDays: 0.25,
+          reason: 'submitted 周末加班 comp demo',
+          status: 'submitted',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.overtimeRequest.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          startTime: new Date(`${year}-08-25T19:00:00.000Z`),
+          endTime: new Date(`${year}-08-25T21:00:00.000Z`),
+          totalHours: 2,
+          overtimeType: 'weekday',
+          compensationType: 'pay',
+          overtimePay: 172.41,
+          reason: 'approved 工作日加班 pay demo',
+          status: 'approved',
+          approvedAt: new Date(),
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 3 overtime requests');
+    } else {
+      console.log('   ✓ overtime demo already exists (skip)');
     }
   }
 

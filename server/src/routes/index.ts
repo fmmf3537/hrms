@@ -16,6 +16,7 @@ import leaveRoutes from './leave';
 import notificationRoutes from './notification';
 import offboardingRoutes from './offboarding';
 import onboardingRoutes from './onboarding';
+import overtimeRoutes from './overtime';
 import regularizationRoutes from './regularization';
 import shiftRoutes from './shift';
 import transferRoutes from './transfer';
@@ -61,5 +62,6 @@ router.use('/contracts', contractRoutes);
 router.use('/shifts', shiftRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/leaves', leaveRoutes);
+router.use('/overtime', overtimeRoutes);
 
 export default router;
