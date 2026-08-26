@@ -855,7 +855,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 
 | 切片 | 范围 | 子任务 | 工时 |
 |---|---|---|---|
-| B1 | 班次与排班（班次定义 + 月排班） | 4 | 3d |
+| B1 | 班次与排班（班次定义 + 月排班）**已实现** — [`shift/README.md`](../server/src/services/shift/README.md) | 4 | 3d |
 | B2 | 打卡（WiFi + GPS + 补卡申请）+ 考勤数据导入（得力 e+ 导出格式解析） | 5 | 4d |
 | B3 | 请假（8 类假期 + 额度管理 + **走 M0.5 审批流**） | 5 | 3.5d |
 | B4 | 加班（申请 + 补偿二选一 + 走 M0.5 审批流） | 3 | 2d |
@@ -1177,6 +1177,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M1.0.5** | **2026-08-29** | **feat(transfer): M1-A5 调动流程（Cursor 交付）<br>**范围**：transfer_records 1 张表 + 状态机 draft→submitted→approved/rejected/cancelled + 4 级审批流（from_dept_leader→to_dept_leader→hr→ceo）+ 调动类型平调/晋升/降职 + 联动 employee_position_history + employee_salary_history + 立即/次月生效策略 + 5 个新端点 + 21 个新单测（234→255）<br>**依赖**：M1-A1+A2+A3+A4+A6 + M0.5 全部 + employee_position_history / employee_salary_history 表<br>**强约束**：员工/岗位/薪资走 prisma 直接操作（不 import 跨 service），权限重算留二期，未来生效日 BullMQ 留独立任务 | **Cursor + WorkBuddy** |
 | **M1.0.6** | **2026-08-30** | **feat(contract): M1-A7 合同管理（Cursor 交付，M1 收尾切片）<br>**范围**：contract_records 1 张表 + 6 状态机 draft→pending_signature→signing→signed/expired/cancelled + 5 类合同模板（formal/intern/consultant/labor/nda）+ 电子签 mock（不接 e-签宝真实 SaaS，留二期）+ 附件简化处理（attachmentUrl 字符串，不实现 multipart）+ 合同到期 3 级预警（30/15/7 天，configs.contract.warning_days）+ 6 个端点（5 用户 + 1 webhook）+ 21 个新单测（255→276）<br>**依赖**：M1-A1+A2+A3+A4+A5+A6 + M0.5 全部 + crypto.service 加密敏感配置<br>**强约束**：e-签宝只 mock（不接真实 SaaS），附件走 URL 字符串（不实现 multipart），员工关联走 prisma 直接操作（不 import 跨 service） | **Cursor + WorkBuddy** |
 | **M1.0.7** | **2026-08-26** | **docs: M1 收尾（7 切片全部完成 + 提示词库 9 文件）<br>**M1 全部完成**：A1+A2/A3/A4/A5/A6/A7 全部落地（7 个 commit，0 越界，0 旧测试改动）<br>**测试演进**：140（M0.5 收尾）→ 178→195→213→234→255→**276**（M1 收尾，+136 / +97%）<br>**提示词库**：docs/cursor-prompts/ 累计 9 个 .md（~270KB）；模式演进 30-33KB（A1+A2/A3/A4 早期）→ 45-47KB（A5/A6/A7 详尽模式）<br>**关键经验**：1) 简化提示词 ≠ 优化（**A6 第一次瘦身 15KB 失败，反向优化回 45KB 验证成功**）；2) 4 类关键决策点必须详尽（schema 完整定义 / JSDoc+校验链 / 错误码触发条件 / 测试断言细节）；3) 样板可省（Zod/controller/routes 挂载/5 角色 RBAC）引用前切片<br>**M1 收尾报告**：[`docs/cursor-prompts/M1-wrap-up.md`](./cursor-prompts/M1-wrap-up.md)<br>**下一阶段 M2 考勤假勤**（V1.2 §四.6 B1-B6） | **WorkBuddy** |
+| **M2.0.1** | **2026-08-27** | **feat(shift): M2-B1 班次定义与排班（Cursor 交付，M2 首个切片）<br>**范围**：shift_templates + shift_assignments 2 张表 + 3 类工时制（standard/comprehensive/flexible）+ 状态机 draft→active→archived + 5 端点（4 班次 CRUD + 1 批量排班）+ 排班冲突检测（连续工作 ≤6 天 / 休息间隔 ≥12 小时 / 同员工同范围不可重复）+ 9 类 configs 业务规则 + 17 个新单测（276→293）<br>**依赖**：M1 全部 + M0.5 全部 + employees / companies / departments 关联<br>**强约束**：员工/部门/公司关联走 prisma 直接操作（不 import 跨 service），B1 不实现打卡/请假/加班/出差/月度汇总（留 B2-B6），BullMQ 冲突扫描调度留独立任务 | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

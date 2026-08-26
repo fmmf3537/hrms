@@ -255,6 +255,60 @@ const DEFAULT_CONFIGS: Array<{
     value: true,
     remark: 'mock 模式开关',
   },
+  {
+    category: 'shift',
+    key: 'types',
+    value: ['standard', 'comprehensive', 'flexible'],
+    remark: '3 类工时制枚举',
+  },
+  {
+    category: 'shift',
+    key: 'default_work_hours',
+    value: 8,
+    remark: '标准工时默认小时数',
+  },
+  {
+    category: 'shift',
+    key: 'break_duration',
+    value: 90,
+    remark: '午休默认时长（分钟）',
+  },
+  {
+    category: 'shift',
+    key: 'flex_minutes',
+    value: 30,
+    remark: '弹性时间（分钟）',
+  },
+  {
+    category: 'shift',
+    key: 'assignment_strategy',
+    value: 'department',
+    remark: '默认排班策略',
+  },
+  {
+    category: 'shift',
+    key: 'max_consecutive_days',
+    value: 6,
+    remark: '最大连续工作天数',
+  },
+  {
+    category: 'shift',
+    key: 'min_rest_hours',
+    value: 12,
+    remark: '最小休息间隔小时数',
+  },
+  {
+    category: 'shift',
+    key: 'late_threshold',
+    value: 30,
+    remark: '迟到阈值（分钟，B2 用）',
+  },
+  {
+    category: 'shift',
+    key: 'early_leave_threshold',
+    value: 30,
+    remark: '早退阈值（分钟，B2 用）',
+  },
 ];
 
 async function main() {
@@ -1040,6 +1094,91 @@ async function main() {
     }
   } else {
     console.log('   ✓ no suitable employee, skip contract seed');
+  }
+
+  console.log('==> Seeding shift demo (M2-B1)...');
+  const hrEmployee = await prisma.employee.findUnique({
+    where: { employeeNo: `XACH${year}0002` },
+  });
+  if (hrEmployee) {
+    const stdExists = await prisma.shiftTemplate.findFirst({
+      where: { code: 'STD-DAY', companyId: xach.id },
+    });
+    if (!stdExists) {
+      const stdShift = await prisma.shiftTemplate.create({
+        data: {
+          code: 'STD-DAY',
+          name: '标准白班',
+          shiftType: 'standard',
+          startTime: '09:00',
+          endTime: '18:00',
+          breakStart: '12:00',
+          breakEnd: '13:30',
+          breakDuration: 90,
+          workHours: 8,
+          flexMinutes: 30,
+          effectiveFrom: new Date(`${year}-01-01`),
+          companyId: xach.id,
+          status: 'active',
+          description: '标准 9:00-18:00 白班',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.shiftTemplate.create({
+        data: {
+          code: 'COMP-DAY',
+          name: '综合白班',
+          shiftType: 'comprehensive',
+          startTime: '08:00',
+          endTime: '17:00',
+          breakStart: '12:00',
+          breakEnd: '13:00',
+          breakDuration: 60,
+          workHours: 8,
+          flexMinutes: 30,
+          effectiveFrom: new Date(`${year}-01-01`),
+          companyId: xach.id,
+          status: 'active',
+          description: '综合工时白班',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.shiftTemplate.create({
+        data: {
+          code: 'FLEX-DAY',
+          name: '弹性班',
+          shiftType: 'flexible',
+          startTime: '10:00',
+          endTime: '19:00',
+          breakStart: '13:00',
+          breakEnd: '14:00',
+          breakDuration: 60,
+          workHours: 8,
+          flexMinutes: 30,
+          effectiveFrom: new Date(`${year}-01-01`),
+          companyId: xach.id,
+          status: 'draft',
+          description: '弹性 10:00-19:00',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.shiftAssignment.create({
+        data: {
+          shiftId: stdShift.id,
+          assigneeType: 'employee',
+          employeeId: hrEmployee.id,
+          effectiveFrom: new Date(`${year}-09-01`),
+          effectiveTo: new Date(`${year}-09-30`),
+          remark: 'M2-B1 demo 排班',
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 3 shift templates + 1 assignment');
+    } else {
+      console.log('   ✓ shift demo already exists (skip)');
+    }
+  } else {
+    console.log('   ✓ no HR employee, skip shift seed');
   }
 
   console.log('==> Done.');

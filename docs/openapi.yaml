@@ -1579,6 +1579,89 @@ paths:
         '200':
           description: 成功
 
+  /shifts:
+    get:
+      tags: [Shift]
+      summary: 班次列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: companyId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: shiftType
+          in: query
+          schema: { type: string, enum: [standard, comprehensive, flexible] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, active, archived] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Shift]
+      summary: 创建班次模板
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /shifts/assignments:
+    post:
+      tags: [Shift]
+      summary: 批量排班
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftAssignInput'
+      responses:
+        '200':
+          description: 成功
+  /shifts/{id}:
+    get:
+      tags: [Shift]
+      summary: 班次详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+    put:
+      tags: [Shift]
+      summary: 更新班次模板
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftUpdateInput'
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2241,3 +2324,63 @@ components:
           type: array
           items:
             type: object
+
+    ShiftCreateInput:
+      type: object
+      required: [code, name, shiftType, startTime, endTime, workHours, effectiveFrom, companyId]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        shiftType:
+          type: string
+          enum: [standard, comprehensive, flexible]
+        startTime: { type: string, pattern: '^\\d{2}:\\d{2}$' }
+        endTime: { type: string, pattern: '^\\d{2}:\\d{2}$' }
+        breakStart: { type: string, pattern: '^\\d{2}:\\d{2}$' }
+        breakEnd: { type: string, pattern: '^\\d{2}:\\d{2}$' }
+        workHours: { type: number }
+        flexMinutes: { type: integer }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date }
+        companyId: { type: string, format: uuid }
+        description: { type: string }
+
+    ShiftUpdateInput:
+      type: object
+      properties:
+        code: { type: string }
+        name: { type: string }
+        shiftType:
+          type: string
+          enum: [standard, comprehensive, flexible]
+        startTime: { type: string }
+        endTime: { type: string }
+        breakStart: { type: string, nullable: true }
+        breakEnd: { type: string, nullable: true }
+        workHours: { type: number }
+        flexMinutes: { type: integer }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date, nullable: true }
+        companyId: { type: string, format: uuid }
+        description: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [draft, active, archived]
+
+    ShiftAssignInput:
+      type: object
+      required: [shiftId, assigneeType, effectiveFrom]
+      properties:
+        shiftId: { type: string, format: uuid }
+        assigneeType:
+          type: string
+          enum: [employee, department]
+        employeeIds:
+          type: array
+          items: { type: string, format: uuid }
+        departmentIds:
+          type: array
+          items: { type: string, format: uuid }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date }
+        remark: { type: string }

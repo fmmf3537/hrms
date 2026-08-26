@@ -874,3 +874,57 @@ model ContractRecord {
   @@index([createdBy, status])
   @@map("contract_records")
 }
+
+// ==================== M2-B1 班次定义与排班 ====================
+// 状态机：draft → active → archived
+model ShiftTemplate {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique @db.VarChar(50)
+  name          String   @db.VarChar(100)
+  shiftType     String   @map("shift_type") @db.VarChar(20)
+  startTime     String   @map("start_time") @db.VarChar(5)
+  endTime       String   @map("end_time") @db.VarChar(5)
+  breakStart    String?  @map("break_start") @db.VarChar(5)
+  breakEnd      String?  @map("break_end") @db.VarChar(5)
+  breakDuration Int?     @map("break_duration")
+  workHours     Decimal  @map("work_hours") @db.Decimal(4, 2)
+  flexMinutes   Int      @default(30) @map("flex_minutes")
+  effectiveFrom DateTime @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  companyId     String   @map("company_id") @db.Uuid
+  description   String?  @db.Text
+  status        String   @default("draft") @db.VarChar(20)
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  archivedAt    DateTime? @map("archived_at") @db.Timestamptz(6)
+  archivedBy    String?  @map("archived_by") @db.Uuid
+
+  assignments ShiftAssignment[]
+
+  @@index([companyId, status])
+  @@index([shiftType, status])
+  @@index([effectiveFrom, effectiveTo])
+  @@map("shift_templates")
+}
+
+model ShiftAssignment {
+  id            String   @id @default(uuid()) @db.Uuid
+  shiftId       String   @map("shift_id") @db.Uuid
+  assigneeType  String   @map("assignee_type") @db.VarChar(20)
+  employeeId    String?  @map("employee_id") @db.Uuid
+  departmentId  String?  @map("department_id") @db.Uuid
+  effectiveFrom DateTime @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  remark        String?  @db.Text
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  shift ShiftTemplate @relation(fields: [shiftId], references: [id], onDelete: Restrict)
+
+  @@index([shiftId, effectiveFrom])
+  @@index([employeeId, effectiveFrom])
+  @@index([departmentId, effectiveFrom])
+  @@map("shift_assignments")
+}

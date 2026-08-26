@@ -708,6 +708,16 @@
 | POST | `/contracts/:id/cancel` | 是 | 取消/作废 |
 | POST | `/contracts/webhook/e-sign` | 否（验签） | e-签宝 webhook 回调（HMAC 验签 + handleESignCallback） |
 
+### 3.13 Shift API（M2-B1）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/shifts` | 是 | HR 创建班次模板（draft） |
+| GET | `/shifts` | 是 | 班次列表（分页 + companyId/shiftType/status 过滤） |
+| GET | `/shifts/:id` | 是 | 班次详情（含 company 关联 + assignmentCount） |
+| PUT | `/shifts/:id` | 是 | 更新班次（仅 draft/active；status='archived' 触发归档） |
+| POST | `/shifts/assignments` | 是 | 批量排班（按 employee / department / 日期范围） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

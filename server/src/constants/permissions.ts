@@ -112,6 +112,11 @@ export const PERMISSIONS = {
 
   // M1-A7 合同管理
   CONTRACT_SIGN: 'contract:sign',
+
+  // M2-B1 班次定义
+  SHIFT_READ: 'shift:read',
+  SHIFT_WRITE: 'shift:write',
+  SHIFT_ASSIGN: 'shift:assign',
 } as const;
 
 /** 权限点字面量联合类型 */
@@ -171,6 +176,9 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.TRANSFER_WRITE,
     PERMISSIONS.TRANSFER_APPROVE,
     PERMISSIONS.CONTRACT_SIGN,
+    PERMISSIONS.SHIFT_READ,
+    PERMISSIONS.SHIFT_WRITE,
+    PERMISSIONS.SHIFT_ASSIGN,
   ],
   dept_head: [
     PERMISSIONS.EMPLOYEE_READ_SELF_DEPT,
@@ -186,6 +194,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     PERMISSIONS.OFFBOARDING_READ,
     PERMISSIONS.TRANSFER_READ,
     PERMISSIONS.CONTRACT_READ,
+    PERMISSIONS.SHIFT_READ,
+    PERMISSIONS.SHIFT_ASSIGN,
   ],
   executive: [
     PERMISSIONS.EMPLOYEE_READ,

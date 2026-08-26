@@ -122,6 +122,16 @@ V1.2 之前的 6 个严重项全部修复：
 **M1 收尾报告**：[`docs/cursor-prompts/M1-wrap-up.md`](./docs/cursor-prompts/M1-wrap-up.md)
 **下一阶段 M2 考勤假勤**（V1.2 §四.6 B1-B6 切片）
 
+### M2 考勤假勤（启动，B1 班次定义已完成）
+
+- **B1 班次定义与排班（已完成，M2 首个切片）**：shift_templates + shift_assignments 2 张表
+  + 3 类工时制（standard/comprehensive/flexible）+ 5 端点（4 班次 CRUD + 1 批量排班）
+  + 排班冲突检测（连续工作 ≤6 天 / 休息间隔 ≥12 小时 / 同员工同范围不可重复）
+  + 9 类 configs 业务规则 + 17 个新单测（276 → 293）
+  + **B1 不实现打卡 / 请假 / 加班 / 出差 / 月度汇总**（留 B2-B6 切片）
+  + **BullMQ 冲突扫描调度留独立任务**
+- 后续：B2 打卡 → B3 请假 → B4 加班 → B5 出差 → B6 月度汇总
+
 ### 工程强约束（V1.2 时代）
 
 - **不用 class + 静态方法**：统一 `export function` 范式
