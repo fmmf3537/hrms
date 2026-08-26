@@ -179,6 +179,8 @@ model Employee {
   company    Company     @relation(fields: [companyId], references: [id], onDelete: Restrict)
   department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
 
+  performanceRecords PerformanceRecord[]
+
   @@index([companyId, departmentId])
   @@index([status])
   @@index([contractEnd])
@@ -1133,6 +1135,7 @@ model PerformanceCycle {
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   schemes     PerformanceScheme[]
+  records     PerformanceRecord[]
 
   @@index([type, status])
   @@index([startDate, endDate])
@@ -1156,6 +1159,7 @@ model PerformanceIndicator {
   updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   schemeLinks   PerformanceSchemeIndicator[]
+  scoreItems    PerformanceScoreItem[]
 
   @@index([type, status])
   @@index([category])
@@ -1182,6 +1186,7 @@ model PerformanceScheme {
   sourceScheme PerformanceScheme?           @relation("SchemeClones", fields: [sourceSchemeId], references: [id], onDelete: SetNull)
   clones       PerformanceScheme[]          @relation("SchemeClones")
   indicators   PerformanceSchemeIndicator[]
+  records      PerformanceRecord[]
 
   @@index([cycleId, status])
   @@index([applicableScope, applicableDeptId])
@@ -1219,4 +1224,91 @@ model PerformanceCoefficient {
   @@index([grade, effectiveFrom, effectiveTo])
   @@index([grade, effectiveTo])
   @@map("performance_coefficients")
+}
+
+// ==================== M3-D2 考核流程 ====================
+model PerformanceRecord {
+  id                 String    @id @default(uuid()) @db.Uuid
+  employeeId         String    @map("employee_id") @db.Uuid
+  cycleId            String    @map("cycle_id") @db.Uuid
+  schemeId           String?   @map("scheme_id") @db.Uuid
+  status             String    @default("draft") @db.VarChar(30)
+  finalGrade         String?   @map("final_grade") @db.VarChar(2)
+  finalScore         Decimal?  @map("final_score") @db.Decimal(5, 2)
+  submittedAt        DateTime? @map("submitted_at") @db.Timestamptz(6)
+  archivedAt         DateTime? @map("archived_at") @db.Timestamptz(6)
+  approvalInstanceId String?   @map("approval_instance_id") @db.Uuid
+  createdBy          String    @map("created_by") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  employee      Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  cycle         PerformanceCycle         @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+  scheme        PerformanceScheme?       @relation(fields: [schemeId], references: [id], onDelete: SetNull)
+  scores        PerformanceScore[]
+  aiSuggestions PerformanceAiSuggestion[]
+
+  @@unique([employeeId, cycleId])
+  @@index([cycleId, status])
+  @@index([status, submittedAt])
+  @@index([employeeId, status])
+  @@map("performance_records")
+}
+
+model PerformanceScore {
+  id          String   @id @default(uuid()) @db.Uuid
+  recordId    String   @map("record_id") @db.Uuid
+  stage       String   @db.VarChar(20)
+  totalScore  Decimal  @map("total_score") @db.Decimal(5, 2)
+  comment     String?  @db.Text
+  isCurrent   Boolean  @default(true) @map("is_current")
+  version     Int      @default(1)
+  submittedBy String   @map("submitted_by") @db.Uuid
+  submittedAt DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  record PerformanceRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  items  PerformanceScoreItem[]
+
+  @@unique([recordId, stage, version])
+  @@index([recordId, stage, isCurrent])
+  @@map("performance_scores")
+}
+
+model PerformanceScoreItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  scoreId       String   @map("score_id") @db.Uuid
+  indicatorId   String   @map("indicator_id") @db.Uuid
+  weight        Decimal  @db.Decimal(5, 2)
+  scoreValue    Decimal  @map("score") @db.Decimal(5, 2)
+  weightedScore Decimal  @map("weighted_score") @db.Decimal(5, 2)
+  comment       String?  @db.Text
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  performanceScore PerformanceScore    @relation(fields: [scoreId], references: [id], onDelete: Cascade)
+  indicator        PerformanceIndicator @relation(fields: [indicatorId], references: [id], onDelete: Restrict)
+
+  @@unique([scoreId, indicatorId])
+  @@index([scoreId])
+  @@map("performance_score_items")
+}
+
+model PerformanceAiSuggestion {
+  id          String   @id @default(uuid()) @db.Uuid
+  recordId    String   @map("record_id") @db.Uuid
+  prompt      String   @db.Text
+  rawResponse String   @map("raw_response") @db.Text
+  suggestions Json
+  modelName   String   @map("model_name") @db.VarChar(100)
+  tokens      Int
+  cost        Decimal  @db.Decimal(8, 4)
+  durationMs  Int      @map("duration_ms")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  record PerformanceRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([recordId, createdAt])
+  @@map("performance_ai_suggestions")
 }

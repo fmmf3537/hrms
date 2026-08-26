@@ -629,6 +629,70 @@ erDiagram
     }
 ```
 
+### 3.4 M3-D2 考核流程数据模型
+
+```mermaid
+erDiagram
+    PerformanceRecord ||--o{ PerformanceScore : "记录→评分"
+    PerformanceScore ||--o{ PerformanceScoreItem : "评分→明细"
+    PerformanceRecord ||--o{ PerformanceAiSuggestion : "记录→AI建议"
+    PerformanceCycle ||--o{ PerformanceRecord : "周期→记录"
+    PerformanceScheme ||--o{ PerformanceRecord : "方案→记录"
+    Employee ||--o{ PerformanceRecord : "员工→记录"
+    PerformanceIndicator ||--o{ PerformanceScoreItem : "指标→明细"
+
+    PerformanceRecord {
+        uuid id PK
+        uuid employee_id FK
+        uuid cycle_id FK
+        uuid scheme_id FK
+        string status "13 states"
+        string final_grade "S/A/B/C/D nullable"
+        decimal final_score
+    }
+
+    PerformanceScore {
+        uuid id PK
+        uuid record_id FK
+        string stage "self/manager/calibrate/hr/ceo"
+        decimal total_score
+        boolean is_current
+        int version
+    }
+
+    PerformanceScoreItem {
+        uuid id PK
+        uuid score_id FK
+        uuid indicator_id FK
+        decimal weight
+        decimal score
+        decimal weighted_score
+    }
+
+    PerformanceAiSuggestion {
+        uuid id PK
+        uuid record_id FK
+        json suggestions
+        string model_name
+        int tokens
+    }
+```
+
+```mermaid
+stateDiagram-v2
+    [*] --> draft
+    draft --> manager_scoring : submitSelf
+    manager_scoring --> dept_calibrating : submitManager
+    dept_calibrating --> hr_summarizing : submitCalibration
+    hr_summarizing --> ceo_approving : submitHr
+    ceo_approving --> ceo_approved : ceoApprove
+    ceo_approved --> archived : archive
+    draft --> cancelled : cancel(HR)
+    manager_scoring --> rejected : reject
+    dept_calibrating --> rejected : reject
+    ceo_approving --> rejected : reject
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

@@ -170,4 +170,146 @@ router.patch(
   performanceController.updateCoefficients,
 );
 
+const scoreItemSchema = z.object({
+  indicatorId: z.string().uuid(),
+  score: z.number().min(0).max(100),
+  comment: z.string().max(2000).optional(),
+});
+
+const saveScoreSchema = z.object({
+  comment: z.string().max(2000).optional(),
+  items: z.array(scoreItemSchema).min(1),
+  basedOnAiSuggestionId: z.string().uuid().optional(),
+});
+
+const recordCreateSchema = z.object({
+  cycleId: z.string().uuid(),
+  employeeIds: z.array(z.string().uuid()).min(1),
+  schemeId: z.string().uuid().optional(),
+});
+
+const recordListSchema = z.object({
+  cycleId: z.string().uuid().optional(),
+  employeeId: z.string().uuid().optional(),
+  status: z.string().max(30).optional(),
+  deptId: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const ceoApproveSchema = z.object({
+  finalGrade: z.enum(['S', 'A', 'B', 'C', 'D']),
+  finalScore: z.number().min(0).max(100),
+  comment: z.string().max(2000).optional(),
+});
+
+const rejectSchema = z.object({
+  reason: z.string().min(5).max(2000),
+});
+
+router.post(
+  '/records',
+  requirePermission(PERMISSIONS.PERFORMANCE_RECORD_WRITE),
+  validate(recordCreateSchema),
+  performanceController.createRecord,
+);
+
+router.get(
+  '/records',
+  requirePermission(PERMISSIONS.PERFORMANCE_RECORD_READ),
+  validate(recordListSchema, 'query'),
+  performanceController.listRecords,
+);
+
+router.get(
+  '/records/:id',
+  requirePermission(PERMISSIONS.PERFORMANCE_RECORD_READ),
+  performanceController.getRecord,
+);
+
+router.patch(
+  '/records/:id/self',
+  requirePermission(PERMISSIONS.PERFORMANCE_SELF_SUBMIT),
+  validate(saveScoreSchema),
+  performanceController.saveSelf,
+);
+
+router.post(
+  '/records/:id/submit-self',
+  requirePermission(PERMISSIONS.PERFORMANCE_SELF_SUBMIT),
+  performanceController.submitSelf,
+);
+
+router.post(
+  '/records/:id/ai-suggest',
+  requirePermission(PERMISSIONS.PERFORMANCE_AI_REQUEST),
+  performanceController.requestAiSuggest,
+);
+
+router.get(
+  '/records/:id/ai-suggestions',
+  requirePermission(PERMISSIONS.PERFORMANCE_AI_READ),
+  performanceController.listAiSuggestions,
+);
+
+router.patch(
+  '/records/:id/manager-score',
+  requirePermission(PERMISSIONS.PERFORMANCE_MANAGER_SCORE),
+  validate(saveScoreSchema),
+  performanceController.saveManagerScore,
+);
+
+router.post(
+  '/records/:id/submit-manager',
+  requirePermission(PERMISSIONS.PERFORMANCE_MANAGER_SCORE),
+  performanceController.submitManager,
+);
+
+router.patch(
+  '/records/:id/calibrate',
+  requirePermission(PERMISSIONS.PERFORMANCE_DEPT_CALIBRATE),
+  validate(saveScoreSchema),
+  performanceController.saveCalibrate,
+);
+
+router.post(
+  '/records/:id/submit-calibrate',
+  requirePermission(PERMISSIONS.PERFORMANCE_DEPT_CALIBRATE),
+  performanceController.submitCalibrate,
+);
+
+router.patch(
+  '/records/:id/hr-summary',
+  requirePermission(PERMISSIONS.PERFORMANCE_HR_SUMMARY),
+  validate(saveScoreSchema),
+  performanceController.saveHrSummary,
+);
+
+router.post(
+  '/records/:id/submit-hr',
+  requirePermission(PERMISSIONS.PERFORMANCE_HR_SUMMARY),
+  performanceController.submitHr,
+);
+
+router.patch(
+  '/records/:id/ceo-approve',
+  requirePermission(PERMISSIONS.PERFORMANCE_CEO_APPROVE),
+  validate(ceoApproveSchema),
+  performanceController.ceoApprove,
+);
+
+router.post(
+  '/records/:id/archive',
+  requirePermission(PERMISSIONS.PERFORMANCE_RECORD_WRITE),
+  performanceController.archiveRecord,
+);
+
+router.post(
+  '/records/:id/reject',
+  requirePermission(PERMISSIONS.PERFORMANCE_RECORD_WRITE),
+  validate(rejectSchema),
+  performanceController.rejectRecord,
+);
+
 export default router;

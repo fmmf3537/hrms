@@ -601,6 +601,108 @@ const DEFAULT_CONFIGS: Array<{
     value: 0.05,
     remark: '校准阈值（D3 校验）',
   },
+  {
+    category: 'performance',
+    key: 'cycle.create_day',
+    value: 25,
+    remark: '每月创建考核记录日',
+  },
+  {
+    category: 'performance',
+    key: 'cycle.self_deadline',
+    value: 25,
+    remark: '自评截止日',
+  },
+  {
+    category: 'performance',
+    key: 'cycle.manager_deadline',
+    value: 27,
+    remark: '上级评分截止日',
+  },
+  {
+    category: 'performance',
+    key: 'cycle.calibrate_deadline',
+    value: 28,
+    remark: '部门校准截止日',
+  },
+  {
+    category: 'performance',
+    key: 'cycle.hr_deadline',
+    value: 29,
+    remark: 'HR 汇总截止日',
+  },
+  {
+    category: 'performance',
+    key: 'cycle.ceo_deadline',
+    value: 30,
+    remark: '总经理审批截止日',
+  },
+  {
+    category: 'performance',
+    key: 'cycle.archive_day',
+    value: 1,
+    remark: '次月归档日',
+  },
+  {
+    category: 'performance',
+    key: 'ai.suggestion_count',
+    value: 3,
+    remark: 'AI 建议条数',
+  },
+  {
+    category: 'performance',
+    key: 'ai.suggestion_history_months',
+    value: 6,
+    remark: 'AI 建议历史保留月数',
+  },
+  {
+    category: 'performance',
+    key: 'ai.input_template_key',
+    value: 'performance_ai_suggestion',
+    remark: 'AI 输入模板 key',
+  },
+  {
+    category: 'performance',
+    key: 'ai.fallback_strategy',
+    value: 'mock',
+    remark: 'AI 失败 fallback（mock / error）',
+  },
+  {
+    category: 'performance',
+    key: 'score.min',
+    value: 0,
+    remark: '分数最小值',
+  },
+  {
+    category: 'performance',
+    key: 'score.max',
+    value: 100,
+    remark: '分数最大值',
+  },
+  {
+    category: 'performance',
+    key: 'score.weight_tolerance',
+    value: 0.01,
+    remark: '权重和误差容忍',
+  },
+  {
+    category: 'performance',
+    key: 'approval.flow_keys',
+    value: [
+      'performance:self_submit',
+      'performance:manager_score',
+      'performance:dept_calibrate',
+      'performance:hr_summary',
+      'performance:ceo_approve',
+    ],
+    remark: '绩效 5 级审批 flowKey',
+  },
+  {
+    category: 'performance',
+    key: 'archive.required_final_grade',
+    value: true,
+    remark: '归档前必须有 finalGrade',
+  },
 ];
 
 async function main() {
@@ -811,6 +913,38 @@ async function main() {
     },
   });
   console.log(`   ✓ trip_default flow (id=${tripFlow.id})`);
+
+  // 4) 绩效 5 级审批流（M3-D2）
+  const perfFlowDefs = [
+    { key: 'self_submit', name: '绩效自评提交', approver: 'direct_leader' },
+    { key: 'manager_score', name: '上级评分提交', approver: 'department_leader' },
+    { key: 'dept_calibrate', name: '部门校准提交', approver: 'hr' },
+    { key: 'hr_summary', name: 'HR 汇总提交', approver: 'ceo' },
+    { key: 'ceo_approve', name: '总经理审批', approver: 'ceo' },
+  ];
+  for (const def of perfFlowDefs) {
+    // eslint-disable-next-line no-await-in-loop
+    await prisma.approvalFlow.upsert({
+      where: { category_key_version: { category: 'performance', key: def.key, version: 1 } },
+      update: {},
+      create: {
+        category: 'performance',
+        key: def.key,
+        name: def.name,
+        version: 1,
+        enabled: true,
+        description: `绩效审批：${def.name}`,
+        nodes: [{
+          id: 'step1',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: def.approver,
+          condition: null,
+        }],
+      },
+    });
+  }
+  console.log('   ✓ performance 5 approval flows (self/manager/calibrate/hr/ceo)');
 
   console.log('==> Seeding default notification templates (M0.5-2)...');
 
@@ -1945,6 +2079,59 @@ async function main() {
     console.log('   ✓ performance cycles / indicators / schemes / coefficients demo');
   } else {
     console.log('   ✓ performance demo already exists (skip)');
+  }
+
+  console.log('==> Seeding performance records demo (M3-D2)...');
+  const monthlyCycleForRecords = await prisma.performanceCycle.findFirst({
+    where: { code: `${year}-09`, status: 'active' },
+  });
+  const peduScheme = await prisma.performanceScheme.findFirst({
+    where: { code: 'SCH-PEDU-MONTHLY' },
+  });
+  const sampleEmployees = await prisma.employee.findMany({
+    where: { deletedAt: null },
+    take: 3,
+    orderBy: { employeeNo: 'asc' },
+  });
+  if (monthlyCycleForRecords && peduScheme && sampleEmployees.length >= 2) {
+    const recordExists = await prisma.performanceRecord.findFirst({
+      where: { cycleId: monthlyCycleForRecords.id },
+    });
+    if (!recordExists) {
+      await prisma.performanceRecord.create({
+        data: {
+          employeeId: sampleEmployees[0].id,
+          cycleId: monthlyCycleForRecords.id,
+          schemeId: peduScheme.id,
+          status: 'manager_scoring',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.performanceRecord.create({
+        data: {
+          employeeId: sampleEmployees[1].id,
+          cycleId: monthlyCycleForRecords.id,
+          schemeId: peduScheme.id,
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      if (sampleEmployees[2]) {
+        await prisma.performanceRecord.create({
+          data: {
+            employeeId: sampleEmployees[2].id,
+            cycleId: monthlyCycleForRecords.id,
+            schemeId: peduScheme.id,
+            status: 'ceo_approving',
+            finalScore: 85,
+            createdBy: admin.id,
+          },
+        });
+      }
+      console.log('   ✓ 3 performance records demo');
+    } else {
+      console.log('   ✓ performance records demo already exists (skip)');
+    }
   }
 
   console.log('==> Done.');

@@ -786,6 +786,29 @@
 
 **错误码**：72401-72412（D1 子区）。
 
+### 3.20 Performance Records API（M3-D2）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/performance/records` | 是 | performance:record:write | HR 批量创建考核记录 |
+| GET | `/performance/records` | 是 | performance:record:read | 考核记录列表 |
+| GET | `/performance/records/:id` | 是 | performance:record:read | 考核记录详情 |
+| PATCH | `/performance/records/:id/self` | 是 | performance:self:submit | 保存员工自评 |
+| POST | `/performance/records/:id/submit-self` | 是 | performance:self:submit | 提交员工自评 |
+| POST | `/performance/records/:id/ai-suggest` | 是 | performance:ai:request | 请求 AI 评分建议 |
+| GET | `/performance/records/:id/ai-suggestions` | 是 | performance:ai:read | AI 建议历史 |
+| PATCH | `/performance/records/:id/manager-score` | 是 | performance:manager:score | 保存上级评分 |
+| POST | `/performance/records/:id/submit-manager` | 是 | performance:manager:score | 提交上级评分 |
+| PATCH | `/performance/records/:id/calibrate` | 是 | performance:dept:calibrate | 保存部门校准 |
+| POST | `/performance/records/:id/submit-calibrate` | 是 | performance:dept:calibrate | 提交部门校准 |
+| PATCH | `/performance/records/:id/hr-summary` | 是 | performance:hr:summary | 保存 HR 汇总 |
+| POST | `/performance/records/:id/submit-hr` | 是 | performance:hr:summary | 提交 HR 汇总 |
+| PATCH | `/performance/records/:id/ceo-approve` | 是 | performance:ceo:approve | 总经理审批 |
+| POST | `/performance/records/:id/archive` | 是 | performance:record:write | 归档考核记录 |
+| POST | `/performance/records/:id/reject` | 是 | performance:record:write | 拒绝考核记录 |
+
+**错误码**：72501-72520（D2 子区）。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

@@ -171,6 +171,31 @@
 | 72411 | 400 | SCHEME_SCOPE_INVALID | 方案适用范围字段不匹配 | 提示范围错误 |
 | 72412 | 400 | SCHEME_INDICATOR_INVALID | 指标不存在或已归档 | 提示指标无效 |
 
+### 7.3 M3-D2 考核流程（72501-72520）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 72501 | 404 | RECORD_NOT_FOUND | recordId 不存在 | 提示 ID 错误 |
+| 72502 | 400 | RECORD_DUPLICATE_EMPLOYEE_CYCLE | 同一 employee+cycle 重复创建 | 提示已存在 |
+| 72503 | 400 | RECORD_STATUS_INVALID_TRANSITION | 状态机非法流转 | 提示当前状态 |
+| 72504 | 403 | RECORD_NOT_EMPLOYEE_SELF | employee 操作非本人 record | 提示权限 |
+| 72505 | 400 | RECORD_ALREADY_ARCHIVED | 归档后再次操作 | 提示已归档 |
+| 72506 | 400 | RECORD_REJECT_REASON_REQUIRED | reject 必须传 reason | 提示必填 |
+| 72507 | 400 | SCORE_ITEMS_INCOMPLETE | 评分未覆盖所有 scheme indicators | 提示补全 |
+| 72508 | 400 | SCORE_OUT_OF_RANGE | score 越界 | 提示分数范围 |
+| 72509 | 400 | SCORE_WEIGHT_SUM_NOT_100 | 评分明细权重和 ≠ 100 | 提示权重错误 |
+| 72510 | 400 | SCORE_INVALID_STAGE | 当前状态不允许此 stage 评分 | 提示当前状态 |
+| 72511 | 400 | SCORE_VERSION_CONFLICT | version 冲突（乐观锁） | 提示重新加载 |
+| 72512 | 400 | SCORE_ALREADY_SUBMITTED | 重复提交 | 提示已提交 |
+| 72513 | 400 | AI_SUGGESTION_NOT_ALLOWED | 当前状态不允许 AI 建议 | 提示状态 |
+| 72514 | 500 | AI_SUGGESTION_FAILED | AI 调用失败且无 fallback | 提示重试 |
+| 72515 | 400 | AI_SUGGESTION_HISTORY_EMPTY | 无历史 AI 建议 | 提示暂无 |
+| 72516 | 400 | AI_SUGGESTION_COUNT_EXCEEDED | 24h 调用次数超限 | 提示稍后再试 |
+| 72517 | 400 | APPROVAL_FLOW_NOT_CONFIGURED | 5 个 flowKey 未 seed | 提示配置审批流 |
+| 72518 | 400 | APPROVAL_INSTANCE_CREATE_FAILED | submitApproval 失败 | 提示重试 |
+| 72519 | 400 | APPROVAL_REJECT_NOT_AT_SCORING_STAGE | 拒绝时不在评分阶段 | 提示当前状态 |
+| 72520 | 400 | APPROVAL_ALREADY_APPROVED | 已审批重复操作 | 提示已审批 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

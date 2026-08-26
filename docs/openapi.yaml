@@ -2071,6 +2071,203 @@ paths:
       responses:
         '200':
           description: 成功
+  /performance/records:
+    get:
+      tags: [Performance]
+      summary: 考核记录列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Performance]
+      summary: 批量创建考核记录
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 已创建
+  /performance/records/{id}:
+    get:
+      tags: [Performance]
+      summary: 考核记录详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/self:
+    patch:
+      tags: [Performance]
+      summary: 保存员工自评
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/submit-self:
+    post:
+      tags: [Performance]
+      summary: 提交员工自评
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/ai-suggest:
+    post:
+      tags: [Performance]
+      summary: 请求 AI 评分建议
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/ai-suggestions:
+    get:
+      tags: [Performance]
+      summary: AI 建议历史
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/manager-score:
+    patch:
+      tags: [Performance]
+      summary: 保存上级评分
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/submit-manager:
+    post:
+      tags: [Performance]
+      summary: 提交上级评分
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/calibrate:
+    patch:
+      tags: [Performance]
+      summary: 保存部门校准
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/submit-calibrate:
+    post:
+      tags: [Performance]
+      summary: 提交部门校准
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/hr-summary:
+    patch:
+      tags: [Performance]
+      summary: 保存 HR 汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/submit-hr:
+    post:
+      tags: [Performance]
+      summary: 提交 HR 汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/ceo-approve:
+    patch:
+      tags: [Performance]
+      summary: 总经理审批
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/archive:
+    post:
+      tags: [Performance]
+      summary: 归档考核记录
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/records/{id}/reject:
+    post:
+      tags: [Performance]
+      summary: 拒绝考核记录
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
 
 components:
   securitySchemes:
