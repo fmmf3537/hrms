@@ -703,6 +703,30 @@ const DEFAULT_CONFIGS: Array<{
     value: true,
     remark: '归档前必须有 finalGrade',
   },
+  {
+    category: 'performance',
+    key: 'grade.thresholds',
+    value: { S: 90, A: 80, B: 70, C: 60, D: 0 },
+    remark: 'D3 等级判定阈值',
+  },
+  {
+    category: 'performance',
+    key: 'grade.calibration_strategy',
+    value: 'warn_only',
+    remark: '校准策略 warn_only / force（D3 仅 warn_only）',
+  },
+  {
+    category: 'performance',
+    key: 'grade.batch_size',
+    value: 100,
+    remark: '批量等级判定上限',
+  },
+  {
+    category: 'performance',
+    key: 'calibration.ratio_tolerance',
+    value: 0.02,
+    remark: '比例容差 ±2%',
+  },
 ];
 
 async function main() {
@@ -2131,6 +2155,35 @@ async function main() {
       console.log('   ✓ 3 performance records demo');
     } else {
       console.log('   ✓ performance records demo already exists (skip)');
+    }
+  }
+
+  console.log('==> Seeding performance grade demo (M3-D3)...');
+  if (monthlyCycleForRecords && peduScheme && sampleEmployees.length >= 3) {
+    const d3Exists = await prisma.performanceRecord.findFirst({
+      where: {
+        cycleId: monthlyCycleForRecords.id,
+        status: 'archived',
+        finalScore: 95,
+      },
+    });
+    if (!d3Exists) {
+      const d3Scores = [95, 85, 55];
+      await Promise.all(d3Scores.map((score, idx) => prisma.performanceRecord.create({
+        data: {
+          employeeId: sampleEmployees[idx].id,
+          cycleId: monthlyCycleForRecords.id,
+          schemeId: peduScheme.id,
+          status: 'archived',
+          finalScore: score,
+          finalGrade: score >= 90 ? 'S' : score >= 80 ? 'A' : 'D',
+          archivedAt: new Date(),
+          createdBy: admin.id,
+        },
+      })));
+      console.log('   ✓ 3 archived performance records for D3 grade demo');
+    } else {
+      console.log('   ✓ D3 grade demo already exists (skip)');
     }
   }
 

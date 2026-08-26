@@ -693,6 +693,25 @@ stateDiagram-v2
     ceo_approving --> rejected : reject
 ```
 
+### 3.5 M3-D3 五档评分流程
+
+```mermaid
+flowchart LR
+    A[ceo_approved + finalScore] --> B[calculateGrade]
+    B --> C{thresholds}
+    C -->|>=90| S[S]
+    C -->|>=80| A1[A]
+    C -->|>=70| B1[B]
+    C -->|>=60| C1[C]
+    C -->|<60| D[D]
+    S --> E[update finalGrade]
+    A1 --> E
+    B1 --> E
+    C1 --> E
+    D --> E
+    E --> F[calibrateDepartmentRatios warn_only]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

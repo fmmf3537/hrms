@@ -196,6 +196,21 @@
 | 72519 | 400 | APPROVAL_REJECT_NOT_AT_SCORING_STAGE | 拒绝时不在评分阶段 | 提示当前状态 |
 | 72520 | 400 | APPROVAL_ALREADY_APPROVED | 已审批重复操作 | 提示已审批 |
 
+### 7.4 M3-D3 五档评分 + 系数配置（72601-72610）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 72601 | 400 | GRADE_FINALSCORE_MISSING | record.finalScore 为 null | 提示无分数 |
+| 72602 | 400 | GRADE_THRESHOLD_INVALID | 阈值越界或顺序错乱 | 提示阈值 |
+| 72603 | 400 | GRADE_OUT_OF_RANGE | finalScore 越界 | 提示范围 |
+| 72604 | 400 | GRADE_ALREADY_CALCULATED | finalGrade 已存在且未 force | 提示已判定 |
+| 72605 | 400 | GRADE_BATCH_EMPTY | 批量入参为空 | 提示入参 |
+| 72606 | 400 | GRADE_BATCH_TOO_LARGE | 批量超过上限 | 提示分批 |
+| 72607 | 400 | THRESHOLD_GRADE_NOT_FOUND | 阈值缺少某 grade | 提示配置 |
+| 72608 | 400 | THRESHOLD_OVERLAPPING | 阈值顺序不严格递减 | 提示区间 |
+| 72609 | 400 | CALIBRATION_DEPT_NOT_FOUND | 部门不存在 | 提示部门 |
+| 72610 | 400 | CALIBRATION_RATIO_INVALID | 比例和 ≠ 1.0 | 提示比例 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

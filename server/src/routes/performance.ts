@@ -7,7 +7,11 @@ import * as performanceController from '../controllers/performance.controller';
 import {
   authenticate, rejectIfMustChangePassword, requirePermission,
 } from '../middleware/auth';
+import { asyncHandler } from '../middleware/errorHandler';
 import { validate } from '../middleware/validate';
+import * as calibrationRatioService from '../services/performance_calibration_ratio.service';
+import * as gradeService from '../services/performance_grade.service';
+import type { GradeThresholds } from '../services/performance_grade.service';
 
 const router: RouterType = Router();
 
@@ -310,6 +314,105 @@ router.post(
   requirePermission(PERMISSIONS.PERFORMANCE_RECORD_WRITE),
   validate(rejectSchema),
   performanceController.rejectRecord,
+);
+
+function requireGradeUserId(req: import('express').Request, res: import('express').Response): string | null {
+  const userId = req.user?.userId;
+  if (!userId) {
+    res.status(401).json({ success: false, message: '未认证' });
+    return null;
+  }
+  return userId;
+}
+
+const gradeCalculateSchema = z.object({
+  recordId: z.string().uuid(),
+  force: z.boolean().optional(),
+});
+
+const gradeBatchSchema = z.object({
+  recordIds: z.array(z.string().uuid()).min(1),
+  force: z.boolean().optional(),
+  batchSize: z.number().int().positive().max(100)
+    .optional(),
+});
+
+const gradeThresholdsSchema = z.object({
+  S: z.number().min(0).max(100),
+  A: z.number().min(0).max(100),
+  B: z.number().min(0).max(100),
+  C: z.number().min(0).max(100),
+  D: z.number().min(0).max(100),
+});
+
+const calibrateRatiosSchema = z.object({
+  deptIds: z.array(z.string().uuid()).min(1),
+  cycleId: z.string().uuid().optional(),
+});
+
+router.post(
+  '/grade/calculate',
+  requirePermission(PERMISSIONS.PERFORMANCE_GRADE_CALCULATE),
+  validate(gradeCalculateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireGradeUserId(req, res);
+    if (!actorId) return;
+    const { recordId, force } = req.body as { recordId: string; force?: boolean };
+    const data = await gradeService.calculateGrade(actorId, recordId, { force });
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/grade/calculate-batch',
+  requirePermission(PERMISSIONS.PERFORMANCE_GRADE_CALCULATE),
+  validate(gradeBatchSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireGradeUserId(req, res);
+    if (!actorId) return;
+    const { recordIds, force, batchSize } = req.body as {
+      recordIds: string[];
+      force?: boolean;
+      batchSize?: number;
+    };
+    const data = await gradeService.calculateBatchGrade(actorId, recordIds, { force, batchSize });
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/grade/thresholds',
+  requirePermission(PERMISSIONS.PERFORMANCE_GRADE_THRESHOLD_READ),
+  asyncHandler(async (req, res) => {
+    const actorId = req.user?.userId ?? 'anonymous';
+    const data = await gradeService.getGradeThresholds(actorId);
+    res.json({ success: true, data });
+  }),
+);
+
+router.patch(
+  '/grade/thresholds',
+  requirePermission(PERMISSIONS.PERFORMANCE_GRADE_THRESHOLD_WRITE),
+  validate(gradeThresholdsSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireGradeUserId(req, res);
+    if (!actorId) return;
+    const data = await gradeService.updateGradeThresholds(actorId, req.body as GradeThresholds);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/grade/calibrate-ratios',
+  requirePermission(PERMISSIONS.PERFORMANCE_RECORD_READ),
+  validate(calibrateRatiosSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireGradeUserId(req, res);
+    if (!actorId) return;
+    const { deptIds, cycleId } = req.body as { deptIds: string[]; cycleId?: string };
+    const data = await calibrationRatioService.calibrateDepartmentRatios(actorId, deptIds, cycleId);
+    res.json({ success: true, data });
+  }),
 );
 
 export default router;

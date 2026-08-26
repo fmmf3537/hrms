@@ -2268,6 +2268,45 @@ paths:
       responses:
         '200':
           description: 成功
+  /performance/grade/calculate:
+    post:
+      tags: [Performance]
+      summary: 单条等级判定
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/grade/calculate-batch:
+    post:
+      tags: [Performance]
+      summary: 批量等级判定
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/grade/thresholds:
+    get:
+      tags: [Performance]
+      summary: 读等级阈值
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    patch:
+      tags: [Performance]
+      summary: 写等级阈值
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/grade/calibrate-ratios:
+    post:
+      tags: [Performance]
+      summary: 部门比例校准软警告
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
 
 components:
   securitySchemes:

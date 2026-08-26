@@ -880,7 +880,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 |---|---|---|---|
 | D1 | 考核方案配置（KPI+OKR 指标库 + 周期定义）**已实现** | 4 | 3d |
 | D2 | 考核流程（自评→上级→校准→HR→总经理 5 级审批 + **AI 评分建议**）**已实现** | 6 | 5d |
-| D3 | 五档评分 + 系数配置（S/A/B/C/D 后台可调） | 3 | 2d |
+| D3 | 五档评分 + 系数配置（S/A/B/C/D 后台可调）**已实现** | 3 | 2d |
 | D4 | 绩效兑现（双轨制：直乘 vs 部门池，后台切换） | 4 | 3d |
 | D5 | 销售提成（回款触发 + 比例配置） | 3 | 2d |
 | D6 | 结果应用（调薪/晋升/PIP 触发） | 3 | 2.5d |
@@ -1186,6 +1186,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M2.0.7** | **2026-09-01** | **docs: M2 收尾（6 切片全部完成 + 提示词库 14 文件 + 0 越界 13 次连续）<br>**M2 全部完成**：B1/B2/B3/B4/B5/B6 全部落地（6 个业务 commit + 6 个提示词 commit，**0 越界**，0 旧测试改动）<br>**测试演进**：276（M1 收尾）→ 293→314→336→359→378→**400**（M2 收尾，+124 / +45%）；一期累计 26→400（+374 / +1439%）<br>**M2 累计**：84 文件 / 25 端点 / 7 新表 / 16 权限点 / 60 错误码（72 段位 71801-72310）<br>**B6 红线 6 验证**：`git diff HEAD -- leave.service.ts` = 0 行（调休余额自己实现 calculateCompBalance，未修改 leave.service）<br>**提示词库**：docs/cursor-prompts/ 累计 14 个 .md（~560KB）；全部 M2 切片沿用 45-46KB 详尽模式（42-46KB 区间，0 越界 6 切片连续）<br>**关键经验**：1) 45KB 详尽模式 6 切片稳定验证（vs M0.5-5 越界教训）；2) prisma 直接操作 6 切片 100% 遵守（不 import 跨 service，避免循环依赖）；3) 业务规则配置化 45 项（configs 表 + configService + fallback + TODO 注释）；4) BullMQ 调度任务 9 类暴露函数（listUpcoming*/generateMonthlySummary/disableUserAccount）<br>**遗留任务**：M2 全部切片均暴露 BullMQ 调度函数（待独立任务接入）；调休余额/销差/月度汇总自动生成/未来生效日等调度均留独立任务<br>**M2 收尾报告**：[`docs/cursor-prompts/M2-wrap-up.md`](./cursor-prompts/M2-wrap-up.md)<br>**下一阶段 M3 绩效管理**（V1.2 §四.7 D1-D6，约 19d） | **WorkBuddy** |
 | **M3.0.1** | **2026-09-02** | **feat(performance): M3-D1 考核方案配置（Cursor 交付）<br>**范围**：performance_cycles / performance_indicators / performance_schemes / performance_scheme_indicators / performance_coefficients 5 张表 + 考核周期 + 指标库 + 考核方案（含权重和=100% + 复制）+ 等级系数版本回溯 + 12 项 performance.* configs + 10 端点 + 8 权限点 + 23 新单测（400→423）<br>**强约束**：不创建 performance_scores/records 表（D2 范围），不实现 5 级审批流/AI 评分（D2），不联动 M4 薪酬，仅 import audit/config + prisma | **Cursor + WorkBuddy** |
 | **M3.0.2** | **2026-09-03** | **feat(performance): M3-D2 考核流程（Cursor 交付）<br>**范围**：performance_records / performance_scores / performance_score_items / performance_ai_suggestions 4 张表 + 5 级状态机 + 5 审批 flowKey + AI 评分建议（复用 suggestScore）+ 16 端点 + 8 权限点 + 20 错误码（72501-72520）+ 16 项 performance.* configs 扩展 + 35 新单测<br>**强约束**：D1 五个 service 0 行改动；不创建 calibrations/sales_commissions/pips 表；不实现 D3/D4/M4 | **Cursor + WorkBuddy** |
+| **M3.0.3** | **2026-09-03** | **feat(performance): M3-D3 五档评分 + 系数配置（Cursor 交付）<br>**范围**：0 新表 + 等级判定算法 + 阈值 configs + 部门比例软警告 + 5 端点 + 3 权限点 + 10 错误码（72601-72610）+ 4 项 configs + 16 新单测<br>**强约束**：D1+D2 九个 service 0 行改动；不创建 performance_calibrations 表；warn_only 不强制改 finalGrade | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

@@ -809,6 +809,18 @@
 
 **错误码**：72501-72520（D2 子区）。
 
+### 3.21 Performance Grade API（M3-D3）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/performance/grade/calculate` | 是 | performance:grade:calculate | 单条等级判定 |
+| POST | `/performance/grade/calculate-batch` | 是 | performance:grade:calculate | 批量等级判定 |
+| GET | `/performance/grade/thresholds` | 是 | performance:grade:threshold:read | 读等级阈值 |
+| PATCH | `/performance/grade/thresholds` | 是 | performance:grade:threshold:write | 写等级阈值 |
+| POST | `/performance/grade/calibrate-ratios` | 是 | performance:record:read | 部门比例校准软警告 |
+
+**错误码**：72601-72610（D3 子区）。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
