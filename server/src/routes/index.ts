@@ -6,6 +6,7 @@ import auditRoutes from './audit';
 import authRoutes from './auth';
 import companyRoutes from './company';
 import configRoutes from './config';
+import contractRoutes from './contract';
 import departmentRoutes from './department';
 import employeeRoutes from './employee';
 import encryptedFieldRoutes from './encryptedField';
@@ -53,5 +54,6 @@ router.use('/onboarding', onboardingRoutes);
 router.use('/regularizations', regularizationRoutes);
 router.use('/offboarding', offboardingRoutes);
 router.use('/transfers', transferRoutes);
+router.use('/contracts', contractRoutes);
 
 export default router;

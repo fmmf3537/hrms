@@ -188,6 +188,73 @@ const DEFAULT_CONFIGS: Array<{
     value: 90,
     remark: '未来生效日最大天数',
   },
+  // M1-A7 合同管理
+  {
+    category: 'contract',
+    key: 'warning_days',
+    value: [30, 15, 7],
+    remark: '合同到期前 N 天预警',
+  },
+  {
+    category: 'contract',
+    key: 'esign_provider',
+    value: 'mock',
+    remark: '电子签服务方（mock / esignbao）',
+  },
+  {
+    category: 'contract',
+    key: 'esign_api_key',
+    value: 'mock-api-key',
+    remark: 'e-签宝 API key（加密存储）',
+  },
+  {
+    category: 'contract',
+    key: 'esign_webhook_secret',
+    value: 'mock-webhook-secret',
+    remark: 'e-签宝 webhook 验签密钥',
+  },
+  {
+    category: 'contract',
+    key: 'attachment_max_size',
+    value: 10485760,
+    remark: '附件最大 10MB',
+  },
+  {
+    category: 'contract',
+    key: 'attachment_allowed_types',
+    value: ['application/pdf', 'image/jpeg', 'image/png'],
+    remark: '允许的附件 MIME',
+  },
+  {
+    category: 'contract',
+    key: 'approval_flow_key',
+    value: 'contract:contract_approval',
+    remark: '合同审批流 flowKey',
+  },
+  {
+    category: 'contract',
+    key: 'templates',
+    value: {
+      formal: '/templates/contract-formal.html',
+      intern: '/templates/contract-intern.html',
+      consultant: '/templates/contract-consultant.html',
+      labor: '/templates/contract-labor.html',
+      nda: '/templates/contract-nda.html',
+    },
+    remark: '5 类合同模板路径',
+  },
+  {
+    category: 'contract',
+    key: 'expire_check_days',
+    value: 7,
+    remark: '自动流转 expired 检查窗口',
+  },
+  {
+    category: 'contract',
+    key: 'test_mode',
+    value: true,
+    remark: 'mock 模式开关',
+  },
 ];
 
 async function main() {
@@ -921,6 +988,58 @@ async function main() {
     }
   } else {
     console.log('   ✓ no suitable employee/dept, skip transfer seed');
+  }
+
+  console.log('==> Seeding contract demo (M1-A7)...');
+  const contractEmp = await prisma.employee.findFirst({
+    where: {
+      companyId: xach.id,
+      status: 'active',
+      deletedAt: null,
+      employeeNo: `XACH${year}0002`,
+    },
+  });
+  if (contractEmp) {
+    const existingContract = await prisma.contractRecord.findFirst({
+      where: {
+        employeeId: contractEmp.id,
+        status: { notIn: ['cancelled', 'expired'] },
+        contractType: 'formal',
+      },
+    });
+    if (!existingContract) {
+      await prisma.contractRecord.create({
+        data: {
+          employeeId: contractEmp.id,
+          contractNo: `CT-FO-${year}0001`,
+          contractType: 'formal',
+          title: `${contractEmp.name}劳动合同`,
+          startDate: new Date(`${year}-09-01`),
+          endDate: new Date(`${year + 1}-08-31`),
+          templateKey: 'formal',
+          position: 'HR 专员',
+          attachments: [{
+            name: '身份证扫描件.pdf',
+            url: 'https://oss.example.com/demo/id-card.pdf',
+            type: 'application/pdf',
+            size: 2048,
+            uploadedAt: new Date().toISOString(),
+          }],
+          signatories: [
+            { name: contractEmp.name, role: 'employee', signed: false },
+            { name: 'HR 管理员', role: 'hr', signed: false },
+          ],
+          esignProvider: 'mock',
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 1 contract record (draft)');
+    } else {
+      console.log('   ✓ contract demo already exists (skip)');
+    }
+  } else {
+    console.log('   ✓ no suitable employee, skip contract seed');
   }
 
   console.log('==> Done.');

@@ -110,7 +110,15 @@ V1.2 之前的 6 个严重项全部修复：
   + 立即/次月生效策略（configs.transfer.salary_effective）
   + 5 个新端点 + 21 个新单测（234 → 255）
   + **权限重算留二期，未来生效日 BullMQ 留独立任务**
-- 后续：A7（合同）
+- **A7 合同管理（已完成，M1 收尾）**：contract_records 1 张表
+  + 5 类合同模板（formal/intern/consultant/labor/nda）
+  + 6 状态机 draft→pending_signature→signing→signed/expired/cancelled
+  + 电子签 mock（不接 e-签宝真实 SaaS，留二期）
+  + 附件简化处理（attachmentUrl 字符串，不实现 multipart）
+  + 合同到期 3 级预警（30/15/7 天，configs.contract.warning_days）
+  + 6 个端点（5 用户 + 1 webhook）+ 21 个新单测（255 → 276）
+  - **M1 阶段全部完成**：A1+A2 → A3 → A4 → A5 → A6 → A7
+  - **下一阶段 M2 考勤假勤**（V1.2 §四.6）
 
 ### 工程强约束（V1.2 时代）
 

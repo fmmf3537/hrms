@@ -814,3 +814,63 @@ model TransferRecord {
   @@index([toDeptId, status])
   @@map("transfer_records")
 }
+
+// ==================== M1-A7 合同管理 ====================
+// 状态机：draft → pending_signature → signing → signed / expired / cancelled
+// 关联 employee（A2 已有）+ approval_instance（M0.5-1 已有）
+// 电子签：e-签宝 mock（configs.contract.esign_provider='mock'）
+model ContractRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  // 关联员工
+  employeeId    String   @map("employee_id") @db.Uuid
+  // 合同基本信息
+  contractNo    String   @unique @map("contract_no") @db.VarChar(50)
+  contractType  String   @map("contract_type") @db.VarChar(50)
+  title         String   @db.VarChar(200)
+  // 合同期限
+  startDate     DateTime @map("start_date") @db.Date
+  endDate       DateTime @map("end_date") @db.Date
+  // 试用期
+  probationMonths Int?   @map("probation_months")
+  // 薪资
+  baseSalary    Decimal? @map("base_salary") @db.Decimal(10, 2)
+  // 工作内容
+  position      String?  @db.VarChar(100)
+  workLocation  String?  @map("work_location") @db.VarChar(200)
+  // 模板
+  templateKey   String   @map("template_key") @db.VarChar(50)
+  // 附件 JSON
+  attachments   Json?
+  // 签署方 JSON
+  signatories   Json?
+  // 电子签 mock
+  esignProvider String   @default("mock") @map("esign_provider") @db.VarChar(20)
+  esignFlowId   String?  @map("esign_flow_id") @db.VarChar(100)
+  esignFlowUrl  String?  @map("esign_flow_url") @db.Text
+  // 审批流
+  approvalInstanceId String? @unique @map("approval_instance_id") @db.Uuid
+  // 状态机
+  status        String   @default("draft") @db.VarChar(20)
+  // 签约时间
+  signedAt      DateTime? @map("signed_at") @db.Timestamptz(6)
+  signedBy      String?   @map("signed_by") @db.Uuid
+  // 到期预警
+  expireWarned30d Boolean @default(false) @map("expire_warned_30d")
+  expireWarned15d Boolean @default(false) @map("expire_warned_15d")
+  expireWarned7d  Boolean @default(false) @map("expire_warned_7d")
+  expiredAt     DateTime? @map("expired_at") @db.Timestamptz(6)
+  // 取消
+  cancelledAt   DateTime? @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy   String?   @map("cancelled_by") @db.Uuid
+  cancelledReason String? @map("cancelled_reason") @db.Text
+  // 元数据
+  createdBy     String?  @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([employeeId, status])
+  @@index([status, endDate])
+  @@index([contractType, status])
+  @@index([createdBy, status])
+  @@map("contract_records")
+}

@@ -697,6 +697,17 @@
 | POST | `/transfers/:id/update` | 是 | 更新调动草稿（仅 draft） |
 | POST | `/transfers/:id/cancel` | 是 | 撤回/取消（draft 直接取消；submitted 调 approval.withdraw） |
 
+### 3.12 Contract API（M1-A7）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/contracts` | 是 | HR 创建合同草稿（draft） |
+| GET | `/contracts` | 是 | 合同列表（分页 + 状态/类型/员工过滤） |
+| GET | `/contracts/:id` | 是 | 合同详情（含 employee + attachments + signatories） |
+| POST | `/contracts/:id/update` | 是 | 更新草稿（仅 draft）；body.submit=true 时发起电子签 |
+| POST | `/contracts/:id/cancel` | 是 | 取消/作废 |
+| POST | `/contracts/webhook/e-sign` | 否（验签） | e-签宝 webhook 回调（HMAC 验签 + handleESignCallback） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

@@ -1490,6 +1490,95 @@ paths:
         '200':
           description: 成功
 
+  /contracts:
+    get:
+      tags: [Contract]
+      summary: 合同列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Contract]
+      summary: 创建合同草稿
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /contracts/{id}:
+    get:
+      tags: [Contract]
+      summary: 合同详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /contracts/{id}/update:
+    post:
+      tags: [Contract]
+      summary: 更新合同草稿（submit=true 发起电子签）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractUpdateInput'
+      responses:
+        '200':
+          description: 成功
+  /contracts/{id}/cancel:
+    post:
+      tags: [Contract]
+      summary: 取消合同
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: 成功
+  /contracts/webhook/e-sign:
+    post:
+      tags: [Contract]
+      summary: e-签宝 webhook 回调
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractESignWebhookInput'
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2086,3 +2175,69 @@ components:
         newPerformanceSalary: { type: number, nullable: true }
         newTotalSalary: { type: number, nullable: true }
         effectiveDate: { type: string, format: date }
+
+    ContractCreateInput:
+      type: object
+      required: [employeeId, contractType, title, startDate, endDate, templateKey]
+      properties:
+        employeeId: { type: string, format: uuid }
+        contractType:
+          type: string
+          enum: [formal, intern, consultant, labor, nda]
+        title: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        probationMonths: { type: integer }
+        baseSalary: { type: number }
+        position: { type: string }
+        workLocation: { type: string }
+        templateKey: { type: string }
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              url: { type: string }
+              type: { type: string }
+              size: { type: integer }
+        signatories:
+          type: array
+          items:
+            type: object
+
+    ContractUpdateInput:
+      type: object
+      properties:
+        contractType:
+          type: string
+          enum: [formal, intern, consultant, labor, nda]
+        title: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        probationMonths: { type: integer, nullable: true }
+        baseSalary: { type: number, nullable: true }
+        position: { type: string, nullable: true }
+        workLocation: { type: string, nullable: true }
+        templateKey: { type: string }
+        attachments:
+          type: array
+          items:
+            type: object
+        signatories:
+          type: array
+          items:
+            type: object
+        submit: { type: boolean }
+
+    ContractESignWebhookInput:
+      type: object
+      required: [flowId, signStatus]
+      properties:
+        flowId: { type: string }
+        signStatus: { type: string }
+        signedAt: { type: string, format: date-time }
+        signatories:
+          type: array
+          items:
+            type: object
