@@ -1117,3 +1117,106 @@ model MonthlySummary {
   @@index([status])
   @@map("monthly_summaries")
 }
+
+// ==================== M3-D1 考核方案配置 ====================
+model PerformanceCycle {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(200)
+  type        String   @db.VarChar(20)
+  startDate   DateTime @map("start_date") @db.Date
+  endDate     DateTime @map("end_date") @db.Date
+  status      String   @default("draft") @db.VarChar(20)
+  description String?  @db.Text
+  createdBy   String   @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  schemes     PerformanceScheme[]
+
+  @@index([type, status])
+  @@index([startDate, endDate])
+  @@map("performance_cycles")
+}
+
+model PerformanceIndicator {
+  id            String   @id @default(uuid()) @db.Uuid
+  code          String   @unique @db.VarChar(50)
+  name          String   @db.VarChar(200)
+  type          String   @db.VarChar(10)
+  category      String?  @db.VarChar(100)
+  description   String?  @db.Text
+  defaultWeight Decimal? @map("default_weight") @db.Decimal(5, 2)
+  target        String?  @db.Text
+  unit          String?  @db.VarChar(50)
+  scoringRule   String?  @map("scoring_rule") @db.Text
+  status        String   @default("active") @db.VarChar(20)
+  createdBy     String   @map("created_by") @db.Uuid
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  schemeLinks   PerformanceSchemeIndicator[]
+
+  @@index([type, status])
+  @@index([category])
+  @@map("performance_indicators")
+}
+
+model PerformanceScheme {
+  id                      String   @id @default(uuid()) @db.Uuid
+  code                    String   @unique @db.VarChar(50)
+  name                    String   @db.VarChar(200)
+  cycleId                 String?  @map("cycle_id") @db.Uuid
+  applicableScope         String   @map("applicable_scope") @db.VarChar(20)
+  applicableDeptId        String?  @map("applicable_dept_id") @db.Uuid
+  applicablePositionLevel String?  @map("applicable_position_level") @db.VarChar(50)
+  status                  String   @default("draft") @db.VarChar(20)
+  description             String?  @db.Text
+  version                 Int      @default(1)
+  sourceSchemeId          String?  @map("source_scheme_id") @db.Uuid
+  createdBy               String   @map("created_by") @db.Uuid
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  cycle        PerformanceCycle?            @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  sourceScheme PerformanceScheme?           @relation("SchemeClones", fields: [sourceSchemeId], references: [id], onDelete: SetNull)
+  clones       PerformanceScheme[]          @relation("SchemeClones")
+  indicators   PerformanceSchemeIndicator[]
+
+  @@index([cycleId, status])
+  @@index([applicableScope, applicableDeptId])
+  @@index([sourceSchemeId])
+  @@map("performance_schemes")
+}
+
+model PerformanceSchemeIndicator {
+  id          String   @id @default(uuid()) @db.Uuid
+  schemeId    String   @map("scheme_id") @db.Uuid
+  indicatorId String   @map("indicator_id") @db.Uuid
+  weight      Decimal  @db.Decimal(5, 2)
+  target      String?  @db.Text
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  scheme    PerformanceScheme    @relation(fields: [schemeId], references: [id], onDelete: Cascade)
+  indicator PerformanceIndicator @relation(fields: [indicatorId], references: [id], onDelete: Restrict)
+
+  @@unique([schemeId, indicatorId])
+  @@index([schemeId, sortOrder])
+  @@map("performance_scheme_indicators")
+}
+
+model PerformanceCoefficient {
+  id            String    @id @default(uuid()) @db.Uuid
+  grade         String    @db.VarChar(2)
+  coefficient   Decimal   @db.Decimal(4, 2)
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  createdBy     String    @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([grade, effectiveFrom, effectiveTo])
+  @@index([grade, effectiveTo])
+  @@map("performance_coefficients")
+}

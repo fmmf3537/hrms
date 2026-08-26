@@ -529,6 +529,78 @@ const DEFAULT_CONFIGS: Array<{
     value: 21.75,
     remark: '月平均工作日（劳动法）',
   },
+  {
+    category: 'performance',
+    key: 'cycle.types',
+    value: ['monthly', 'quarterly', 'yearly'],
+    remark: '考核周期类型白名单',
+  },
+  {
+    category: 'performance',
+    key: 'cycle.advance_days',
+    value: 5,
+    remark: '提前 N 天可创建下个周期',
+  },
+  {
+    category: 'performance',
+    key: 'indicator.types',
+    value: ['KPI', 'OKR', 'BSC', '360'],
+    remark: '指标类型白名单',
+  },
+  {
+    category: 'performance',
+    key: 'indicator.max_weight',
+    value: 100,
+    remark: '单指标最大权重',
+  },
+  {
+    category: 'performance',
+    key: 'scheme.applicable_scope',
+    value: ['company', 'department', 'position'],
+    remark: '方案适用范围',
+  },
+  {
+    category: 'performance',
+    key: 'scheme.clone_strategy',
+    value: 'deep',
+    remark: '方案复制策略',
+  },
+  {
+    category: 'performance',
+    key: 'coefficient.grades',
+    value: ['S', 'A', 'B', 'C', 'D'],
+    remark: '绩效等级白名单',
+  },
+  {
+    category: 'performance',
+    key: 'coefficient.default',
+    value: { S: 1.5, A: 1.2, B: 1.0, C: 0.8, D: 0.5 },
+    remark: '默认等级系数',
+  },
+  {
+    category: 'performance',
+    key: 'coefficient.max_history_versions',
+    value: 12,
+    remark: '系数历史版本保留数',
+  },
+  {
+    category: 'performance',
+    key: 'grade.distribution',
+    value: { S: 0.1, A: 0.2, B: 0.5, C: 0.15, D: 0.05 },
+    remark: '等级比例建议（D3 校验）',
+  },
+  {
+    category: 'performance',
+    key: 'ai.suggestion_template_key',
+    value: 'performance_ai_suggestion',
+    remark: 'AI 评分建议模板 key（D2 复用）',
+  },
+  {
+    category: 'performance',
+    key: 'calibration.threshold',
+    value: 0.05,
+    remark: '校准阈值（D3 校验）',
+  },
 ];
 
 async function main() {
@@ -1751,6 +1823,128 @@ async function main() {
     } else {
       console.log('   ✓ monthly summary demo already exists (skip)');
     }
+  }
+
+  console.log('==> Seeding performance demo (M3-D1)...');
+  const perfExists = await prisma.performanceCycle.findFirst({ where: { code: `${year}-09` } });
+  if (!perfExists) {
+    const monthlyCycle = await prisma.performanceCycle.create({
+      data: {
+        code: `${year}-09`,
+        name: `${year} 年 9 月考核`,
+        type: 'monthly',
+        startDate: new Date(`${year}-09-01`),
+        endDate: new Date(`${year}-09-30`),
+        status: 'active',
+        createdBy: admin.id,
+      },
+    });
+    await prisma.performanceCycle.create({
+      data: {
+        code: `${year}-Q3`,
+        name: `${year} 年 Q3 考核`,
+        type: 'quarterly',
+        startDate: new Date(`${year}-07-01`),
+        endDate: new Date(`${year}-09-30`),
+        status: 'draft',
+        createdBy: admin.id,
+      },
+    });
+    await prisma.performanceCycle.create({
+      data: {
+        code: `${year}`,
+        name: `${year} 年度考核`,
+        type: 'yearly',
+        startDate: new Date(`${year}-01-01`),
+        endDate: new Date(`${year}-12-31`),
+        status: 'draft',
+        createdBy: admin.id,
+      },
+    });
+
+    const indicatorDefs = [
+      { code: 'KPI-SALES', name: '销售额', type: 'KPI', category: '销售' },
+      { code: 'KPI-PROJECT', name: '项目交付', type: 'KPI', category: '项目' },
+      { code: 'OKR-TEAM', name: '团队目标', type: 'OKR', category: '团队' },
+      { code: 'OKR-PERSONAL', name: '个人目标', type: 'OKR', category: '个人' },
+      { code: 'BSC-FIN', name: '财务指标', type: 'BSC', category: '财务' },
+      { code: '360-COLLAB', name: '协作评价', type: '360', category: '协作' },
+    ];
+    const createdIndicators = [];
+    for (const def of indicatorDefs) {
+      const ind = await prisma.performanceIndicator.create({
+        data: { ...def, status: 'active', createdBy: admin.id },
+      });
+      createdIndicators.push(ind);
+    }
+
+    const salesDept = await prisma.department.findFirst({
+      where: { code: 'PEDU', company: { code: 'XACH' } },
+    });
+    const techDept = await prisma.department.findFirst({
+      where: { code: 'TECH', company: { code: 'XACH' } },
+    });
+
+    if (salesDept) {
+      const salesScheme = await prisma.performanceScheme.create({
+        data: {
+          code: 'SCH-PEDU-MONTHLY',
+          name: '产教服务部月度方案',
+          cycleId: monthlyCycle.id,
+          applicableScope: 'department',
+          applicableDeptId: salesDept.id,
+          status: 'active',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.performanceSchemeIndicator.createMany({
+        data: [
+          { schemeId: salesScheme.id, indicatorId: createdIndicators[0].id, weight: 50, sortOrder: 0 },
+          { schemeId: salesScheme.id, indicatorId: createdIndicators[5].id, weight: 50, sortOrder: 1 },
+        ],
+      });
+    }
+
+    if (techDept) {
+      const techScheme = await prisma.performanceScheme.create({
+        data: {
+          code: 'SCH-TECH-MONTHLY',
+          name: '技术部月度方案',
+          cycleId: monthlyCycle.id,
+          applicableScope: 'department',
+          applicableDeptId: techDept.id,
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.performanceSchemeIndicator.createMany({
+        data: [
+          { schemeId: techScheme.id, indicatorId: createdIndicators[1].id, weight: 40, sortOrder: 0 },
+          { schemeId: techScheme.id, indicatorId: createdIndicators[2].id, weight: 30, sortOrder: 1 },
+          { schemeId: techScheme.id, indicatorId: createdIndicators[3].id, weight: 30, sortOrder: 2 },
+        ],
+      });
+    }
+
+    const coefExists = await prisma.performanceCoefficient.findFirst({ where: { effectiveTo: null } });
+    if (!coefExists) {
+      const effectiveFrom = new Date('2020-01-01');
+      for (const [grade, coefficient] of Object.entries({ S: 1.5, A: 1.2, B: 1.0, C: 0.8, D: 0.5 })) {
+        await prisma.performanceCoefficient.create({
+          data: {
+            grade,
+            coefficient,
+            effectiveFrom,
+            effectiveTo: null,
+            createdBy: admin.id,
+          },
+        });
+      }
+    }
+
+    console.log('   ✓ performance cycles / indicators / schemes / coefficients demo');
+  } else {
+    console.log('   ✓ performance demo already exists (skip)');
   }
 
   console.log('==> Done.');

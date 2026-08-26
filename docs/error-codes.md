@@ -154,6 +154,23 @@
 | 70110 | 403 | DATA_PERMISSION_DENIED | 数据权限不足（部门负责人看其他部门数据） | 提示"无权查看该数据" |
 | 70120 | 400 | BUSINESS_RULE_VIOLATION | 业务规则违反（如调岗必须双方负责人审批） | 提示具体规则 |
 
+### 724xx —— M3 绩效 D1 考核方案配置
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 72401 | 400 | CYCLE_CODE_DUPLICATE | 周期 code 重复 | 提示更换 code |
+| 72402 | 400 | CYCLE_INVALID_DATE_RANGE | startDate ≥ endDate | 提示日期范围错误 |
+| 72403 | 400 | CYCLE_TYPE_INVALID | type 不在白名单 | 提示合法 type |
+| 72404 | 400 | CYCLE_STATUS_INVALID_TRANSITION | 状态机非法流转 | 提示当前状态 |
+| 72405 | 400 | CYCLE_HAS_DEPENDENT_RECORDS | 关闭周期时存在依赖（D2 TODO） | 留 D2 |
+| 72406 | 400 | INDICATOR_CODE_DUPLICATE | 指标/方案 code 重复 | 提示更换 code |
+| 72407 | 400 | INDICATOR_TYPE_INVALID | 指标 type 不合法 | 提示合法 type |
+| 72408 | 400 | INDICATOR_WEIGHT_OUT_OF_RANGE | 权重 ≤0 或 >100 | 提示权重范围 |
+| 72409 | 400 | SCHEME_WEIGHT_SUM_NOT_100 | 方案权重和 ≠ 100 | 提示权重和错误 |
+| 72410 | 400 | COEFFICIENT_GRADE_INVALID | 等级/系数不合法 | 提示合法 grade/系数 |
+| 72411 | 400 | SCHEME_SCOPE_INVALID | 方案适用范围字段不匹配 | 提示范围错误 |
+| 72412 | 400 | SCHEME_INDICATOR_INVALID | 指标不存在或已归档 | 提示指标无效 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

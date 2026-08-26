@@ -878,7 +878,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 
 | 切片 | 范围 | 子任务 | 工时 |
 |---|---|---|---|
-| D1 | 考核方案配置（KPI+OKR 指标库 + 周期定义） | 4 | 3d |
+| D1 | 考核方案配置（KPI+OKR 指标库 + 周期定义）**已实现** | 4 | 3d |
 | D2 | 考核流程（自评→上级→校准→HR→总经理 5 级审批 + **AI 评分建议**） | 6 | 5d |
 | D3 | 五档评分 + 系数配置（S/A/B/C/D 后台可调） | 3 | 2d |
 | D4 | 绩效兑现（双轨制：直乘 vs 部门池，后台切换） | 4 | 3d |
@@ -1184,6 +1184,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M2.0.5** | **2026-08-31** | **feat(trip): M2-B5 出差管理（Cursor 交付）<br>**范围**：business_trips 1 张表 + 出差申请（地点/起止日期/事由/项目）+ 差旅补助计算（城市 tier × 职级系数，service 函数，写 allowance_amount 字段）+ 走 M0.5-1 审批流 + 至少提前 3 天申请 + 区间重叠校验 + 7 类 configs 业务规则 + 3 个新端点 + 19 个新单测（359→378）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1/B2/B3/B4 + employees 表（**B5 不创建 projects 表**，projectCode 简化为字符串）<br>**强约束**：员工/部门关联走 prisma 直接操作（不 import 跨 service），**B5 不联动 B2 attendance_records GPS 打卡**，**B5 不联动 M4 薪酬**（差旅补助仅写字段），**B5 不实现月度汇总**（B6 范围） | **Cursor + WorkBuddy** |
 | **M2.0.6** | **2026-09-01** | **feat(summary): M2-B6 月度考勤汇总（Cursor 交付，M2 收尾切片）<br>**范围**：monthly_summaries 1 张表 + 报表生成（聚合 B1 attendance + B3 leave + B4 overtime + B5 trip 数据）+ 员工确认（draft → employee_confirmed）+ HR 锁定（employee_confirmed → hr_locked，**M4 薪酬切片读取 locked 数据**）+ **【B3 调休余额承诺】调休余额聚合**（B6 自己实现 calculateCompBalance 函数，**不调 leave.service，不修改 leave.service.calculateLeaveBalance**）+ 4 个新端点 + 22 个新单测（378→400）<br>**依赖**：M1 全部 + M0.5 全部 + M2-B1/B2/B3/B4/B5 + B3 leave_requests / B4 overtime_requests（聚合源）<br>**强约束**：员工/部门关联走 prisma 直接查询（不 import 跨 service），**未修改 leave.service.ts**，**B6 自己实现 calculateCompBalance 函数**（不调 leave.service.calculateLeaveBalance），BullMQ 每月 1 日自动生成留独立任务 | **Cursor + WorkBuddy** |
 | **M2.0.7** | **2026-09-01** | **docs: M2 收尾（6 切片全部完成 + 提示词库 14 文件 + 0 越界 13 次连续）<br>**M2 全部完成**：B1/B2/B3/B4/B5/B6 全部落地（6 个业务 commit + 6 个提示词 commit，**0 越界**，0 旧测试改动）<br>**测试演进**：276（M1 收尾）→ 293→314→336→359→378→**400**（M2 收尾，+124 / +45%）；一期累计 26→400（+374 / +1439%）<br>**M2 累计**：84 文件 / 25 端点 / 7 新表 / 16 权限点 / 60 错误码（72 段位 71801-72310）<br>**B6 红线 6 验证**：`git diff HEAD -- leave.service.ts` = 0 行（调休余额自己实现 calculateCompBalance，未修改 leave.service）<br>**提示词库**：docs/cursor-prompts/ 累计 14 个 .md（~560KB）；全部 M2 切片沿用 45-46KB 详尽模式（42-46KB 区间，0 越界 6 切片连续）<br>**关键经验**：1) 45KB 详尽模式 6 切片稳定验证（vs M0.5-5 越界教训）；2) prisma 直接操作 6 切片 100% 遵守（不 import 跨 service，避免循环依赖）；3) 业务规则配置化 45 项（configs 表 + configService + fallback + TODO 注释）；4) BullMQ 调度任务 9 类暴露函数（listUpcoming*/generateMonthlySummary/disableUserAccount）<br>**遗留任务**：M2 全部切片均暴露 BullMQ 调度函数（待独立任务接入）；调休余额/销差/月度汇总自动生成/未来生效日等调度均留独立任务<br>**M2 收尾报告**：[`docs/cursor-prompts/M2-wrap-up.md`](./cursor-prompts/M2-wrap-up.md)<br>**下一阶段 M3 绩效管理**（V1.2 §四.7 D1-D6，约 19d） | **WorkBuddy** |
+| **M3.0.1** | **2026-09-02** | **feat(performance): M3-D1 考核方案配置（Cursor 交付）<br>**范围**：performance_cycles / performance_indicators / performance_schemes / performance_scheme_indicators / performance_coefficients 5 张表 + 考核周期 + 指标库 + 考核方案（含权重和=100% + 复制）+ 等级系数版本回溯 + 12 项 performance.* configs + 10 端点 + 8 权限点 + 23 新单测（400→423）<br>**强约束**：不创建 performance_scores/records 表（D2 范围），不实现 5 级审批流/AI 评分（D2），不联动 M4 薪酬，仅 import audit/config + prisma | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

@@ -1985,6 +1985,93 @@ paths:
               schema:
                 $ref: '#/components/schemas/MonthlySummaryResponse'
 
+  /performance/cycles:
+    get:
+      tags: [Performance]
+      summary: 考核周期列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Performance]
+      summary: 创建考核周期
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 已创建
+  /performance/cycles/{id}:
+    patch:
+      tags: [Performance]
+      summary: 更新考核周期
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /performance/indicators:
+    get:
+      tags: [Performance]
+      summary: 指标库列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Performance]
+      summary: 创建绩效指标
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 已创建
+  /performance/schemes:
+    get:
+      tags: [Performance]
+      summary: 考核方案列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [Performance]
+      summary: 创建考核方案
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 已创建
+  /performance/schemes/{id}/clone:
+    post:
+      tags: [Performance]
+      summary: 复制考核方案
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201':
+          description: 已复制
+  /performance/coefficients:
+    get:
+      tags: [Performance]
+      summary: 当前生效等级系数
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    patch:
+      tags: [Performance]
+      summary: 更新等级系数
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:

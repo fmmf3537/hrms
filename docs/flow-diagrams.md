@@ -580,6 +580,55 @@ erDiagram
 - **AiEmbedding** 用 pgvector 存储向量，启用 PostgreSQL 扩展
 - **AiConversation** 关联 `user_id` + `document_id` 便于追溯
 
+### 3.3 M3-D1 考核方案配置数据模型
+
+```mermaid
+erDiagram
+    PerformanceCycle ||--o{ PerformanceScheme : "周期→方案"
+    PerformanceScheme ||--o{ PerformanceSchemeIndicator : "方案→指标关联"
+    PerformanceIndicator ||--o{ PerformanceSchemeIndicator : "指标→方案关联"
+    PerformanceScheme ||--o{ PerformanceScheme : "复制来源"
+
+    PerformanceCycle {
+        uuid id PK
+        string code UK
+        string type "monthly/quarterly/yearly"
+        date start_date
+        date end_date
+        string status "draft/active/closed"
+    }
+
+    PerformanceIndicator {
+        uuid id PK
+        string code UK
+        string type "KPI/OKR/BSC/360"
+        string status "active/archived"
+    }
+
+    PerformanceScheme {
+        uuid id PK
+        string code UK
+        uuid cycle_id FK
+        string applicable_scope
+        string status "draft/active/archived"
+    }
+
+    PerformanceSchemeIndicator {
+        uuid id PK
+        uuid scheme_id FK
+        uuid indicator_id FK
+        decimal weight
+    }
+
+    PerformanceCoefficient {
+        uuid id PK
+        string grade "S/A/B/C/D"
+        decimal coefficient
+        date effective_from
+        date effective_to
+    }
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

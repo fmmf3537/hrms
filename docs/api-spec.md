@@ -769,6 +769,23 @@
 
 **错误码**：72301-72310（B6 子区）。
 
+### 3.19 Performance API（M3-D1）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/performance/cycles` | 是 | performance:cycle:write | 创建考核周期 |
+| GET | `/performance/cycles` | 是 | performance:cycle:read | 考核周期列表 |
+| PATCH | `/performance/cycles/:id` | 是 | performance:cycle:write | 更新考核周期 |
+| POST | `/performance/indicators` | 是 | performance:indicator:write | 创建绩效指标 |
+| GET | `/performance/indicators` | 是 | performance:indicator:read | 指标库列表 |
+| POST | `/performance/schemes` | 是 | performance:scheme:write | 创建考核方案 |
+| GET | `/performance/schemes` | 是 | performance:scheme:read | 考核方案列表 |
+| POST | `/performance/schemes/:id/clone` | 是 | performance:scheme:write | 复制考核方案 |
+| GET | `/performance/coefficients` | 是 | performance:coefficient:read | 当前生效等级系数 |
+| PATCH | `/performance/coefficients` | 是 | performance:coefficient:write | 更新等级系数 |
+
+**错误码**：72401-72412（D1 子区）。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
