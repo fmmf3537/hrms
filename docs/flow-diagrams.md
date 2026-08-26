@@ -712,6 +712,44 @@ flowchart LR
     E --> F[calibrateDepartmentRatios warn_only]
 ```
 
+### 3.6 M3-D4 绩效兑现 ER + 双轨制流程
+
+```mermaid
+erDiagram
+    performance_payout_configs {
+        uuid id PK
+        varchar mode
+        date effective_from
+        date effective_to
+        uuid created_by
+    }
+    performance_payouts {
+        uuid id PK
+        uuid employee_id FK
+        uuid cycle_id FK
+        date month
+        varchar period
+        varchar mode
+        decimal base_amount
+        decimal coefficient
+        decimal actual_amount
+        varchar status
+    }
+    employees ||--o{ performance_payouts : receives
+    performance_cycles ||--o{ performance_payouts : cycle
+```
+
+```mermaid
+flowchart TD
+    A[archived record] --> B{mode}
+    B -->|direct| C[base × coefficient]
+    B -->|pool| D[deptPool × ratio]
+    C --> E[performance_payouts]
+    D --> E
+    F[季度 M1/M2] --> G[prepay 50%]
+    H[季度 M3] --> I[settle 多退少补]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

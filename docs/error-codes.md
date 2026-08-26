@@ -211,6 +211,21 @@
 | 72609 | 400 | CALIBRATION_DEPT_NOT_FOUND | 部门不存在 | 提示部门 |
 | 72610 | 400 | CALIBRATION_RATIO_INVALID | 比例和 ≠ 1.0 | 提示比例 |
 
+### 7.5 M3-D4 绩效兑现（72701-72710）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 72701 | 400 | PAYOUT_CONFIG_NOT_FOUND | 当前无生效配置 | 提示初始化配置 |
+| 72702 | 400 | PAYOUT_MODE_INVALID | mode 不在 direct / pool | 提示合法 mode |
+| 72703 | 400 | PAYOUT_PERIOD_INVALID | period 格式错（YYYY-MM） | 提示格式 |
+| 72704 | 400 | PAYOUT_CALC_NOT_READY | record 未归档 | 提示归档 |
+| 72705 | 400 | PAYOUT_POOL_DEPT_NOT_FOUND | 部门不存在 | 提示部门 |
+| 72706 | 400 | PAYOUT_POOL_MEMBER_EMPTY | 部门池成员数 < min_members | 提示最小成员 |
+| 72707 | 400 | PAYOUT_PREPAY_NOT_ALLOWED | 非季度前 2 月 | 提示时间 |
+| 72708 | 400 | PAYOUT_PREPAY_ALREADY_DONE | 当月已预支 | 提示已预支 |
+| 72709 | 400 | PAYOUT_SETTLE_NOT_ALLOWED | 季度末未到 / record 未归档 | 提示时间 |
+| 72710 | 400 | PAYOUT_DUPLICATE | 同 employeeId+cycleId+month 重复 | 提示重复 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

@@ -821,6 +821,21 @@
 
 **错误码**：72601-72610（D3 子区）。
 
+### 3.22 Performance Payout API（M3-D4）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| GET | `/performance/payouts/config` | 是 | performance:payout:read | 读当前兑现模式配置 |
+| PATCH | `/performance/payouts/config` | 是 | performance:payout:write | 切换兑现模式 |
+| POST | `/performance/payouts/calculate` | 是 | performance:payout:calculate | 直乘/部门池计算 |
+| POST | `/performance/payouts/calculate-pool` | 是 | performance:payout:calculate | 单部门池计算 |
+| POST | `/performance/payouts/prepay` | 是 | performance:payout:settle | 季度前预支 |
+| POST | `/performance/payouts/settle` | 是 | performance:payout:settle | 季度末清算 |
+| GET | `/performance/payouts` | 是 | performance:payout:read | 兑现记录列表 |
+| GET | `/performance/payouts/:id` | 是 | performance:payout:read | 兑现记录详情 |
+
+**错误码**：72701-72710（D4 子区）。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

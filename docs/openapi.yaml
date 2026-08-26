@@ -2307,6 +2307,76 @@ paths:
       responses:
         '200':
           description: 成功
+  /performance/payouts/config:
+    get:
+      tags: [Performance]
+      summary: 读当前兑现模式配置
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    patch:
+      tags: [Performance]
+      summary: 切换兑现模式
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/payouts/calculate:
+    post:
+      tags: [Performance]
+      summary: 直乘/部门池计算
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/payouts/calculate-pool:
+    post:
+      tags: [Performance]
+      summary: 单部门池计算
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/payouts/prepay:
+    post:
+      tags: [Performance]
+      summary: 季度前预支
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/payouts/settle:
+    post:
+      tags: [Performance]
+      summary: 季度末清算
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/payouts:
+    get:
+      tags: [Performance]
+      summary: 兑现记录列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/payouts/{id}:
+    get:
+      tags: [Performance]
+      summary: 兑现记录详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
 
 components:
   securitySchemes:

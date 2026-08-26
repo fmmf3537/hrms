@@ -727,6 +727,54 @@ const DEFAULT_CONFIGS: Array<{
     value: 0.02,
     remark: '比例容差 ±2%',
   },
+  {
+    category: 'performance',
+    key: 'payout.mode',
+    value: 'direct',
+    remark: 'D4 兑现模式 direct / pool',
+  },
+  {
+    category: 'performance',
+    key: 'payout.prepay_rate',
+    value: 0.5,
+    remark: 'D4 季度前预支比例',
+  },
+  {
+    category: 'performance',
+    key: 'payout.prepay.months_per_quarter',
+    value: 2,
+    remark: 'D4 季度前预支月数',
+  },
+  {
+    category: 'performance',
+    key: 'payout.pool.min_members',
+    value: 5,
+    remark: 'D4 部门池最小成员数',
+  },
+  {
+    category: 'performance',
+    key: 'payout.direct.excluded_grades',
+    value: ['D'],
+    remark: 'D4 直乘模式排除等级',
+  },
+  {
+    category: 'performance',
+    key: 'payout.batch_size',
+    value: 200,
+    remark: 'D4 批量计算上限',
+  },
+  {
+    category: 'performance',
+    key: 'payout.dept_coefficient_default',
+    value: 1.0,
+    remark: 'D4 部门绩效系数默认',
+  },
+  {
+    category: 'performance',
+    key: 'payout.settle.trigger_cycle_status',
+    value: ['closed', 'archived'],
+    remark: 'D4 清算触发周期状态',
+  },
 ];
 
 async function main() {
@@ -2184,6 +2232,88 @@ async function main() {
       console.log('   ✓ 3 archived performance records for D3 grade demo');
     } else {
       console.log('   ✓ D3 grade demo already exists (skip)');
+    }
+  }
+
+  console.log('==> Seeding performance payout demo (M3-D4)...');
+  const payoutConfigExists = await prisma.performancePayoutConfig.findFirst({
+    where: { effectiveTo: null },
+  });
+  if (!payoutConfigExists) {
+    await prisma.performancePayoutConfig.create({
+      data: {
+        mode: 'direct',
+        effectiveFrom: new Date(),
+        effectiveTo: null,
+        remark: 'D4 默认直乘模式',
+        createdBy: admin.id,
+      },
+    });
+    console.log('   ✓ default performance_payout_config (direct)');
+  }
+
+  const q3Cycle = await prisma.performanceCycle.findFirst({ where: { code: `${year}-Q3` } });
+  const archivedForPayout = await prisma.performanceRecord.findFirst({
+    where: { status: 'archived', finalGrade: 'B' },
+  });
+  if (q3Cycle && archivedForPayout && sampleEmployees.length >= 1) {
+    const d4Exists = await prisma.performancePayout.findFirst({
+      where: { cycleId: q3Cycle.id },
+    });
+    if (!d4Exists) {
+      const emp = sampleEmployees[0];
+      const salary = await prisma.employeeSalaryHistory.findFirst({
+        where: { employeeId: emp.id },
+        orderBy: { effectiveDate: 'desc' },
+      });
+      const base = salary?.performanceSalary ?? salary?.totalSalary ?? 10000;
+      const monthDirect = new Date(`${year}-09-01`);
+      await prisma.performancePayout.create({
+        data: {
+          employeeId: emp.id,
+          cycleId: q3Cycle.id,
+          month: monthDirect,
+          period: `${year}-09`,
+          mode: 'direct',
+          baseAmount: base,
+          coefficient: 1.0,
+          actualAmount: base,
+          status: 'calculated',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.performancePayout.create({
+        data: {
+          employeeId: emp.id,
+          cycleId: q3Cycle.id,
+          month: monthDirect,
+          period: `${year}-09`,
+          mode: 'pool',
+          baseAmount: base,
+          coefficient: 1.0,
+          ratio: 0.2,
+          actualAmount: Number(base) * 0.2,
+          status: 'calculated',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.performancePayout.create({
+        data: {
+          employeeId: emp.id,
+          cycleId: q3Cycle.id,
+          month: new Date(`${year}-07-01`),
+          period: `${year}-07`,
+          mode: 'direct',
+          baseAmount: base,
+          coefficient: 1.0,
+          actualAmount: Number(base) * 0.5,
+          status: 'prepaid',
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 3 demo performance_payouts (direct + pool + prepay)');
+    } else {
+      console.log('   ✓ D4 payout demo already exists (skip)');
     }
   }
 

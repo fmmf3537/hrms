@@ -12,6 +12,8 @@ import { validate } from '../middleware/validate';
 import * as calibrationRatioService from '../services/performance_calibration_ratio.service';
 import * as gradeService from '../services/performance_grade.service';
 import type { GradeThresholds } from '../services/performance_grade.service';
+import * as payoutService from '../services/performance_payout.service';
+import * as payoutConfigService from '../services/performance_payout_config.service';
 
 const router: RouterType = Router();
 
@@ -411,6 +413,187 @@ router.post(
     if (!actorId) return;
     const { deptIds, cycleId } = req.body as { deptIds: string[]; cycleId?: string };
     const data = await calibrationRatioService.calibrateDepartmentRatios(actorId, deptIds, cycleId);
+    res.json({ success: true, data });
+  }),
+);
+
+// ==================== M3-D4 绩效兑现 ====================
+
+function requirePayoutUserId(req: import('express').Request, res: import('express').Response): string | null {
+  const userId = req.user?.userId;
+  if (!userId) {
+    res.status(401).json({ success: false, message: '未认证' });
+    return null;
+  }
+  return userId;
+}
+
+const payoutConfigSwitchSchema = z.object({
+  mode: z.enum(['direct', 'pool']),
+  effectiveFrom: z.string().optional(),
+  remark: z.string().max(500).optional(),
+});
+
+const payoutCalculateSchema = z.object({
+  mode: z.enum(['direct', 'pool']).optional(),
+  employeeId: z.string().uuid().optional(),
+  cycleId: z.string().uuid(),
+  month: z.string().min(1),
+  deptIds: z.array(z.string().uuid()).optional(),
+});
+
+const payoutCalculatePoolSchema = z.object({
+  deptId: z.string().uuid(),
+  cycleId: z.string().uuid(),
+  month: z.string().min(1),
+});
+
+const payoutPrepaySchema = z.object({
+  cycleId: z.string().uuid(),
+  month: z.string().min(1),
+  employeeId: z.string().uuid().optional(),
+});
+
+const payoutSettleSchema = z.object({
+  cycleId: z.string().uuid(),
+  quarter: z.coerce.number().int().min(1).max(4),
+  employeeId: z.string().uuid().optional(),
+});
+
+const payoutListSchema = z.object({
+  cycleId: z.string().uuid().optional(),
+  employeeId: z.string().uuid().optional(),
+  mode: z.enum(['direct', 'pool']).optional(),
+  status: z.enum(['draft', 'calculated', 'prepaid', 'settled', 'cancelled']).optional(),
+  period: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+router.get(
+  '/payouts/config',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_READ),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const data = await payoutConfigService.getCurrentConfig(actorId);
+    res.json({ success: true, data });
+  }),
+);
+
+router.patch(
+  '/payouts/config',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_WRITE),
+  validate(payoutConfigSwitchSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const body = req.body as { mode: 'direct' | 'pool'; effectiveFrom?: string; remark?: string };
+    const data = await payoutConfigService.switchConfig(actorId, {
+      mode: body.mode,
+      effectiveFrom: body.effectiveFrom ? new Date(body.effectiveFrom) : undefined,
+      remark: body.remark,
+    });
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/payouts/calculate',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_CALCULATE),
+  validate(payoutCalculateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const body = req.body as {
+      mode?: 'direct' | 'pool';
+      employeeId?: string;
+      cycleId: string;
+      month: string;
+      deptIds?: string[];
+    };
+    const mode = body.mode ?? 'direct';
+    if (mode === 'pool') {
+      const data = await payoutService.calculatePool(actorId, {
+        cycleId: body.cycleId,
+        month: body.month,
+        deptIds: body.deptIds,
+      });
+      res.json({ success: true, data });
+      return;
+    }
+    if (!body.employeeId) {
+      res.status(400).json({ success: false, message: '直乘模式需提供 employeeId' });
+      return;
+    }
+    const data = await payoutService.calculateDirect(actorId, {
+      employeeId: body.employeeId,
+      cycleId: body.cycleId,
+      month: body.month,
+    });
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/payouts/calculate-pool',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_CALCULATE),
+  validate(payoutCalculatePoolSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const { deptId, cycleId, month } = req.body as { deptId: string; cycleId: string; month: string };
+    const data = await payoutService.calculatePoolByDept(actorId, deptId, cycleId, month);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/payouts/prepay',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_SETTLE),
+  validate(payoutPrepaySchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const body = req.body as { cycleId: string; month: string; employeeId?: string };
+    const data = await payoutService.prepay(actorId, body);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/payouts/settle',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_SETTLE),
+  validate(payoutSettleSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const body = req.body as { cycleId: string; quarter: number; employeeId?: string };
+    const data = await payoutService.settle(actorId, body);
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/payouts',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_READ),
+  validate(payoutListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const data = await payoutService.listPayouts(actorId, req.query as payoutService.ListPayoutFilter);
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/payouts/:id',
+  requirePermission(PERMISSIONS.PERFORMANCE_PAYOUT_READ),
+  asyncHandler(async (req, res) => {
+    const actorId = requirePayoutUserId(req, res);
+    if (!actorId) return;
+    const data = await payoutService.getPayout(actorId, req.params.id);
     res.json({ success: true, data });
   }),
 );

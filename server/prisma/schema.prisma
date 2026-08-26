@@ -180,6 +180,7 @@ model Employee {
   department Department? @relation(fields: [departmentId], references: [id], onDelete: Restrict)
 
   performanceRecords PerformanceRecord[]
+  performancePayouts PerformancePayout[]
 
   @@index([companyId, departmentId])
   @@index([status])
@@ -1136,6 +1137,7 @@ model PerformanceCycle {
 
   schemes     PerformanceScheme[]
   records     PerformanceRecord[]
+  payouts     PerformancePayout[]
 
   @@index([type, status])
   @@index([startDate, endDate])
@@ -1311,4 +1313,47 @@ model PerformanceAiSuggestion {
 
   @@index([recordId, createdAt])
   @@map("performance_ai_suggestions")
+}
+
+// ==================== M3-D4 绩效兑现 ====================
+
+model PerformancePayoutConfig {
+  id            String    @id @default(uuid()) @db.Uuid
+  mode          String    @db.VarChar(20) // direct / pool
+  effectiveFrom DateTime  @map("effective_from") @db.Date
+  effectiveTo   DateTime? @map("effective_to") @db.Date
+  remark        String?   @db.Text
+  createdBy     String    @map("created_by") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([mode, effectiveFrom, effectiveTo])
+  @@index([mode, effectiveTo])
+  @@map("performance_payout_configs")
+}
+
+model PerformancePayout {
+  id           String   @id @default(uuid()) @db.Uuid
+  employeeId   String   @map("employee_id") @db.Uuid
+  cycleId      String   @map("cycle_id") @db.Uuid
+  month        DateTime @db.Date
+  period       String   @db.VarChar(7) // YYYY-MM
+  mode         String   @db.VarChar(20) // direct / pool
+  baseAmount   Decimal  @map("base_amount") @db.Decimal(12, 2)
+  coefficient  Decimal  @db.Decimal(4, 2)
+  ratio        Decimal? @db.Decimal(5, 4)
+  actualAmount Decimal  @map("actual_amount") @db.Decimal(12, 2)
+  status       String   @default("draft") @db.VarChar(20) // draft/calculated/prepaid/settled/cancelled
+  createdBy    String   @map("created_by") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  employee Employee         @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  cycle    PerformanceCycle @relation(fields: [cycleId], references: [id], onDelete: Restrict)
+
+  @@unique([employeeId, cycleId, month, mode])
+  @@index([cycleId, status])
+  @@index([employeeId, period])
+  @@index([period, status])
+  @@index([mode, status])
+  @@map("performance_payouts")
 }
