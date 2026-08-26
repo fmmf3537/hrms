@@ -83,42 +83,44 @@ V1.2 之前的 6 个严重项全部修复：
 - 数据库：12+ 张表（user / role / permission / audit / approval × 3 / notification × 2 / encrypted × 2 / integration × 2 / config / ai × 4 / user_position_history / user_salary_history 等）
 - 公共底座 5 个切片为 M1-M5 业务模块铺路：审批流 / 通知 / 加密 / 对接 / AI
 
-### M1 组织人事（进行中）
+### M1 组织人事（**已完成** — V1.2 §四.5 A1-A7 全部落地）
 
-- **A1+A2 合并提交（已完成）**：组织架构 + 员工档案
+- **A1+A2 合并提交**：组织架构 + 员工档案
   - 扩展 companies / departments / employees + 新增 employee_position_history / employee_salary_history
   - 25 个新端点（company 7 + department 8 + employee 10）
   - 38 个新单测（140 → 178）
   - AI OCR 集成（M0.5-4 LLM 网关）+ 字段加密（M0.5-3 AES-256-GCM）+ 合同预警（M0.5-2 通知）+ 业务规则（工号/预警天数走 M0.5-6 configService）
-- **A3 入职流程（已完成）**：onboarding_records + onboarding_tasks 2 张表
+- **A3 入职流程**：onboarding_records + onboarding_tasks 2 张表
   + 状态机 + 工号自动生成 + AI OCR 资料收集（复用 A2 employeeAI 三方法）
   + 审批流 + 通知 + 5 个新端点 + 17 个新单测（178 → 195）
-- **A4 转正流程（已完成）**：regularization_records 1 张表
+- **A4 转正流程**：regularization_records 1 张表
   + 状态机 + 3 级审批流（部门负责人 → HR → 总经理）
   + 转正后 employee.status probation → active + 薪资历史写入
   + listUpcomingRegularizations 给 BullMQ 调用 + 4 个新端点 + 18 个新单测（195 → 213）
-- **A6 离职流程（已完成）**：offboarding_records + handover_tasks 2 张表
+- **A6 离职流程**：offboarding_records + handover_tasks 2 张表
   + 7 步流程（V1.2 §二.2.3）+ 2 级审批流（HR → 总经理）
   + 工作交接清单（5 项模板，configs.offboarding.handover_template）
   + 账号禁用（configs.offboarding.account_disable_strategy）
   + 离职证明 mock PDF（HTML + 水印，configs.offboarding.certificate_*）
   + 档案 1 年后访问 RBAC（configs.offboarding.archive_access_after_1y）
   + 6 个新端点 + 21 个新单测（213 → 234）
-- **A5 调动流程（已完成）**：transfer_records 1 张表
+- **A5 调动流程**：transfer_records 1 张表
   + 4 级审批流（调出部门 → 调入部门 → HR → 总经理）
   + 调动类型（平调/晋升/降职）+ 联动 employee_position_history + employee_salary_history
   + 立即/次月生效策略（configs.transfer.salary_effective）
   + 5 个新端点 + 21 个新单测（234 → 255）
   + **权限重算留二期，未来生效日 BullMQ 留独立任务**
-- **A7 合同管理（已完成，M1 收尾）**：contract_records 1 张表
+- **A7 合同管理（M1 收尾）**：contract_records 1 张表
   + 5 类合同模板（formal/intern/consultant/labor/nda）
   + 6 状态机 draft→pending_signature→signing→signed/expired/cancelled
   + 电子签 mock（不接 e-签宝真实 SaaS，留二期）
   + 附件简化处理（attachmentUrl 字符串，不实现 multipart）
   + 合同到期 3 级预警（30/15/7 天，configs.contract.warning_days）
   + 6 个端点（5 用户 + 1 webhook）+ 21 个新单测（255 → 276）
-  - **M1 阶段全部完成**：A1+A2 → A3 → A4 → A5 → A6 → A7
-  - **下一阶段 M2 考勤假勤**（V1.2 §四.6）
+
+**M1 累计**：140 → 276 测试（+136，97% 增长）/ 7 个业务 commit / 0 越界
+**M1 收尾报告**：[`docs/cursor-prompts/M1-wrap-up.md`](./docs/cursor-prompts/M1-wrap-up.md)
+**下一阶段 M2 考勤假勤**（V1.2 §四.6 B1-B6 切片）
 
 ### 工程强约束（V1.2 时代）
 

@@ -710,9 +710,9 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 | 阶段 | 起始 | 结束 | 周数 | 状态 |
 |---|---|---|---|---|
 | M0 脚手架 | 2026-08-25 | 2026-08-29 | 1 周 | 已完成 8/9（M0-09 待部署）|
-| M0.5 公共底座 | 2026-08-30 | 2026-09-12 | 2 周 | ⏳ 规划中 |
-| M1 组织人事 | 2026-09-13 | 2026-10-03 | 3 周 | ⏳ |
-| M2 考勤假勤 | 2026-10-04 | 2026-10-24 | 3 周 | ⏳ |
+| M0.5 公共底座 | 2026-08-30 | 2026-09-12 | 2 周 | ✅ 已完成（7 切片 + 收尾） |
+| M1 组织人事 | 2026-08-25 | 2026-08-26 | 3 周（含 1 周提速） | ✅ **已完成**（A1-A7 全部落地，140→276 测试） |
+| M2 考勤假勤 | 2026-10-04 | 2026-10-24 | 3 周 | 📋 下一阶段启动 |
 | M3 绩效管理 | 2026-10-25 | 2026-11-14 | 3 周 | ⏳ |
 | M4 薪酬核算 | 2026-11-15 | 2026-12-19 | 5 周（+ 1 周缓冲，因 C4 含人力成本预警） | ⏳ |
 | M5 联调上线 | 2026-12-20 | 2027-01-17 | 4 周（含 2 周并行试运行） | ⏳ |
@@ -811,7 +811,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 
 ---
 
-### 4.5 M1 组织人事模块（第 3-5 周）
+### 4.5 M1 组织人事模块（第 3-5 周，**已完成**）
 
 #### 4.5.1 垂直切片
 
@@ -1176,6 +1176,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M1.0.4** | **2026-08-28** | **feat(offboarding): M1-A6 离职流程（Cursor 交付）<br>**范围**：offboarding_records + handover_tasks 2 张表 + 7 步流程 + 状态机 draft→handover_pending→submitted→approved→certificate_issued/rejected/cancelled + 2 级审批流（hr→ceo）+ 工作交接清单（5 项模板）+ 账号禁用（on_resignation_date 策略）+ 离职证明 mock PDF（HTML + 水印，不接 e-签宝）+ 档案 1 年后访问 RBAC + 6 个新端点 + 21 个新单测（213→234）<br>**依赖**：M1-A1+A2+A3+A4 + M0.5 全部 + employee_salary_history / users 表<br>**强约束**：员工状态/账号禁用走 prisma 直接操作（不 import 跨 service），通知 bypassTemplate fallback，离职证明只 mock PDF，e-签宝留 A7 | **Cursor + WorkBuddy** |
 | **M1.0.5** | **2026-08-29** | **feat(transfer): M1-A5 调动流程（Cursor 交付）<br>**范围**：transfer_records 1 张表 + 状态机 draft→submitted→approved/rejected/cancelled + 4 级审批流（from_dept_leader→to_dept_leader→hr→ceo）+ 调动类型平调/晋升/降职 + 联动 employee_position_history + employee_salary_history + 立即/次月生效策略 + 5 个新端点 + 21 个新单测（234→255）<br>**依赖**：M1-A1+A2+A3+A4+A6 + M0.5 全部 + employee_position_history / employee_salary_history 表<br>**强约束**：员工/岗位/薪资走 prisma 直接操作（不 import 跨 service），权限重算留二期，未来生效日 BullMQ 留独立任务 | **Cursor + WorkBuddy** |
 | **M1.0.6** | **2026-08-30** | **feat(contract): M1-A7 合同管理（Cursor 交付，M1 收尾切片）<br>**范围**：contract_records 1 张表 + 6 状态机 draft→pending_signature→signing→signed/expired/cancelled + 5 类合同模板（formal/intern/consultant/labor/nda）+ 电子签 mock（不接 e-签宝真实 SaaS，留二期）+ 附件简化处理（attachmentUrl 字符串，不实现 multipart）+ 合同到期 3 级预警（30/15/7 天，configs.contract.warning_days）+ 6 个端点（5 用户 + 1 webhook）+ 21 个新单测（255→276）<br>**依赖**：M1-A1+A2+A3+A4+A5+A6 + M0.5 全部 + crypto.service 加密敏感配置<br>**强约束**：e-签宝只 mock（不接真实 SaaS），附件走 URL 字符串（不实现 multipart），员工关联走 prisma 直接操作（不 import 跨 service） | **Cursor + WorkBuddy** |
+| **M1.0.7** | **2026-08-26** | **docs: M1 收尾（7 切片全部完成 + 提示词库 9 文件）<br>**M1 全部完成**：A1+A2/A3/A4/A5/A6/A7 全部落地（7 个 commit，0 越界，0 旧测试改动）<br>**测试演进**：140（M0.5 收尾）→ 178→195→213→234→255→**276**（M1 收尾，+136 / +97%）<br>**提示词库**：docs/cursor-prompts/ 累计 9 个 .md（~270KB）；模式演进 30-33KB（A1+A2/A3/A4 早期）→ 45-47KB（A5/A6/A7 详尽模式）<br>**关键经验**：1) 简化提示词 ≠ 优化（**A6 第一次瘦身 15KB 失败，反向优化回 45KB 验证成功**）；2) 4 类关键决策点必须详尽（schema 完整定义 / JSDoc+校验链 / 错误码触发条件 / 测试断言细节）；3) 样板可省（Zod/controller/routes 挂载/5 角色 RBAC）引用前切片<br>**M1 收尾报告**：[`docs/cursor-prompts/M1-wrap-up.md`](./cursor-prompts/M1-wrap-up.md)<br>**下一阶段 M2 考勤假勤**（V1.2 §四.6 B1-B6） | **WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 
