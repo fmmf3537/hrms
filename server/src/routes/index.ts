@@ -5,6 +5,7 @@ import approvalRoutes from './approval';
 import attendanceRoutes from './attendance';
 import auditRoutes from './audit';
 import authRoutes from './auth';
+import businessTripRoutes from './business_trip';
 import companyRoutes from './company';
 import configRoutes from './config';
 import contractRoutes from './contract';
@@ -63,5 +64,6 @@ router.use('/shifts', shiftRoutes);
 router.use('/attendance', attendanceRoutes);
 router.use('/leaves', leaveRoutes);
 router.use('/overtime', overtimeRoutes);
+router.use('/business-trips', businessTripRoutes);
 
 export default router;

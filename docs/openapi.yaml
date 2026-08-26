@@ -1856,6 +1856,47 @@ paths:
         '200':
           description: 成功
 
+  /business-trips/requests:
+    get:
+      tags: [BusinessTrip]
+      summary: 出差记录列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+    post:
+      tags: [BusinessTrip]
+      summary: 提交出差申请
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessTripCreateInput'
+      responses:
+        '201':
+          description: 已创建
+  /business-trips/requests/{id}/cancel:
+    post:
+      tags: [BusinessTrip]
+      summary: 撤回出差申请
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessTripCancelInput'
+      responses:
+        '200':
+          description: 成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -2661,6 +2702,23 @@ components:
             type: object
 
     OvertimeCancelInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+
+    BusinessTripCreateInput:
+      type: object
+      required: [employeeId, destination, startDate, endDate, reason]
+      properties:
+        employeeId: { type: string, format: uuid }
+        destination: { type: string }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        reason: { type: string }
+        projectCode: { type: string }
+
+    BusinessTripCancelInput:
       type: object
       required: [reason]
       properties:

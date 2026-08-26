@@ -453,6 +453,52 @@ const DEFAULT_CONFIGS: Array<{
     value: 4,
     remark: '最少提前申请小时数',
   },
+  {
+    category: 'trip',
+    key: 'allowance_standard',
+    value: 200,
+    remark: '基础差旅补助标准（元/天）',
+  },
+  {
+    category: 'trip',
+    key: 'city_tier_rates',
+    value: { tier1: 1.5, tier2: 1.2, tier3: 1.0 },
+    remark: '城市分级系数',
+  },
+  {
+    category: 'trip',
+    key: 'level_tier_rates',
+    value: { executive: 1.5, manager: 1.2, employee: 1.0 },
+    remark: '职级系数',
+  },
+  {
+    category: 'trip',
+    key: 'city_tier_mapping',
+    value: {
+      北京: 'tier1', 上海: 'tier1', 深圳: 'tier1', 广州: 'tier1',
+      成都: 'tier2', 杭州: 'tier2', 南京: 'tier2',
+      武汉: 'tier3', 西安: 'tier3',
+    },
+    remark: '城市 → tier 映射',
+  },
+  {
+    category: 'trip',
+    key: 'approval_flow_key',
+    value: 'business_trip:trip_default',
+    remark: '出差审批流 key',
+  },
+  {
+    category: 'trip',
+    key: 'min_advance_days',
+    value: 3,
+    remark: '最少提前申请天数',
+  },
+  {
+    category: 'trip',
+    key: 'weekend_inclusive',
+    value: false,
+    remark: '出差天数是否含周末',
+  },
 ];
 
 async function main() {
@@ -1505,6 +1551,70 @@ async function main() {
       console.log('   ✓ 3 overtime requests');
     } else {
       console.log('   ✓ overtime demo already exists (skip)');
+    }
+  }
+
+  console.log('==> Seeding business trip demo (M2-B5)...');
+  if (hrEmp) {
+    const tripExists = await prisma.businessTrip.findFirst({
+      where: { employeeId: hrEmp.id, destination: '北京', status: 'draft' },
+    });
+    if (!tripExists) {
+      await prisma.businessTrip.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          destination: '北京',
+          startDate: new Date(`${year}-10-08`),
+          endDate: new Date(`${year}-10-10`),
+          totalDays: 3,
+          reason: 'draft 北京出差 demo',
+          allowanceAmount: 900,
+          cityTier: 'tier1',
+          levelRate: 1.0,
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.businessTrip.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          destination: '上海',
+          startDate: new Date(`${year}-10-15`),
+          endDate: new Date(`${year}-10-16`),
+          totalDays: 2,
+          reason: 'submitted 上海出差 demo',
+          allowanceAmount: 480,
+          cityTier: 'tier1',
+          levelRate: 1.2,
+          status: 'submitted',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.businessTrip.create({
+        data: {
+          employeeId: hrEmp.id,
+          companyId: hrEmp.companyId,
+          departmentId: hrEmp.departmentId!,
+          destination: '成都',
+          startDate: new Date(`${year}-09-08`),
+          endDate: new Date(`${year}-09-14`),
+          totalDays: 5,
+          reason: 'approved 成都出差 demo',
+          allowanceAmount: 1200,
+          cityTier: 'tier2',
+          levelRate: 1.0,
+          status: 'approved',
+          approvedAt: new Date(),
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 3 business trips');
+    } else {
+      console.log('   ✓ business trip demo already exists (skip)');
     }
   }
 

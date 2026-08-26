@@ -746,6 +746,14 @@
 | GET | `/overtime/requests` | 是 | 加班记录列表（分页 + 多维过滤） |
 | POST | `/overtime/requests/:id/cancel` | 是 | 撤回（draft/submitted） |
 
+### 3.17 Business Trip API（M2-B5）
+
+| Method | Path | 鉴权 | 描述 |
+|---|---|---|---|
+| POST | `/business-trips/requests` | 是 | 提交出差申请（draft → submitted + 审批流） |
+| GET | `/business-trips/requests` | 是 | 出差记录列表（分页 + 多维过滤） |
+| POST | `/business-trips/requests/:id/cancel` | 是 | 撤回（draft/submitted） |
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
