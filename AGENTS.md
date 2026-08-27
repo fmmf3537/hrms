@@ -172,6 +172,48 @@ V1.2 之前的 6 个严重项全部修复：
 - **M2 收尾报告**：[`docs/cursor-prompts/M2-wrap-up.md`](./docs/cursor-prompts/M2-wrap-up.md)
 - **下一阶段 M3 绩效管理**（V1.2 §四.7 D1-D6 切片，约 19d）
 
+### M3 绩效管理（**已完成** — V1.2 §四.7 D1-D6 全部落地）
+
+- **D1 考核方案配置**（a445938 提示词 + 77e927b 业务 + b8978ce §3.3 finance 修正）
+  - 5 张表：performance_cycles / indicators / schemes / scheme_indicators / coefficients
+  - 10 端点 + 8 权限点 + 12 错误码（72401-72412）+ 12 项 configs
+  - 30 个新单测（276→430，+21%）
+- **D2 考核流程**（1c1756d 提示词 + acbfcb9 业务）
+  - 4 张表：performance_records / scores / score_items / ai_suggestions
+  - 13 状态状态机 + 5 级审批流（5 flowKey 走 M0.5-1）
+  - **直接复用 M0.5-5 `aiScoreService.suggestScore`**（D2 严禁重写）
+  - 16 端点 + 8 权限点 + 20 错误码（72501-72520）+ 16 项 configs
+  - 33 个新单测（430→463，+8%）
+- **D3 五档评分**（cdb0709 提示词 + 24efc4a 业务）
+  - **0 新表**（M2-wrap-up 误写"季度校准会议"已修正为"五档评分"，V1.2 §四.7.1 D3 实际范围）
+  - 软警告 warn_only（V1.2 §二.5.1 比例仅供参考，不强制）
+  - 5 端点 + 3 权限点 + 10 错误码（72601-72610）+ 4 项 configs
+  - 28 个新单测（463→491，+6%）
+- **D4 绩效兑现**（45cfa29 提示词 + 672bb9e 业务）
+  - 2 张表：performance_payout_configs / payouts
+  - **双轨制**：直乘（baseAmount × coefficient，D 档 0）+ 部门池（部门池 × 个人系数 / 部门成员系数总和）
+  - **预支 + 清算**：季度前 2 月按 1.0 × 50% 预支 + 季度末按实际系数多退少补（仅 audit + 标记，**不联动 M4 薪酬**）
+  - 8 端点 + 4 权限点 + 10 错误码（72701-72710）+ 8 项 configs
+  - 22 个新单测（491→511，+5%）
+  - **D4 验收发现 2 个 B3/B5 跨 UTC 边界旧测** → 955b119 fix commit 用 `vi.useFakeTimers` 锁日期（沿用 B6 红线 6 模式）
+- **D5 销售提成**（af4ff69 提示词 + 7146be7 业务）
+  - 3 张表：performance_sales_products / payments / commissions
+  - 财务确认自动触发 commission 计算（auto_on_confirm 策略）
+  - **无 finance 角色**（hr 兼任财务确认，D1 教训延续）
+  - 8 端点 + 7 权限点 + 10 错误码（72801-72810）+ 8 项 configs
+  - 35 个新单测（511→548，+7%）
+- **D6 结果应用**（b1b93f9 提示词 + 830e600 业务，**M3 收尾**）
+  - 2 张表：performance_pips / pip_reviews
+  - **调薪 / 晋升用 audit_logs**（0 新表）→ 实际写入 employee_salary_history / position_history 留 M4 联调
+  - **PIP 状态机**：4 状态（active / completed / failed / cancelled）+ 3 月改进期 + 月度评审
+  - **PIP 失败仅 audit + 标记**，**不调 A6 离职 service**
+  - 8 端点 + 8 权限点 + 10 错误码（72901-72910）+ 11 项 configs
+  - 33 个新单测（548→581，+6%）
+
+**M3 累计**：430 → 581 测试（+181 / +42%）；一期累计 26 → 581（+555 / +2135%）
+**M3 收尾报告**：[`docs/cursor-prompts/M3-wrap-up.md`](./docs/cursor-prompts/M3-wrap-up.md)
+**下一阶段 M4 薪酬核算**（V1.2 §四.8 C1-C8，约 26d）
+
 ### 工程强约束（V1.2 时代）
 
 - **不用 class + 静态方法**：统一 `export function` 范式
