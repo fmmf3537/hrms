@@ -750,6 +750,58 @@ flowchart TD
     H[季度 M3] --> I[settle 多退少补]
 ```
 
+### 3.7 M3-D5 销售提成 ER + 回款触发流程
+
+```mermaid
+erDiagram
+    performance_sales_products {
+        uuid id PK
+        varchar code UK
+        varchar name
+        varchar category
+        decimal base_rate
+        varchar status
+    }
+    performance_sales_payments {
+        uuid id PK
+        uuid employee_id FK
+        uuid product_id FK
+        decimal amount
+        date payment_date
+        varchar period
+        varchar status
+        uuid confirmed_by_id
+    }
+    performance_sales_commissions {
+        uuid id PK
+        uuid employee_id FK
+        uuid payment_id UK
+        uuid product_id FK
+        decimal base_amount
+        decimal commission_rate
+        decimal target_bonus_rate
+        decimal final_amount
+        varchar period
+        varchar status
+    }
+    employees ||--o{ performance_sales_payments : registers
+    employees ||--o{ performance_sales_commissions : earns
+    performance_sales_products ||--o{ performance_sales_payments : for
+    performance_sales_products ||--o{ performance_sales_commissions : rate
+    performance_sales_payments ||--o| performance_sales_commissions : triggers
+```
+
+```mermaid
+flowchart TD
+    A[销售登记回款 draft] --> B[HR 确认到账]
+    B --> C[status=confirmed]
+    C --> D[calculateCommission]
+    D --> E["finalAmount = amount × baseRate"]
+    E --> F[status=calculated]
+    F --> G[payoutCommission 标记 paid]
+    G --> H[联动 M4 留独立任务]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

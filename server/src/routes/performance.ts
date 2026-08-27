@@ -14,6 +14,9 @@ import * as gradeService from '../services/performance_grade.service';
 import type { GradeThresholds } from '../services/performance_grade.service';
 import * as payoutService from '../services/performance_payout.service';
 import * as payoutConfigService from '../services/performance_payout_config.service';
+import * as salesCommissionService from '../services/performance_sales_commission.service';
+import * as salesPaymentService from '../services/performance_sales_payment.service';
+import * as salesProductService from '../services/performance_sales_product.service';
 
 const router: RouterType = Router();
 
@@ -595,6 +598,193 @@ router.get(
     if (!actorId) return;
     const data = await payoutService.getPayout(actorId, req.params.id);
     res.json({ success: true, data });
+  }),
+);
+
+// ==================== M3-D5 销售提成 ====================
+
+function requireSalesUserId(req: import('express').Request, res: import('express').Response): string | null {
+  const userId = req.user?.userId;
+  if (!userId) {
+    res.status(401).json({ success: false, message: '未认证' });
+    return null;
+  }
+  return userId;
+}
+
+const salesProductCreateSchema = z.object({
+  code: z.string().min(1).max(50),
+  name: z.string().min(1).max(200),
+  category: z.enum(['product', 'service', 'training']),
+  baseRate: z.number().optional(),
+  description: z.string().max(2000).optional(),
+});
+
+const salesProductUpdateSchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  category: z.enum(['product', 'service', 'training']).optional(),
+  baseRate: z.number().optional(),
+  description: z.string().max(2000).optional(),
+});
+
+const salesProductListSchema = z.object({
+  category: z.enum(['product', 'service', 'training']).optional(),
+  status: z.enum(['active', 'archived']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const salesPaymentCreateSchema = z.object({
+  employeeId: z.string().uuid(),
+  productId: z.string().uuid(),
+  customerName: z.string().min(1).max(200),
+  amount: z.number(),
+  paymentDate: z.string().min(1),
+  period: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  remark: z.string().max(2000).optional(),
+});
+
+const salesPaymentListSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  productId: z.string().uuid().optional(),
+  status: z.enum(['draft', 'confirmed', 'cancelled']).optional(),
+  period: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const salesPaymentConfirmSchema = z.object({
+  remark: z.string().max(2000).optional(),
+});
+
+const salesCommissionListSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  productId: z.string().uuid().optional(),
+  status: z.enum(['calculated', 'paid', 'cancelled']).optional(),
+  period: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const salesCommissionCalculateSchema = z.object({
+  paymentId: z.string().uuid(),
+});
+
+router.post(
+  '/sales/products',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_PRODUCT_WRITE),
+  validate(salesProductCreateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const data = await salesProductService.createProduct(actorId, req.body as salesProductService.CreateProductInput);
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/sales/products',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_PRODUCT_READ),
+  validate(salesProductListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const data = await salesProductService.listProducts(
+      actorId,
+      req.query as salesProductService.ListProductFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.patch(
+  '/sales/products/:id',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_PRODUCT_WRITE),
+  validate(salesProductUpdateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const data = await salesProductService.updateProduct(
+      actorId,
+      req.params.id,
+      req.body as salesProductService.UpdateProductInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/sales/payments',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_PAYMENT_WRITE),
+  validate(salesPaymentCreateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const body = req.body as salesPaymentService.CreatePaymentInput;
+    const data = await salesPaymentService.createPayment(actorId, body);
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/sales/payments',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_PAYMENT_READ),
+  validate(salesPaymentListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const data = await salesPaymentService.listPayments(
+      actorId,
+      req.query as salesPaymentService.ListPaymentFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.patch(
+  '/sales/payments/:id/confirm',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_PAYMENT_CONFIRM),
+  validate(salesPaymentConfirmSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const data = await salesPaymentService.confirmPayment(
+      actorId,
+      req.params.id,
+      req.body as { remark?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/sales/commissions',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_COMMISSION_READ),
+  validate(salesCommissionListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const data = await salesCommissionService.listCommissions(
+      actorId,
+      req.query as salesCommissionService.ListCommissionFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/sales/commissions/calculate',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALES_COMMISSION_WRITE),
+  validate(salesCommissionCalculateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireSalesUserId(req, res);
+    if (!actorId) return;
+    const { paymentId } = req.body as { paymentId: string };
+    const data = await salesCommissionService.calculateCommission(actorId, paymentId);
+    res.status(201).json({ success: true, data });
   }),
 );
 

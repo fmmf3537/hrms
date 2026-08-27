@@ -775,6 +775,54 @@ const DEFAULT_CONFIGS: Array<{
     value: ['closed', 'archived'],
     remark: 'D4 清算触发周期状态',
   },
+  {
+    category: 'performance',
+    key: 'sales.commission.default_rate',
+    value: 0.05,
+    remark: 'D5 默认提成比例（5%）',
+  },
+  {
+    category: 'performance',
+    key: 'sales.commission.rate_tiers',
+    value: { product: 0.05, service: 0.08, training: 0.03 },
+    remark: 'D5 产品/服务/培训差异化比例',
+  },
+  {
+    category: 'performance',
+    key: 'sales.commission.target_completion_bonus',
+    value: { threshold: 1.2, bonus_rate: 0.2 },
+    remark: 'D5 目标完成率 >120% 上浮 20%（D5 暂不启用）',
+  },
+  {
+    category: 'performance',
+    key: 'sales.commission.calculation_strategy',
+    value: 'auto_on_confirm',
+    remark: 'D5 财务确认后自动计算',
+  },
+  {
+    category: 'performance',
+    key: 'sales.commission.batch_size',
+    value: 200,
+    remark: 'D5 批量计算上限',
+  },
+  {
+    category: 'performance',
+    key: 'sales.commission.target_period',
+    value: 'monthly',
+    remark: 'D5 提成发放周期',
+  },
+  {
+    category: 'performance',
+    key: 'sales.commission.payment_lock_days',
+    value: 7,
+    remark: 'D5 财务确认后锁定期（D5 暂不启用）',
+  },
+  {
+    category: 'performance',
+    key: 'sales.payment.auto_confirm',
+    value: false,
+    remark: 'D5 是否自动确认（强制 false，财务手动）',
+  },
 ];
 
 async function main() {
@@ -2315,6 +2363,140 @@ async function main() {
     } else {
       console.log('   ✓ D4 payout demo already exists (skip)');
     }
+  }
+
+  console.log('==> Seeding performance sales demo (M3-D5)...');
+  const d5ProductExists = await prisma.performanceSalesProduct.findFirst({
+    where: { code: 'UAV-01' },
+  });
+  if (!d5ProductExists) {
+    const productUav = await prisma.performanceSalesProduct.create({
+      data: {
+        code: 'UAV-01',
+        name: '无人机整机',
+        category: 'product',
+        baseRate: 0.05,
+        description: 'D5 demo 无人机整机 5%',
+        status: 'active',
+        createdById: admin.id,
+      },
+    });
+    const productSvc = await prisma.performanceSalesProduct.create({
+      data: {
+        code: 'SVC-01',
+        name: '运维服务',
+        category: 'service',
+        baseRate: 0.08,
+        description: 'D5 demo 服务 8%',
+        status: 'active',
+        createdById: admin.id,
+      },
+    });
+    const productTrn = await prisma.performanceSalesProduct.create({
+      data: {
+        code: 'TRN-01',
+        name: '操作培训',
+        category: 'training',
+        baseRate: 0.03,
+        description: 'D5 demo 培训 3%',
+        status: 'active',
+        createdById: admin.id,
+      },
+    });
+    console.log('   ✓ 3 demo sales products (UAV/SVC/TRN)');
+
+    const salesEmp = sampleEmployees.find((e) => e.status === 'active') ?? sampleEmployees[0];
+    if (salesEmp) {
+      const period = `${year}-09`;
+      const paymentDate = new Date(`${year}-09-15`);
+      await prisma.performanceSalesPayment.create({
+        data: {
+          employeeId: salesEmp.id,
+          productId: productUav.id,
+          customerName: '演示客户-草稿',
+          amount: 100000,
+          paymentDate,
+          period,
+          status: 'draft',
+          createdById: admin.id,
+        },
+      });
+      const confirmedPay = await prisma.performanceSalesPayment.create({
+        data: {
+          employeeId: salesEmp.id,
+          productId: productSvc.id,
+          customerName: '演示客户-已确认',
+          amount: 80000,
+          paymentDate,
+          period,
+          status: 'confirmed',
+          confirmedById: admin.id,
+          confirmedAt: new Date(),
+          createdById: admin.id,
+        },
+      });
+      await prisma.performanceSalesPayment.create({
+        data: {
+          employeeId: salesEmp.id,
+          productId: productTrn.id,
+          customerName: '演示客户-已取消',
+          amount: 30000,
+          paymentDate,
+          period,
+          status: 'cancelled',
+          remark: '演示取消回款',
+          createdById: admin.id,
+        },
+      });
+      console.log('   ✓ 3 demo sales payments (draft/confirmed/cancelled)');
+
+      await prisma.performanceSalesCommission.create({
+        data: {
+          employeeId: salesEmp.id,
+          paymentId: confirmedPay.id,
+          productId: productSvc.id,
+          baseAmount: 80000,
+          commissionRate: 0.08,
+          targetBonusRate: 0,
+          finalAmount: 6400,
+          period,
+          status: 'calculated',
+          calculatedBy: admin.id,
+        },
+      });
+      const paidPay = await prisma.performanceSalesPayment.create({
+        data: {
+          employeeId: salesEmp.id,
+          productId: productUav.id,
+          customerName: '演示客户-已发放',
+          amount: 100000,
+          paymentDate,
+          period,
+          status: 'confirmed',
+          confirmedById: admin.id,
+          confirmedAt: new Date(),
+          createdById: admin.id,
+        },
+      });
+      await prisma.performanceSalesCommission.create({
+        data: {
+          employeeId: salesEmp.id,
+          paymentId: paidPay.id,
+          productId: productUav.id,
+          baseAmount: 100000,
+          commissionRate: 0.05,
+          targetBonusRate: 0,
+          finalAmount: 5000,
+          period,
+          status: 'paid',
+          calculatedBy: admin.id,
+          paidAt: new Date(),
+        },
+      });
+      console.log('   ✓ 2 demo sales commissions (calculated + paid)');
+    }
+  } else {
+    console.log('   ✓ D5 sales demo already exists (skip)');
   }
 
   console.log('==> Done.');

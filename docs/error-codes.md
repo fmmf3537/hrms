@@ -226,6 +226,21 @@
 | 72709 | 400 | PAYOUT_SETTLE_NOT_ALLOWED | 季度末未到 / record 未归档 | 提示时间 |
 | 72710 | 400 | PAYOUT_DUPLICATE | 同 employeeId+cycleId+month 重复 | 提示重复 |
 
+### 7.6 M3-D5 销售提成（72801-72810）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 72801 | 400 | SALES_PRODUCT_NOT_FOUND | productId 不存在 | 提示 ID 错误 |
+| 72802 | 400 | SALES_PRODUCT_DUPLICATE_CODE | 产品 code 重复 | 提示更换 code |
+| 72803 | 400 | SALES_PRODUCT_RATE_OUT_OF_RANGE | baseRate ≤0 或 >50% | 提示比例范围 |
+| 72804 | 400 | SALES_PAYMENT_NOT_FOUND | paymentId 不存在 | 提示 ID 错误 |
+| 72805 | 400 | SALES_PAYMENT_ALREADY_CONFIRMED | 重复确认 / 回款未确认 | 提示已确认 |
+| 72806 | 400 | SALES_PAYMENT_AMOUNT_INVALID | amount ≤0 | 提示金额 |
+| 72807 | 400 | SALES_PAYMENT_EMPLOYEE_NOT_SALES | 员工非销售岗 | 提示员工类型 |
+| 72808 | 400 | SALES_COMMISSION_ALREADY_CALCULATED | 已计算过该 payment | 提示已计算 |
+| 72809 | 400 | SALES_COMMISSION_PERIOD_INVALID | period 格式错（YYYY-MM） | 提示格式 |
+| 72810 | 400 | SALES_COMMISSION_TARGET_NOT_MET | 目标完成率 < 100% | 提示目标（D5 暂不从销售目标表触发） |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

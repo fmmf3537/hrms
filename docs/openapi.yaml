@@ -2378,6 +2378,95 @@ paths:
         '200':
           description: 成功
 
+  /performance/sales/products:
+    post:
+      tags: [Performance]
+      summary: 创建销售产品字典
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesProduct'
+    get:
+      tags: [Performance]
+      summary: 销售产品字典列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/sales/products/{id}:
+    patch:
+      tags: [Performance]
+      summary: 更新销售产品
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+  /performance/sales/payments:
+    post:
+      tags: [Performance]
+      summary: 销售登记回款
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesPayment'
+    get:
+      tags: [Performance]
+      summary: 回款列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/sales/payments/{id}/confirm:
+    patch:
+      tags: [Performance]
+      summary: 财务确认回款并触发提成
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+  /performance/sales/commissions:
+    get:
+      tags: [Performance]
+      summary: 提成记录列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/sales/commissions/calculate:
+    post:
+      tags: [Performance]
+      summary: 手动触发提成计算
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesCommission'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3267,3 +3356,42 @@ components:
             - type: array
               items:
                 $ref: '#/components/schemas/MonthlySummary'
+
+    SalesProduct:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string }
+        name: { type: string }
+        category: { type: string, enum: [product, service, training] }
+        baseRate: { type: number }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [active, archived] }
+
+    SalesPayment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        customerName: { type: string }
+        amount: { type: number }
+        paymentDate: { type: string, format: date }
+        period: { type: string }
+        status: { type: string, enum: [draft, confirmed, cancelled] }
+        confirmedById: { type: string, format: uuid, nullable: true }
+
+    SalesCommission:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        paymentId: { type: string, format: uuid }
+        productId: { type: string, format: uuid }
+        baseAmount: { type: number }
+        commissionRate: { type: number }
+        targetBonusRate: { type: number }
+        finalAmount: { type: number }
+        period: { type: string }
+        status: { type: string, enum: [calculated, paid, cancelled] }
+

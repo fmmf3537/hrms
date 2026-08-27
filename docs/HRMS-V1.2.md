@@ -882,7 +882,7 @@ const annualLeaveDays = await configService.getValue('leave', 'annual_days');
 | D2 | 考核流程（自评→上级→校准→HR→总经理 5 级审批 + **AI 评分建议**）**已实现** | 6 | 5d |
 | D3 | 五档评分 + 系数配置（S/A/B/C/D 后台可调）**已实现** | 3 | 2d |
 | D4 | 绩效兑现（双轨制：直乘 vs 部门池，后台切换）**已实现** | 4 | 3d |
-| D5 | 销售提成（回款触发 + 比例配置） | 3 | 2d |
+| D5 | 销售提成（回款触发 + 比例配置）**已实现** | 3 | 2d |
 | D6 | 结果应用（调薪/晋升/PIP 触发） | 3 | 2.5d |
 
 **D2 切片内嵌 AI 绩效评分建议**（M0.5 底座已搭好）：
@@ -1188,6 +1188,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M3.0.2** | **2026-09-03** | **feat(performance): M3-D2 考核流程（Cursor 交付）<br>**范围**：performance_records / performance_scores / performance_score_items / performance_ai_suggestions 4 张表 + 5 级状态机 + 5 审批 flowKey + AI 评分建议（复用 suggestScore）+ 16 端点 + 8 权限点 + 20 错误码（72501-72520）+ 16 项 performance.* configs 扩展 + 35 新单测<br>**强约束**：D1 五个 service 0 行改动；不创建 calibrations/sales_commissions/pips 表；不实现 D3/D4/M4 | **Cursor + WorkBuddy** |
 | **M3.0.3** | **2026-09-03** | **feat(performance): M3-D3 五档评分 + 系数配置（Cursor 交付）<br>**范围**：0 新表 + 等级判定算法 + 阈值 configs + 部门比例软警告 + 5 端点 + 3 权限点 + 10 错误码（72601-72610）+ 4 项 configs + 16 新单测<br>**强约束**：D1+D2 九个 service 0 行改动；不创建 performance_calibrations 表；warn_only 不强制改 finalGrade | **Cursor + WorkBuddy** |
 | **M3.0.4** | **2026-08-27** | **feat(performance): M3-D4 绩效兑现（Cursor 交付）<br>**范围**：performance_payout_configs / performance_payouts 2 张表 + 直乘/部门池双轨制 + 预支/清算 + 8 端点 + 4 权限点 + 10 错误码（72701-72710）+ 8 项 configs + 22 新单测（491→513）<br>**强约束**：D1+D2+D3 十一个 service 0 行改动；不联动 M4 薪酬；不实现 D5/D6/UI/hybrid | **Cursor + WorkBuddy** |
+| **M3.0.5** | **2026-08-27** | **feat(performance): M3-D5 销售提成（Cursor 交付）<br>**范围**：performance_sales_products / payments / commissions 3 张表 + 产品字典 + 回款登记/财务确认 + 提成计算发放 + 8 端点 + 7 权限点 + 10 错误码（72801-72810）+ 8 项 configs + 35 新单测（513→548）<br>**强约束**：D1+D2+D3+D4 十一个 performance service 0 行改动；不联动 M4 薪酬；不创建 sales_targets/pips 表；无 finance 角色（hr 兼任确认） | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

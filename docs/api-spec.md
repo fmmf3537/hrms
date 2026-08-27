@@ -836,6 +836,23 @@
 
 **错误码**：72701-72710（D4 子区）。
 
+### 3.23 Performance Sales API（M3-D5）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/performance/sales/products` | 是 | performance:sales:product:write | 创建产品字典 |
+| GET | `/performance/sales/products` | 是 | performance:sales:product:read | 产品字典列表 |
+| PATCH | `/performance/sales/products/:id` | 是 | performance:sales:product:write | 更新产品（code 不可改） |
+| POST | `/performance/sales/payments` | 是 | performance:sales:payment:write | 销售登记回款（draft） |
+| GET | `/performance/sales/payments` | 是 | performance:sales:payment:read | 回款列表 |
+| PATCH | `/performance/sales/payments/:id/confirm` | 是 | performance:sales:payment:confirm | 财务确认到账并触发提成 |
+| GET | `/performance/sales/commissions` | 是 | performance:sales:commission:read | 提成记录列表 |
+| POST | `/performance/sales/commissions/calculate` | 是 | performance:sales:commission:write | 手动触发提成计算 |
+
+**错误码**：72801-72810（D5 子区）。
+
+提成公式：`finalAmount = baseAmount × (commissionRate + targetBonusRate)`；D5 的 `targetBonusRate` 固定为 0（销售目标表留 D5+ 联调）。财务确认由 hr 兼任（无 finance 角色）。发放仅标记 `paid`，不联动 M4 薪酬。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
