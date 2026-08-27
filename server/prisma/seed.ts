@@ -889,6 +889,38 @@ const DEFAULT_CONFIGS: Array<{
     value: true,
     remark: 'D6 PIP 期间必须培训',
   },
+  {
+    category: 'salary',
+    key: 'grade.sequences',
+    value: ['M', 'T', 'P', 'S', 'A'],
+    remark: 'C1 薪级序列（M=高管+部门负责人 / T 技术 / P 生产 / S 销售 / A 职能）',
+  },
+  {
+    category: 'salary',
+    key: 'grade.levels_per_grade',
+    value: 6,
+    remark: 'C1 每级档位数（5-7，默认 6）',
+  },
+  {
+    category: 'salary',
+    key: 'grade.fixed_floating_ratio',
+    value: {
+      M: 0.6, T: 0.8, P: 0.75, S: 0, A: 0.85,
+    },
+    remark: 'C1 固浮比（销售 S=0 纯提成）',
+  },
+  {
+    category: 'salary',
+    key: 'plan.effective_default',
+    value: 'next_month_first_day',
+    remark: 'C1 薪酬方案默认生效日（次月 1 日）',
+  },
+  {
+    category: 'salary',
+    key: 'plan.lock_after_effective',
+    value: true,
+    remark: 'C1 方案生效后锁定（防重复生效）',
+  },
 ];
 
 async function main() {
@@ -2607,6 +2639,133 @@ async function main() {
     console.log('   ✓ 2 demo PIPs + 6 reviews');
   } else {
     console.log('   ✓ D6 PIP demo already exists (skip)');
+  }
+
+  console.log('==> Seeding salary grades/levels/plans (M4-C1)...');
+  const existingC1Grade = await prisma.salaryGrade.findFirst({
+    where: { sequence: 'M', gradeCode: 'M1' },
+  });
+  if (!existingC1Grade && sampleEmployees.length >= 3) {
+    const gradeDefs = [
+      {
+        sequence: 'M' as const,
+        gradeCode: 'M1',
+        name: '高管 M1',
+        minBase: 20000,
+        maxBase: 35000,
+        minPerf: 8000,
+        maxPerf: 20000,
+      },
+      {
+        sequence: 'T' as const,
+        gradeCode: 'T3',
+        name: '技术 T3',
+        minBase: 8000,
+        maxBase: 15000,
+        minPerf: 1500,
+        maxPerf: 4000,
+      },
+      {
+        sequence: 'P' as const,
+        gradeCode: 'P3',
+        name: '生产 P3',
+        minBase: 6000,
+        maxBase: 12000,
+        minPerf: 1500,
+        maxPerf: 4000,
+      },
+      {
+        sequence: 'S' as const,
+        gradeCode: 'S3',
+        name: '销售 S3',
+        minBase: 4000,
+        maxBase: 8000,
+        minPerf: 0,
+        maxPerf: 1000,
+      },
+      {
+        sequence: 'A' as const,
+        gradeCode: 'A3',
+        name: '职能 A3',
+        minBase: 7000,
+        maxBase: 13000,
+        minPerf: 1000,
+        maxPerf: 2500,
+      },
+    ];
+    const createdGrades: Record<string, { id: string }> = {};
+    for (const g of gradeDefs) {
+      createdGrades[g.gradeCode] = await prisma.salaryGrade.create({
+        data: {
+          sequence: g.sequence,
+          gradeCode: g.gradeCode,
+          name: g.name,
+          minBaseSalary: g.minBase,
+          maxBaseSalary: g.maxBase,
+          minPerformanceBase: g.minPerf,
+          maxPerformanceBase: g.maxPerf,
+          status: 'active',
+          createdById: admin.id,
+        },
+      });
+    }
+    const levelSeries: Array<{ code: string; bases: number[]; perfs: number[] }> = [
+      {
+        code: 'M1',
+        bases: [20000, 22000, 24000, 26000, 28000, 30000],
+        perfs: [8000, 10000, 12000, 14000, 16000, 18000],
+      },
+      {
+        code: 'T3',
+        bases: [8000, 9000, 10000, 11000, 12000, 13000],
+        perfs: [1500, 1800, 2100, 2400, 2700, 3000],
+      },
+      {
+        code: 'A3',
+        bases: [7000, 8000, 9000, 10000, 11000, 12000],
+        perfs: [1000, 1200, 1400, 1600, 1800, 2000],
+      },
+    ];
+    const createdLevels: Record<string, { id: string }> = {};
+    for (const series of levelSeries) {
+      const grade = createdGrades[series.code];
+      await Promise.all(series.bases.map((base, idx) => prisma.salaryGradeLevel.create({
+        data: {
+          gradeId: grade.id,
+          level: idx + 1,
+          baseSalary: base,
+          performanceBase: series.perfs[idx],
+          status: 'active',
+          createdById: admin.id,
+        },
+      }).then((lv) => {
+        createdLevels[`${series.code}-${idx + 1}`] = lv;
+      })));
+    }
+    const planMonth = new Date(year, 0, 1);
+    const planSeeds = [
+      { emp: sampleEmployees[0], grade: 'T3', level: 3, base: 10000, perf: 2100 },
+      { emp: sampleEmployees[1], grade: 'A3', level: 2, base: 8000, perf: 1200 },
+      { emp: sampleEmployees[2], grade: 'M1', level: 1, base: 20000, perf: 8000 },
+    ];
+    await Promise.all(planSeeds.map((p) => prisma.employeeSalaryPlan.create({
+      data: {
+        employeeId: p.emp.id,
+        gradeId: createdGrades[p.grade].id,
+        levelId: createdLevels[`${p.grade}-${p.level}`].id,
+        baseSalary: p.base,
+        performanceBase: p.perf,
+        allowance: 0,
+        welfare: 'demo',
+        effectiveFrom: planMonth,
+        effectiveTo: null,
+        status: 'active',
+        createdById: admin.id,
+      },
+    })));
+    console.log('   ✓ 5 demo grades + 18 demo levels + 3 demo plans');
+  } else {
+    console.log('   ✓ C1 salary demo already exists (skip)');
   }
 
   console.log('==> Done.');

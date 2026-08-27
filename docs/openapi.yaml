@@ -55,6 +55,8 @@ tags:
     description: 转正流程（M1-A4）
   - name: Offboarding
     description: 离职流程（M1-A6）
+  - name: Salary
+    description: 薪酬核算（M4-C1 薪级薪档 + 员工薪酬方案）
 
 security:
   - BearerAuth: []
@@ -2551,6 +2553,80 @@ paths:
               schema:
                 $ref: '#/components/schemas/PerformancePipReview'
 
+  # ============== M4-C1 Salary ==============
+  /salary/grades:
+    post:
+      tags: [Salary]
+      summary: 创建薪级
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryGrade'
+    get:
+      tags: [Salary]
+      summary: 薪级列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/grade-levels:
+    post:
+      tags: [Salary]
+      summary: 创建薪档
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalaryGradeLevel'
+    get:
+      tags: [Salary]
+      summary: 薪档列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/plans:
+    post:
+      tags: [Salary]
+      summary: 创建员工薪酬方案
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeSalaryPlan'
+    get:
+      tags: [Salary]
+      summary: 薪酬方案列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/plans/{id}/deactivate:
+    patch:
+      tags: [Salary]
+      summary: 失效薪酬方案
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 失效成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3499,4 +3575,43 @@ components:
         reviewDate: { type: string, format: date }
         rating: { type: string, enum: [improved, no_change, worsened] }
         comment: { type: string, nullable: true }
+
+    SalaryGrade:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        sequence: { type: string, enum: [M, T, P, S, A] }
+        gradeCode: { type: string }
+        name: { type: string }
+        minBaseSalary: { type: number }
+        maxBaseSalary: { type: number }
+        minPerformanceBase: { type: number }
+        maxPerformanceBase: { type: number }
+        status: { type: string, enum: [active, archived] }
+
+    SalaryGradeLevel:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        gradeId: { type: string, format: uuid }
+        level: { type: integer }
+        baseSalary: { type: number }
+        performanceBase: { type: number }
+        status: { type: string, enum: [active, archived] }
+
+    EmployeeSalaryPlan:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        gradeId: { type: string, format: uuid }
+        levelId: { type: string, format: uuid }
+        baseSalary: { type: number }
+        performanceBase: { type: number }
+        allowance: { type: number, nullable: true }
+        welfare: { type: string, nullable: true }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date, nullable: true }
+        status: { type: string, enum: [active, inactive, superseded] }
+
 

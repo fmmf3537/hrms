@@ -842,6 +842,58 @@ flowchart TD
     K -->|worsened| M[failed + audit 建议离职]
 ```
 
+### 4.1 M4-C1 薪级薪档 + 员工薪酬方案 ER
+
+```mermaid
+erDiagram
+    salary_grades {
+        uuid id PK
+        varchar sequence
+        varchar grade_code
+        varchar name
+        decimal min_base_salary
+        decimal max_base_salary
+        decimal min_performance_base
+        decimal max_performance_base
+        varchar status
+    }
+    salary_grade_levels {
+        uuid id PK
+        uuid grade_id FK
+        int level
+        decimal base_salary
+        decimal performance_base
+        varchar status
+    }
+    employee_salary_plans {
+        uuid id PK
+        uuid employee_id FK
+        uuid grade_id FK
+        uuid level_id FK
+        decimal base_salary
+        decimal performance_base
+        decimal allowance
+        text welfare
+        date effective_from
+        date effective_to
+        varchar status
+    }
+    employees ||--o{ employee_salary_plans : has
+    salary_grades ||--o{ salary_grade_levels : contains
+    salary_grades ||--o{ employee_salary_plans : referenced
+    salary_grade_levels ||--o{ employee_salary_plans : referenced
+```
+
+```mermaid
+flowchart TD
+    A[定义薪级 M/T/P/S/A] --> B[每级 5-7 档递增]
+    B --> C[为员工创建薪酬方案]
+    C --> D[effectiveFrom 默认次月 1 日]
+    D --> E[status=active]
+    E --> F[C8 写入 employee_salary_history]
+    F -.-> G[C1 不写 history]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

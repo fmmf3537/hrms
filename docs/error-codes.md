@@ -256,6 +256,21 @@
 | 72909 | 400 | PIP_REVIEW_OVERDUE | PIP 期间漏评审 | 提示评审 |
 | 72910 | 400 | PIP_STATUS_INVALID_TRANSITION | PIP 状态机非法流转 | 提示状态 |
 
+### 8.1 M4-C1 薪级薪档 + 薪酬方案（73001-73010）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 73001 | 400 | GRADE_NOT_FOUND | gradeId / level 所属 grade 不存在或不匹配 | 提示 ID 错误 |
+| 73002 | 400 | GRADE_DUPLICATE_SEQUENCE | sequence + gradeCode 重复 | 提示更换 |
+| 73003 | 400 | GRADE_RANGE_INVALID | min ≥ max（基本工资或绩效工资） | 提示范围 |
+| 73004 | 400 | GRADE_SEQUENCE_INVALID | sequence 不在 M/T/P/S/A | 提示合法序列 |
+| 73005 | 400 | LEVEL_NOT_FOUND | levelId 不存在 | 提示 ID 错误 |
+| 73006 | 400 | LEVEL_DUPLICATE_POSITION | 同一 gradeId 同一 level 重复 | 提示更换 |
+| 73007 | 400 | LEVEL_OUT_OF_GRADE_RANGE | level.baseSalary 不在 grade.minBase~maxBase | 提示范围 |
+| 73008 | 400 | LEVEL_NOT_INCREASING | 同 grade 下 level 间 baseSalary 非递增 | 提示递增 |
+| 73009 | 400 | PLAN_NOT_FOUND | planId 不存在或无当前生效方案 | 提示 ID |
+| 73010 | 400 | PLAN_EMPLOYEE_NOT_FOUND | employeeId 不存在 | 提示员工 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
@@ -348,6 +363,7 @@ axios.interceptors.response.use(
 | 版本 | 日期 | 变更说明 | 变更人 |
 |---|---|---|---|
 | V1.0 | 2026-08-25 | 初稿，覆盖 M0 + M0.5 基础/公共错误码（0xxxx-6xxxx + 7xxxx 通用业务） | WorkBuddy AI |
+| M4-C1 | 2026-08-27 | 新增 73001-73010（薪级薪档 + 员工薪酬方案） | Cursor |
 
 ## 六、附录：错误码使用统计（M0 + M0.5 预估）
 

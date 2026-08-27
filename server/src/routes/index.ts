@@ -21,6 +21,7 @@ import onboardingRoutes from './onboarding';
 import overtimeRoutes from './overtime';
 import performanceRoutes from './performance';
 import regularizationRoutes from './regularization';
+import salaryRoutes from './salary';
 import shiftRoutes from './shift';
 import transferRoutes from './transfer';
 
@@ -69,5 +70,6 @@ router.use('/overtime', overtimeRoutes);
 router.use('/business-trips', businessTripRoutes);
 router.use('/monthly-summaries', monthlySummaryRoutes);
 router.use('/performance', performanceRoutes);
+router.use('/salary', salaryRoutes);
 
 export default router;

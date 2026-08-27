@@ -915,7 +915,7 @@ performance_coefficients
 
 | 切片 | 范围 | 子任务 | 工时 |
 |---|---|---|---|
-| C1 | 薪级薪档配置 + 员工薪酬方案 | 3 | 2d |
+| C1 | 薪级薪档配置 + 员工薪酬方案 **已实现** | 3 | 2d |
 | C2 | 社保公积金方案（西安/北京/四川三地） | 3 | 2d |
 | C3 | 个税引擎（工资薪金累计预扣 + 年终奖 + 劳务报酬） | 4 | 3d |
 | C4 | 薪酬核算主流程（应发-应扣-实发 + **AI 校验摘要**） | 5 | 4.5d |
@@ -1191,6 +1191,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M3.0.5** | **2026-08-27** | **feat(performance): M3-D5 销售提成（Cursor 交付）<br>**范围**：performance_sales_products / payments / commissions 3 张表 + 产品字典 + 回款登记/财务确认 + 提成计算发放 + 8 端点 + 7 权限点 + 10 错误码（72801-72810）+ 8 项 configs + 35 新单测（513→548）<br>**强约束**：D1+D2+D3+D4 十一个 performance service 0 行改动；不联动 M4 薪酬；不创建 sales_targets/pips 表；无 finance 角色（hr 兼任确认） | **Cursor + WorkBuddy** |
 | **M3.0.6** | **2026-08-27** | **feat(performance): M3-D6 结果应用（Cursor 交付，M3 收尾）<br>**范围**：performance_pips / performance_pip_reviews 2 张表 + 调薪/晋升走 audit_logs + PIP 触发/月度评审 + 8 端点 + 8 权限点 + 10 错误码（72901-72910）+ 11 项 configs + 33 新单测（548→581）<br>**强约束**：D1–D5 十四个 performance service 0 行改动；不写 employee_salary_history / employee_position_history；PIP 失败不调 A6 离职；无 finance 角色 | **Cursor + WorkBuddy** |
 | **M3.0.7** | **2026-08-27** | **docs: M3 收尾（6 切片全部完成 + 提示词库 20 文件 + 0 越界 20 次连续 + 一期 581 测试）<br>**M3 全部完成**：D1/D2/D3/D4/D5/D6 全部落地（6 个业务 commit + 6 个提示词 commit + 1 个 fix commit + 1 个 finance 修正，**0 越界**，0 旧测试改动）<br>**测试演进**：430（M2 收尾）→ 463→491→511→548→**581**（M3 收尾，+181 / +42%）；一期累计 26→581（+555 / +2135%）<br>**M3 累计**：100 文件 / 55 端点 / 16 新表 / 38 权限点 / 72 错误码（72 段位 72401-72910）/ 59 项 configs<br>**D6 调薪/晋升 0 新表**（用 audit_logs）+ PIP 2 张表<br>**红线升级**：D1+D2+D3+D4+D5 11 个 performance service 0 行改动（D6 沿用 D3-D5 教训）<br>**关键经验**：1) D1 提示词 §3.3 误列 finance 角色 → **Cursor 主动识别 + 修正 + 透明报告**（M3 最重要的纪律胜利）；2) M2-wrap-up §7 误写 D3 = "季度校准会议" → D3 提示词修正 + D3 业务代码 0 新表；3) D4 验收发现 B3/B5 跨 UTC 边界旧测 → vi.useFakeTimers 修复（沿用 B6 模式）；4) D6 调薪/晋升用 audit_logs 不建表（减少表数量 + 复用 audit）<br>**遗留任务**：D6 调薪/晋升实际写入 employee_salary_history / position_history 留 M4 联调；D4 payout 实际扣工资留 M4；D5 提成发放联动 M4；PIP 失败启动离职流程留独立任务；培训管理模块留二期<br>**M3 收尾报告**：[`docs/cursor-prompts/M3-wrap-up.md`](./cursor-prompts/M3-wrap-up.md)<br>**下一阶段 M4 薪酬核算**（V1.2 §四.8 C1-C8，约 26d） | **WorkBuddy** |
+| **M4.0.1** | **2026-08-27** | **feat(salary): M4-C1 薪级薪档配置 + 员工薪酬方案（Cursor 交付，M4 启动）<br>**范围**：salary_grades / salary_grade_levels / employee_salary_plans 3 张表 + 7 端点 + 4 权限点 + 10 错误码（73001-73010）+ 5 项 salary.* configs<br>**强约束**：不写 employee_salary_history（留 C8）；不实现 C2-C8；不创建 payslips / social_insurance / tax_records / service_fees；D1-D6 14 个 performance service 0 行改动；5 角色 RBAC 无 finance | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

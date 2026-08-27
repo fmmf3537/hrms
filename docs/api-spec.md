@@ -870,6 +870,22 @@
 
 调薪/晋升不建业务表，记录落在 `audit_logs`；实际写入 `employee_salary_history` / `employee_position_history` 留 M4。PIP 失败仅标记 + audit，不调 A6 离职。
 
+### 3.25 Salary Grades & Plans API（M4-C1）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/salary/grades` | 是 | salary:grade:write | 创建薪级 |
+| GET | `/salary/grades` | 是 | salary:grade:read | 薪级列表（sequence/status 过滤） |
+| POST | `/salary/grade-levels` | 是 | salary:grade:write | 创建薪档 |
+| GET | `/salary/grade-levels` | 是 | salary:grade:read | 薪档列表（gradeId/status 过滤） |
+| POST | `/salary/plans` | 是 | salary:plan:write | 创建员工薪酬方案 |
+| GET | `/salary/plans` | 是 | salary:plan:read | 薪酬方案列表（权限过滤） |
+| PATCH | `/salary/plans/:id/deactivate` | 是 | salary:plan:write | 失效薪酬方案 |
+
+**错误码**：73001-73010（C1 子区）。
+
+6 大序列 `M/T/P/S/A`（M=高管+部门负责人）；每级 5-7 档（默认 6）；档位基本工资须递增。薪酬方案 `effectiveFrom` 默认次月 1 日。**C1 不写 `employee_salary_history`**（实际调薪执行留 C8）。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

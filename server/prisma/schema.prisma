@@ -40,6 +40,11 @@ model User {
   pipsCreated              PerformancePip[]             @relation("PipCreator")
   pipReviews               PerformancePipReview[]       @relation("PipReviewer")
 
+  // M4-C1 薪级薪档 + 薪酬方案反向关联
+  salaryGradesCreated      SalaryGrade[]                @relation("GradeCreator")
+  salaryLevelsCreated      SalaryGradeLevel[]           @relation("LevelCreator")
+  salaryPlansCreated       EmployeeSalaryPlan[]         @relation("PlanCreator")
+
   @@map("users")
 }
 
@@ -191,6 +196,7 @@ model Employee {
   salesPayments      PerformanceSalesPayment[]
   salesCommissions   PerformanceSalesCommission[]
   performancePips    PerformancePip[]
+  salaryPlans        EmployeeSalaryPlan[]
 
   @@index([companyId, departmentId])
   @@index([status])
@@ -1522,4 +1528,102 @@ model PerformancePipReview {
   @@unique([pipId, reviewMonth])
   @@index([pipId, reviewDate])
   @@map("performance_pip_reviews")
+}
+
+// ==================== M4-C1 薪级薪档 + 员工薪酬方案 ====================
+
+enum SalaryGradeSequence {
+  M // executive + manager
+  T // tech
+  P // production
+  S // sales
+  A // admin / function
+}
+
+enum SalaryGradeStatus {
+  active
+  archived
+}
+
+enum SalaryGradeLevelStatus {
+  active
+  archived
+}
+
+enum EmployeeSalaryPlanStatus {
+  active
+  inactive
+  superseded
+}
+
+model SalaryGrade {
+  id                 String              @id @default(uuid()) @db.Uuid
+  sequence           SalaryGradeSequence
+  gradeCode          String              @map("grade_code") @db.VarChar(20)
+  name               String              @db.VarChar(100)
+  minBaseSalary      Decimal             @map("min_base_salary") @db.Decimal(12, 2)
+  maxBaseSalary      Decimal             @map("max_base_salary") @db.Decimal(12, 2)
+  minPerformanceBase Decimal             @map("min_performance_base") @db.Decimal(12, 2)
+  maxPerformanceBase Decimal             @map("max_performance_base") @db.Decimal(12, 2)
+  status             SalaryGradeStatus   @default(active)
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("GradeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  levels SalaryGradeLevel[]
+  plans  EmployeeSalaryPlan[]
+
+  @@unique([sequence, gradeCode])
+  @@index([sequence, status])
+  @@map("salary_grades")
+}
+
+model SalaryGradeLevel {
+  id              String                 @id @default(uuid()) @db.Uuid
+  gradeId         String                 @map("grade_id") @db.Uuid
+  grade           SalaryGrade            @relation(fields: [gradeId], references: [id], onDelete: Restrict)
+  level           Int
+  baseSalary      Decimal                @map("base_salary") @db.Decimal(12, 2)
+  performanceBase Decimal                @map("performance_base") @db.Decimal(12, 2)
+  status          SalaryGradeLevelStatus @default(active)
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("LevelCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  plans EmployeeSalaryPlan[]
+
+  @@unique([gradeId, level])
+  @@index([gradeId, level, status])
+  @@map("salary_grade_levels")
+}
+
+model EmployeeSalaryPlan {
+  id              String                   @id @default(uuid()) @db.Uuid
+  employeeId      String                   @map("employee_id") @db.Uuid
+  employee        Employee                 @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  gradeId         String                   @map("grade_id") @db.Uuid
+  grade           SalaryGrade              @relation(fields: [gradeId], references: [id], onDelete: Restrict)
+  levelId         String                   @map("level_id") @db.Uuid
+  level           SalaryGradeLevel         @relation(fields: [levelId], references: [id], onDelete: Restrict)
+  baseSalary      Decimal                  @map("base_salary") @db.Decimal(12, 2)
+  performanceBase Decimal                  @map("performance_base") @db.Decimal(12, 2)
+  allowance       Decimal?                 @db.Decimal(12, 2)
+  welfare         String?                  @db.Text
+  effectiveFrom   DateTime                 @map("effective_from") @db.Date
+  effectiveTo     DateTime?                @map("effective_to") @db.Date
+  status          EmployeeSalaryPlanStatus @default(active)
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("PlanCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([employeeId, status])
+  @@index([employeeId, effectiveFrom, effectiveTo])
+  @@index([status, effectiveTo])
+  @@map("employee_salary_plans")
 }
