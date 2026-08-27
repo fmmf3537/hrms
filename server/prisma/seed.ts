@@ -957,6 +957,86 @@ const DEFAULT_CONFIGS: Array<{
     value: 200,
     remark: 'C2 批量操作上限',
   },
+  {
+    category: 'salary',
+    key: 'tax.cumulative_method',
+    value: 'cumulative_withholding',
+    remark: 'C3 累计预扣法（V1.2 §二.4.4）',
+  },
+  {
+    category: 'salary',
+    key: 'tax.basic_deduction',
+    value: 5000,
+    remark: 'C3 起征点 5000 元/月',
+  },
+  {
+    category: 'salary',
+    key: 'tax.monthly_brackets',
+    value: [
+      { minIncome: 0, maxIncome: 36000, rate: 0.03, quickDeduction: 0 },
+      { minIncome: 36000, maxIncome: 144000, rate: 0.10, quickDeduction: 2520 },
+      { minIncome: 144000, maxIncome: 300000, rate: 0.20, quickDeduction: 16920 },
+      { minIncome: 300000, maxIncome: 420000, rate: 0.25, quickDeduction: 31920 },
+      { minIncome: 420000, maxIncome: 660000, rate: 0.30, quickDeduction: 52920 },
+      { minIncome: 660000, maxIncome: 960000, rate: 0.35, quickDeduction: 85920 },
+      { minIncome: 960000, maxIncome: null, rate: 0.45, quickDeduction: 181920 },
+    ],
+    remark: 'C3 工资薪金 7 级超额累进 + 速算扣除数',
+  },
+  {
+    category: 'salary',
+    key: 'tax.year_end_bonus_brackets',
+    value: [
+      { minIncome: 0, maxIncome: 3000, rate: 0.03, quickDeduction: 0 },
+      { minIncome: 3000, maxIncome: 12000, rate: 0.10, quickDeduction: 210 },
+      { minIncome: 12000, maxIncome: 25000, rate: 0.20, quickDeduction: 1410 },
+      { minIncome: 25000, maxIncome: 35000, rate: 0.25, quickDeduction: 2660 },
+      { minIncome: 35000, maxIncome: 55000, rate: 0.30, quickDeduction: 4410 },
+      { minIncome: 55000, maxIncome: 80000, rate: 0.35, quickDeduction: 7160 },
+      { minIncome: 80000, maxIncome: null, rate: 0.45, quickDeduction: 15160 },
+    ],
+    remark: 'C3 年终奖按月换算后税率表',
+  },
+  {
+    category: 'salary',
+    key: 'tax.labor_income_brackets',
+    value: [
+      { minIncome: 0, maxIncome: 20000, rate: 0.20, quickDeduction: 0 },
+      { minIncome: 20000, maxIncome: 50000, rate: 0.30, quickDeduction: 2000 },
+      { minIncome: 50000, maxIncome: null, rate: 0.40, quickDeduction: 7000 },
+    ],
+    remark: 'C3 劳务报酬 3 级超额累进',
+  },
+  {
+    category: 'salary',
+    key: 'tax.labor_income.threshold_low',
+    value: 4000,
+    remark: 'C3 劳务费 ≤4000 减定额',
+  },
+  {
+    category: 'salary',
+    key: 'tax.labor_income.deduction_low',
+    value: 800,
+    remark: 'C3 劳务费低额减除 800',
+  },
+  {
+    category: 'salary',
+    key: 'tax.labor_income.deduction_high_rate',
+    value: 0.2,
+    remark: 'C3 劳务费高额减除 20%',
+  },
+  {
+    category: 'salary',
+    key: 'tax.annual_settlement_period',
+    value: ['03-01', '06-30'],
+    remark: 'C3 年度汇算清缴期（3-6 月）；实际申报留 C5',
+  },
+  {
+    category: 'salary',
+    key: 'tax.batch_size',
+    value: 200,
+    remark: 'C3 批量个税计算上限',
+  },
 ];
 
 async function main() {

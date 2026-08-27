@@ -16,6 +16,9 @@ import * as gradeService from '../services/salary_grade.service';
 import * as levelService from '../services/salary_grade_level.service';
 import * as planService from '../services/salary_plan.service';
 import * as socialSchemeService from '../services/social_insurance_scheme.service';
+import * as taxService from '../services/tax_calculation.service';
+import * as laborTaxService from '../services/tax_labor_income.service';
+import * as bonusTaxService from '../services/tax_year_end_bonus.service';
 
 const router: RouterType = Router();
 
@@ -419,8 +422,137 @@ employeeInsuranceRouter.patch(
   }),
 );
 
+const taxCalculateSchema = z.object({
+  employeeId: z.string().uuid(),
+  period: z.string().min(1),
+  baseAmount: z.number(),
+  cumulativePrepaid: z.number().optional(),
+});
+
+const taxBatchSchema = z.object({
+  period: z.string().min(1),
+  deptIds: z.array(z.string().uuid()).optional(),
+});
+
+const taxYearEndSchema = z.object({
+  employeeId: z.string().uuid(),
+  bonusAmount: z.number(),
+  isAnnual: z.literal(true),
+});
+
+const taxLaborSchema = z.object({
+  employeeId: z.string().uuid(),
+  incomeAmount: z.number(),
+});
+
+const taxHistorySchema = z.object({
+  employeeId: z.string().uuid(),
+  year: z.coerce.number().int(),
+});
+
+const taxAnnualSchema = z.object({
+  employeeId: z.string().uuid(),
+  year: z.coerce.number().int(),
+  settle: z.coerce.boolean().optional(),
+});
+
+const taxRouter: RouterType = Router();
+taxRouter.post(
+  '/calculate',
+  requirePermission(PERMISSIONS.SALARY_TAX_CALCULATE),
+  validate(taxCalculateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await taxService.calculateMonthlyTax(
+      actorId,
+      req.body as taxService.CalculateMonthlyTaxInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+taxRouter.post(
+  '/calculate-batch',
+  requirePermission(PERMISSIONS.SALARY_TAX_CALCULATE),
+  validate(taxBatchSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await taxService.calculateBatchTax(
+      actorId,
+      req.body as taxService.CalculateBatchTaxInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+taxRouter.post(
+  '/year-end-bonus',
+  requirePermission(PERMISSIONS.SALARY_TAX_CALCULATE),
+  validate(taxYearEndSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await bonusTaxService.calculateYearEndBonus(
+      actorId,
+      req.body as bonusTaxService.CalculateYearEndBonusInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+taxRouter.post(
+  '/labor-income',
+  requirePermission(PERMISSIONS.SALARY_TAX_CALCULATE),
+  validate(taxLaborSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await laborTaxService.calculateLaborIncomeTax(
+      actorId,
+      req.body as laborTaxService.CalculateLaborIncomeTaxInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+taxRouter.get(
+  '/history',
+  requirePermission(PERMISSIONS.SALARY_TAX_READ),
+  validate(taxHistorySchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const { employeeId, year } = req.query as unknown as {
+      employeeId: string;
+      year: number;
+    };
+    const data = await taxService.getTaxHistory(actorId, employeeId, Number(year));
+    res.json({ success: true, data });
+  }),
+);
+taxRouter.get(
+  '/annual-summary',
+  requirePermission(PERMISSIONS.SALARY_TAX_READ),
+  validate(taxAnnualSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const { employeeId, year, settle } = req.query as unknown as {
+      employeeId: string;
+      year: number;
+      settle?: boolean;
+    };
+    const data = await taxService.getTaxAnnualSummary(
+      actorId,
+      employeeId,
+      Number(year),
+      { settle: settle === true },
+    );
+    res.json({ success: true, data });
+  }),
+);
+
 router.use('/insurances/social', insuranceRouter);
 router.use('/insurances/housing-fund', housingFundRouter);
 router.use('/insurances/employees', employeeInsuranceRouter);
+router.use('/tax', taxRouter);
 
 export default router;

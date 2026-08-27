@@ -944,11 +944,35 @@ flowchart TD
     F -.-> G[C2 不算扣]
 ```
 
+### 4.3 M4-C3 个税引擎（0 新表）
+
+C3 为纯算法层：计算结果不落库，历史查询复用 `audit_logs`（action=`TAX_CALCULATE` / `TAX_YEAR_END_BONUS_CALCULATE` / `TAX_LABOR_INCOME_CALCULATE`）。算薪汇总与工资条持久化分别留 C4 / C5。
+
+```mermaid
+flowchart TD
+    A[HR POST /salary/tax/calculate] --> B{税种}
+    B -->|工资薪金| C[baseAmount - 起征点 5000]
+    C --> D[7 级超额累进 + 速算扣除数]
+    B -->|年终奖| E[bonusAmount / 12 找档]
+    E --> F[bonusAmount x rate - 速算扣除]
+    B -->|劳务报酬| G{收入是否 ≤4000}
+    G -->|是| H[减 800]
+    G -->|否| I[减 20%]
+    H --> J[3 级 20/30/40%]
+    I --> J
+    D --> K[返回计算结果 + 写 audit]
+    F --> K
+    J --> K
+    K --> L[GET /salary/tax/history 读 audit]
+    L -.-> M[C5 payslips 持久化快照]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
 |---|---|---|---|
 | V1.0 | 2026-08-25 | 初稿，7 业务流程 + 1 架构图 + 2 ER 图 | WorkBuddy AI |
+| V1.2-C3 | 2026-08-27 | 追加 §4.3 M4-C3 个税计算流程图（0 新表，无 ER） | Cursor |
 
 ---
 

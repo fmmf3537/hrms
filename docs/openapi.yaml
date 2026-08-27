@@ -2730,6 +2730,95 @@ paths:
       responses:
         '200':
           description: 更新成功
+  /salary/tax/calculate:
+    post:
+      tags: [Salary]
+      summary: 单员工单月个税计算
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 计算成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxCalculationResult'
+  /salary/tax/calculate-batch:
+    post:
+      tags: [Salary]
+      summary: 批量月度个税计算
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 批量结果（succeeded + failed）
+  /salary/tax/year-end-bonus:
+    post:
+      tags: [Salary]
+      summary: 年终奖单独计税
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 计算成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/YearEndBonusResult'
+  /salary/tax/labor-income:
+    post:
+      tags: [Salary]
+      summary: 劳务报酬个税
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 计算成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LaborIncomeResult'
+  /salary/tax/history:
+    get:
+      tags: [Salary]
+      summary: 个税历史（audit_logs）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功
+  /salary/tax/annual-summary:
+    get:
+      tags: [Salary]
+      summary: 年度个税汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: settle
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: 成功
 
 components:
   securitySchemes:
@@ -3754,6 +3843,35 @@ components:
         effectiveFrom: { type: string, format: date }
         effectiveTo: { type: string, format: date, nullable: true }
         status: { type: string, enum: [active, inactive] }
+
+    TaxCalculationResult:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        period: { type: string, example: '2026-08' }
+        baseAmount: { type: number }
+        taxableIncome: { type: number }
+        taxAmount: { type: number }
+        taxType: { type: string, enum: [monthly] }
+
+    YearEndBonusResult:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        bonusAmount: { type: number }
+        monthlyEquivalent: { type: number }
+        taxAmount: { type: number }
+        taxType: { type: string, enum: [year_end_bonus] }
+
+    LaborIncomeResult:
+      type: object
+      properties:
+        employeeId: { type: string, format: uuid }
+        incomeAmount: { type: number }
+        deduction: { type: number }
+        taxableIncome: { type: number }
+        taxAmount: { type: number }
+        taxType: { type: string, enum: [labor_income] }
 
 
 

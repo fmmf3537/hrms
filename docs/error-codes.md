@@ -286,6 +286,21 @@
 | 73109 | 400 | REGISTRATION_NOT_FOUND | registrationId 不存在或无当前生效登记 | 提示 ID |
 | 73110 | 400 | REGISTRATION_DUPLICATE_ACTIVE | 员工已有 active 登记 | 提示已登记 |
 
+### 8.3 M4-C3 个税引擎（73201-73210）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 73201 | 400 | TAX_PERIOD_INVALID | period 格式错（YYYY-MM） | 提示格式 |
+| 73202 | 400 | TAX_BASE_INVALID | baseAmount / bonusAmount ≤0 | 提示税基 |
+| 73203 | 400 | TAX_BRACKET_INVALID | 税率表配置错误 | 提示配置 |
+| 73204 | 400 | TAX_CUMULATIVE_INCOMPLETE | 累计预扣缺少前期数据或 prepaid < 0 | 提示补全 |
+| 73205 | 400 | TAX_YEAR_END_BONUS_OVER_LIMIT | 年终奖超过限额 | 提示限额 |
+| 73206 | 400 | TAX_LABOR_INCOME_INVALID | 劳务费 ≤0 | 提示金额 |
+| 73207 | 400 | TAX_BATCH_EMPTY | 批量入参为空 / 部门下无员工 | 提示入参 |
+| 73208 | 400 | TAX_BATCH_TOO_LARGE | 批量 > 200 条 | 提示分批 |
+| 73209 | 400 | TAX_ANNUAL_NOT_IN_PERIOD | 年度汇算不在 3-6 月 | 提示时间 |
+| 73210 | 400 | TAX_CALCULATION_FAILED | 计算异常（税率表缺档） | 提示配置 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

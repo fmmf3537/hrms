@@ -904,11 +904,27 @@
 
 三地 `xi_an / bei_jing / si_chuan`；5 险 + 公积金 5%-12%。**C2 不实现实际算扣**（留 C3）。5 角色 RBAC，无 finance。
 
+### 3.27 Salary Tax API（M4-C3）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/salary/tax/calculate` | 是 | salary:tax:calculate | 单员工单月个税（累计预扣简化版） |
+| POST | `/salary/tax/calculate-batch` | 是 | salary:tax:calculate | 批量月度个税（按部门） |
+| POST | `/salary/tax/year-end-bonus` | 是 | salary:tax:calculate | 年终奖单独计税（按月换算） |
+| POST | `/salary/tax/labor-income` | 是 | salary:tax:calculate | 劳务报酬个税 |
+| GET | `/salary/tax/history` | 是 | salary:tax:read | 个税历史（复用 audit_logs） |
+| GET | `/salary/tax/annual-summary` | 是 | salary:tax:read | 年度汇总；`settle=true` 校验 3-6 月窗口 |
+
+**错误码**：73201-73210（C3 子区）。
+
+**0 新表**；计算结果不持久化（快照留 C5 payslips）。`salary:tax:annual-settlement` 权限预留，**不实现实际申报**（C5）。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
 |---|---|---|---|
 | V1.0 | 2026-08-25 | 初稿，覆盖 M0 + M0.5 | WorkBuddy AI |
+| V1.2-C3 | 2026-08-27 | 追加 §3.27 Salary Tax API（M4-C3 个税引擎 6 端点） | Cursor |
 
 ---
 
