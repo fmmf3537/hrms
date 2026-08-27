@@ -886,6 +886,24 @@
 
 6 大序列 `M/T/P/S/A`（M=高管+部门负责人）；每级 5-7 档（默认 6）；档位基本工资须递增。薪酬方案 `effectiveFrom` 默认次月 1 日。**C1 不写 `employee_salary_history`**（实际调薪执行留 C8）。5 角色 RBAC，无 finance。
 
+### 3.26 Salary Insurances API（M4-C2）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/salary/insurances/social` | 是 | salary:insurance:write | 创建三地社保方案 |
+| GET | `/salary/insurances/social` | 是 | salary:insurance:read | 社保方案列表 |
+| PATCH | `/salary/insurances/social/:id` | 是 | salary:insurance:write | 更新社保方案（rate/base） |
+| POST | `/salary/insurances/housing-fund` | 是 | salary:housing-fund:write | 创建公积金方案 |
+| GET | `/salary/insurances/housing-fund` | 是 | salary:housing-fund:read | 公积金方案列表 |
+| PATCH | `/salary/insurances/housing-fund/:id` | 是 | salary:housing-fund:write | 更新公积金方案 |
+| POST | `/salary/insurances/employees` | 是 | salary:insurance:write | 员工社保公积金登记 |
+| GET | `/salary/insurances/employees` | 是 | salary:insurance:read | 员工登记列表（权限过滤） |
+| PATCH | `/salary/insurances/employees/:id` | 是 | salary:insurance:write | 更新员工登记 |
+
+**错误码**：73101-73110（C2 子区）。
+
+三地 `xi_an / bei_jing / si_chuan`；5 险 + 公积金 5%-12%。**C2 不实现实际算扣**（留 C3）。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

@@ -921,6 +921,42 @@ const DEFAULT_CONFIGS: Array<{
     value: true,
     remark: 'C1 方案生效后锁定（防重复生效）',
   },
+  {
+    category: 'salary',
+    key: 'insurance.cities',
+    value: ['xi_an', 'bei_jing', 'si_chuan'],
+    remark: 'C2 社保城市白名单（西安/北京/四川）',
+  },
+  {
+    category: 'salary',
+    key: 'insurance.types',
+    value: ['pension', 'medical', 'unemployment', 'work_injury', 'maternity'],
+    remark: 'C2 五险白名单',
+  },
+  {
+    category: 'salary',
+    key: 'insurance.base_adjustment_month',
+    value: { xi_an: 7, bei_jing: 7, si_chuan: 7 },
+    remark: 'C2 三地调基月（默认 7 月）',
+  },
+  {
+    category: 'salary',
+    key: 'housing_fund.cities',
+    value: ['xi_an', 'bei_jing', 'si_chuan'],
+    remark: 'C2 公积金城市白名单',
+  },
+  {
+    category: 'salary',
+    key: 'housing_fund.rate_range',
+    value: { min: 0.05, max: 0.12 },
+    remark: 'C2 公积金比例范围 5%-12%',
+  },
+  {
+    category: 'salary',
+    key: 'insurance.batch_size',
+    value: 200,
+    remark: 'C2 批量操作上限',
+  },
 ];
 
 async function main() {
@@ -2766,6 +2802,98 @@ async function main() {
     console.log('   ✓ 5 demo grades + 18 demo levels + 3 demo plans');
   } else {
     console.log('   ✓ C1 salary demo already exists (skip)');
+  }
+
+  console.log('==> Seeding insurance schemes/registrations (M4-C2)...');
+  const existingC2 = await prisma.socialInsuranceScheme.findFirst({
+    where: { city: 'xi_an', insuranceType: 'pension' },
+  });
+  if (!existingC2 && sampleEmployees.length >= 3) {
+    const bases: Record<string, { min: number; max: number }> = {
+      xi_an: { min: 4500, max: 24000 },
+      bei_jing: { min: 6300, max: 34000 },
+      si_chuan: { min: 4300, max: 21500 },
+    };
+    const socialDefs: Array<{
+      city: 'xi_an' | 'bei_jing' | 'si_chuan';
+      insuranceType: 'pension' | 'medical' | 'unemployment' | 'work_injury' | 'maternity';
+      companyRate: number;
+      personalRate: number;
+    }> = [
+      { city: 'xi_an', insuranceType: 'pension', companyRate: 0.16, personalRate: 0.08 },
+      { city: 'xi_an', insuranceType: 'medical', companyRate: 0.08, personalRate: 0.02 },
+      { city: 'xi_an', insuranceType: 'unemployment', companyRate: 0.007, personalRate: 0.003 },
+      { city: 'xi_an', insuranceType: 'work_injury', companyRate: 0.005, personalRate: 0 },
+      { city: 'xi_an', insuranceType: 'maternity', companyRate: 0, personalRate: 0 },
+      { city: 'bei_jing', insuranceType: 'pension', companyRate: 0.16, personalRate: 0.08 },
+      { city: 'bei_jing', insuranceType: 'medical', companyRate: 0.1, personalRate: 0.02 },
+      { city: 'bei_jing', insuranceType: 'unemployment', companyRate: 0.005, personalRate: 0.005 },
+      { city: 'bei_jing', insuranceType: 'work_injury', companyRate: 0.005, personalRate: 0 },
+      { city: 'bei_jing', insuranceType: 'maternity', companyRate: 0, personalRate: 0 },
+      { city: 'si_chuan', insuranceType: 'pension', companyRate: 0.16, personalRate: 0.08 },
+      { city: 'si_chuan', insuranceType: 'medical', companyRate: 0.085, personalRate: 0.02 },
+      { city: 'si_chuan', insuranceType: 'unemployment', companyRate: 0.006, personalRate: 0.004 },
+      { city: 'si_chuan', insuranceType: 'work_injury', companyRate: 0.005, personalRate: 0 },
+      { city: 'si_chuan', insuranceType: 'maternity', companyRate: 0, personalRate: 0 },
+    ];
+    const createdSocial: Record<string, { id: string }> = {};
+    await Promise.all(socialDefs.map(async (s) => {
+      const rec = await prisma.socialInsuranceScheme.create({
+        data: {
+          city: s.city,
+          insuranceType: s.insuranceType,
+          companyRate: s.companyRate,
+          personalRate: s.personalRate,
+          baseMin: bases[s.city].min,
+          baseMax: bases[s.city].max,
+          baseAdjustmentMonth: 7,
+          status: 'active',
+          createdById: admin.id,
+        },
+      });
+      createdSocial[`${s.city}-${s.insuranceType}`] = rec;
+    }));
+    const fundDefs = [
+      { city: 'xi_an' as const, companyRate: 0.05, personalRate: 0.05 },
+      { city: 'bei_jing' as const, companyRate: 0.12, personalRate: 0.12 },
+      { city: 'si_chuan' as const, companyRate: 0.08, personalRate: 0.08 },
+    ];
+    const createdFunds: Record<string, { id: string }> = {};
+    await Promise.all(fundDefs.map(async (f) => {
+      createdFunds[f.city] = await prisma.housingFundScheme.create({
+        data: {
+          city: f.city,
+          companyRate: f.companyRate,
+          personalRate: f.personalRate,
+          baseMin: bases[f.city].min,
+          baseMax: bases[f.city].max,
+          status: 'active',
+          createdById: admin.id,
+        },
+      });
+    }));
+    const from = new Date(year, 0, 1);
+    const regSeeds = [
+      { emp: sampleEmployees[0], city: 'xi_an' as const, base: 10000 },
+      { emp: sampleEmployees[1], city: 'bei_jing' as const, base: 12000 },
+      { emp: sampleEmployees[2], city: 'si_chuan' as const, base: 8000 },
+    ];
+    await Promise.all(regSeeds.map((r) => prisma.employeeInsuranceRegistration.create({
+      data: {
+        employeeId: r.emp.id,
+        city: r.city,
+        socialInsuranceSchemeId: createdSocial[`${r.city}-pension`].id,
+        housingFundSchemeId: createdFunds[r.city].id,
+        baseSalary: r.base,
+        effectiveFrom: from,
+        effectiveTo: null,
+        status: 'active',
+        createdById: admin.id,
+      },
+    })));
+    console.log('   ✓ 15 demo social schemes + 3 housing funds + 3 registrations');
+  } else {
+    console.log('   ✓ C2 insurance demo already exists (skip)');
   }
 
   console.log('==> Done.');

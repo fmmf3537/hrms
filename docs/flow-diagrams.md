@@ -894,6 +894,56 @@ flowchart TD
     F -.-> G[C1 不写 history]
 ```
 
+### 4.2 M4-C2 社保公积金方案 ER
+
+```mermaid
+erDiagram
+    social_insurance_schemes {
+        uuid id PK
+        varchar city
+        varchar insurance_type
+        decimal company_rate
+        decimal personal_rate
+        decimal base_min
+        decimal base_max
+        int base_adjustment_month
+        varchar status
+    }
+    housing_fund_schemes {
+        uuid id PK
+        varchar city
+        decimal company_rate
+        decimal personal_rate
+        decimal base_min
+        decimal base_max
+        varchar status
+    }
+    employee_insurance_registrations {
+        uuid id PK
+        uuid employee_id FK
+        varchar city
+        uuid social_insurance_scheme_id FK
+        uuid housing_fund_scheme_id FK
+        decimal base_salary
+        date effective_from
+        date effective_to
+        varchar status
+    }
+    employees ||--o{ employee_insurance_registrations : registers
+    social_insurance_schemes ||--o{ employee_insurance_registrations : matched
+    housing_fund_schemes ||--o{ employee_insurance_registrations : matched
+```
+
+```mermaid
+flowchart TD
+    A[配置三地社保 5 险] --> B[配置三地公积金 5%-12%]
+    B --> C[员工按参保地登记]
+    C --> D[scheme.city 必须匹配]
+    D --> E[status=active]
+    E --> F[C3 按 baseSalary x rate 算扣]
+    F -.-> G[C2 不算扣]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

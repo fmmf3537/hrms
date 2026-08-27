@@ -271,6 +271,21 @@
 | 73009 | 400 | PLAN_NOT_FOUND | planId 不存在或无当前生效方案 | 提示 ID |
 | 73010 | 400 | PLAN_EMPLOYEE_NOT_FOUND | employeeId 不存在 | 提示员工 |
 
+### 8.2 M4-C2 社保公积金方案（73101-73110）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 73101 | 400 | INSURANCE_SCHEME_NOT_FOUND | schemeId 不存在 | 提示 ID 错误 |
+| 73102 | 400 | INSURANCE_DUPLICATE_CITY_TYPE | city + insuranceType 重复 | 提示更换 |
+| 73103 | 400 | INSURANCE_CITY_INVALID | city 不在 xi_an / bei_jing / si_chuan | 提示合法城市 |
+| 73104 | 400 | INSURANCE_TYPE_INVALID | insuranceType 不在 5 险白名单 | 提示合法险种 |
+| 73105 | 400 | INSURANCE_RATE_OUT_OF_RANGE | 公司/个人比例越界 | 提示范围 |
+| 73106 | 400 | HOUSING_FUND_NOT_FOUND | housingFundId 不存在 | 提示 ID 错误 |
+| 73107 | 400 | HOUSING_FUND_DUPLICATE_CITY | city 重复 | 提示更换 |
+| 73108 | 400 | HOUSING_FUND_RATE_OUT_OF_RANGE | 公积金比例不在 5%-12% | 提示 5%-12% |
+| 73109 | 400 | REGISTRATION_NOT_FOUND | registrationId 不存在或无当前生效登记 | 提示 ID |
+| 73110 | 400 | REGISTRATION_DUPLICATE_ACTIVE | 员工已有 active 登记 | 提示已登记 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
@@ -364,6 +379,7 @@ axios.interceptors.response.use(
 |---|---|---|---|
 | V1.0 | 2026-08-25 | 初稿，覆盖 M0 + M0.5 基础/公共错误码（0xxxx-6xxxx + 7xxxx 通用业务） | WorkBuddy AI |
 | M4-C1 | 2026-08-27 | 新增 73001-73010（薪级薪档 + 员工薪酬方案） | Cursor |
+| M4-C2 | 2026-08-27 | 新增 73101-73110（三地社保公积金方案 + 员工登记） | Cursor |
 
 ## 六、附录：错误码使用统计（M0 + M0.5 预估）
 

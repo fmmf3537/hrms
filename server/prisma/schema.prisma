@@ -45,6 +45,11 @@ model User {
   salaryLevelsCreated      SalaryGradeLevel[]           @relation("LevelCreator")
   salaryPlansCreated       EmployeeSalaryPlan[]         @relation("PlanCreator")
 
+  // M4-C2 社保公积金反向关联
+  insuranceSchemesCreated  SocialInsuranceScheme[]      @relation("InsuranceSchemeCreator")
+  housingFundsCreated      HousingFundScheme[]          @relation("HousingFundCreator")
+  insuranceRegsCreated     EmployeeInsuranceRegistration[] @relation("InsuranceRegCreator")
+
   @@map("users")
 }
 
@@ -197,6 +202,7 @@ model Employee {
   salesCommissions   PerformanceSalesCommission[]
   performancePips    PerformancePip[]
   salaryPlans        EmployeeSalaryPlan[]
+  insuranceRegistrations EmployeeInsuranceRegistration[]
 
   @@index([companyId, departmentId])
   @@index([status])
@@ -1626,4 +1632,105 @@ model EmployeeSalaryPlan {
   @@index([employeeId, effectiveFrom, effectiveTo])
   @@index([status, effectiveTo])
   @@map("employee_salary_plans")
+}
+
+// ==================== M4-C2 社保公积金方案 + 员工登记 ====================
+
+enum SocialInsuranceCity {
+  xi_an
+  bei_jing
+  si_chuan
+}
+
+enum SocialInsuranceType {
+  pension
+  medical
+  unemployment
+  work_injury
+  maternity
+}
+
+enum SocialInsuranceStatus {
+  active
+  archived
+}
+
+enum HousingFundStatus {
+  active
+  archived
+}
+
+enum EmployeeInsuranceRegistrationStatus {
+  active
+  inactive
+}
+
+model SocialInsuranceScheme {
+  id                  String                @id @default(uuid()) @db.Uuid
+  city                SocialInsuranceCity
+  insuranceType       SocialInsuranceType   @map("insurance_type")
+  companyRate         Decimal               @map("company_rate") @db.Decimal(6, 4)
+  personalRate        Decimal               @map("personal_rate") @db.Decimal(6, 4)
+  baseMin             Decimal               @map("base_min") @db.Decimal(12, 2)
+  baseMax             Decimal               @map("base_max") @db.Decimal(12, 2)
+  baseAdjustmentMonth Int                   @map("base_adjustment_month")
+  status              SocialInsuranceStatus @default(active)
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("InsuranceSchemeCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  registrations EmployeeInsuranceRegistration[]
+
+  @@unique([city, insuranceType])
+  @@index([city, status])
+  @@index([insuranceType, status])
+  @@map("social_insurance_schemes")
+}
+
+model HousingFundScheme {
+  id           String              @id @default(uuid()) @db.Uuid
+  city         SocialInsuranceCity
+  companyRate  Decimal             @map("company_rate") @db.Decimal(6, 4)
+  personalRate Decimal             @map("personal_rate") @db.Decimal(6, 4)
+  baseMin      Decimal             @map("base_min") @db.Decimal(12, 2)
+  baseMax      Decimal             @map("base_max") @db.Decimal(12, 2)
+  status       HousingFundStatus   @default(active)
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("HousingFundCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  registrations EmployeeInsuranceRegistration[]
+
+  @@unique([city])
+  @@index([city, status])
+  @@map("housing_fund_schemes")
+}
+
+model EmployeeInsuranceRegistration {
+  id                      String                                @id @default(uuid()) @db.Uuid
+  employeeId              String                                @map("employee_id") @db.Uuid
+  employee                Employee                              @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  city                    SocialInsuranceCity
+  socialInsuranceSchemeId String?                               @map("social_insurance_scheme_id") @db.Uuid
+  socialInsuranceScheme   SocialInsuranceScheme?                @relation(fields: [socialInsuranceSchemeId], references: [id], onDelete: Restrict)
+  housingFundSchemeId     String?                               @map("housing_fund_scheme_id") @db.Uuid
+  housingFundScheme       HousingFundScheme?                    @relation(fields: [housingFundSchemeId], references: [id], onDelete: Restrict)
+  baseSalary              Decimal                               @map("base_salary") @db.Decimal(12, 2)
+  effectiveFrom           DateTime                              @map("effective_from") @db.Date
+  effectiveTo             DateTime?                             @map("effective_to") @db.Date
+  status                  EmployeeInsuranceRegistrationStatus   @default(active)
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("InsuranceRegCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([employeeId, status])
+  @@index([city, status])
+  @@index([status, effectiveFrom, effectiveTo])
+  @@map("employee_insurance_registrations")
 }

@@ -2627,6 +2627,110 @@ paths:
         '200':
           description: 失效成功
 
+  # ============== M4-C2 Insurances ==============
+  /salary/insurances/social:
+    post:
+      tags: [Salary]
+      summary: 创建三地社保方案
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SocialInsuranceScheme'
+    get:
+      tags: [Salary]
+      summary: 社保方案列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/insurances/social/{id}:
+    patch:
+      tags: [Salary]
+      summary: 更新社保方案
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 更新成功
+  /salary/insurances/housing-fund:
+    post:
+      tags: [Salary]
+      summary: 创建公积金方案
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HousingFundScheme'
+    get:
+      tags: [Salary]
+      summary: 公积金方案列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/insurances/housing-fund/{id}:
+    patch:
+      tags: [Salary]
+      summary: 更新公积金方案
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 更新成功
+  /salary/insurances/employees:
+    post:
+      tags: [Salary]
+      summary: 员工社保公积金登记
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeInsuranceRegistration'
+    get:
+      tags: [Salary]
+      summary: 员工登记列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/insurances/employees/{id}:
+    patch:
+      tags: [Salary]
+      summary: 更新员工社保登记
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 更新成功
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3613,5 +3717,43 @@ components:
         effectiveFrom: { type: string, format: date }
         effectiveTo: { type: string, format: date, nullable: true }
         status: { type: string, enum: [active, inactive, superseded] }
+
+    SocialInsuranceScheme:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        city: { type: string, enum: [xi_an, bei_jing, si_chuan] }
+        insuranceType: { type: string, enum: [pension, medical, unemployment, work_injury, maternity] }
+        companyRate: { type: number }
+        personalRate: { type: number }
+        baseMin: { type: number }
+        baseMax: { type: number }
+        baseAdjustmentMonth: { type: integer }
+        status: { type: string, enum: [active, archived] }
+
+    HousingFundScheme:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        city: { type: string, enum: [xi_an, bei_jing, si_chuan] }
+        companyRate: { type: number }
+        personalRate: { type: number }
+        baseMin: { type: number }
+        baseMax: { type: number }
+        status: { type: string, enum: [active, archived] }
+
+    EmployeeInsuranceRegistration:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        city: { type: string, enum: [xi_an, bei_jing, si_chuan] }
+        socialInsuranceSchemeId: { type: string, format: uuid, nullable: true }
+        housingFundSchemeId: { type: string, format: uuid, nullable: true }
+        baseSalary: { type: number }
+        effectiveFrom: { type: string, format: date }
+        effectiveTo: { type: string, format: date, nullable: true }
+        status: { type: string, enum: [active, inactive] }
+
 
 
