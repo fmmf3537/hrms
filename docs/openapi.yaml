@@ -2819,6 +2819,123 @@ paths:
       responses:
         '200':
           description: 成功
+  /salary/payrolls/runs:
+    post:
+      tags: [Salary]
+      summary: 发起算薪批次
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PayrollRun'
+    get:
+      tags: [Salary]
+      summary: 算薪批次列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/payrolls/runs/{id}:
+    get:
+      tags: [Salary]
+      summary: 算薪批次详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+  /salary/payrolls/runs/{id}/submit:
+    post:
+      tags: [Salary]
+      summary: HR 提交财务复核
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 提交成功
+  /salary/payrolls/runs/{id}/review:
+    post:
+      tags: [Salary]
+      summary: 财务复核（hr 兼任）
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 复核成功
+  /salary/payrolls/runs/{id}/reject:
+    post:
+      tags: [Salary]
+      summary: 复核拒绝
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 已退回草稿
+  /salary/payrolls/runs/{id}/approve:
+    post:
+      tags: [Salary]
+      summary: CEO 审批
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 审批成功
+  /salary/payrolls/runs/{id}/ai-summary:
+    post:
+      tags: [Salary]
+      summary: AI 算薪校验摘要
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 摘要成功
+  /salary/payrolls/runs/{id}/lock:
+    post:
+      tags: [Salary]
+      summary: 锁定算薪批次
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 锁定成功
+  /salary/payrolls/payslips:
+    get:
+      tags: [Salary]
+      summary: 工资单列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /salary/payrolls/payslips/{id}:
+    get:
+      tags: [Salary]
+      summary: 工资单详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payslip'
+  /salary/payrolls/payslips/{id}/recalculate:
+    post:
+      tags: [Salary]
+      summary: 手动重算工资单
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 重算成功
 
 components:
   securitySchemes:
@@ -3872,6 +3989,37 @@ components:
         taxableIncome: { type: number }
         taxAmount: { type: number }
         taxType: { type: string, enum: [labor_income] }
+
+    PayrollRun:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        period: { type: string, example: '2026-09' }
+        status: { type: string, enum: [draft, submitted, reviewed, approved, locked, cancelled] }
+        totalGross: { type: number }
+        totalNet: { type: number }
+        anomalyCount: { type: integer }
+        locked: { type: boolean }
+
+    Payslip:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        runId: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        period: { type: string }
+        grossAmount: { type: number }
+        netAmount: { type: number }
+        status: { type: string, enum: [calculated, approved, locked] }
+
+    PayslipItem:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        payslipId: { type: string, format: uuid }
+        itemType: { type: string }
+        itemName: { type: string }
+        amount: { type: number }
 
 
 

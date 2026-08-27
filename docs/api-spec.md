@@ -919,12 +919,34 @@
 
 **0 新表**；计算结果不持久化（快照留 C5 payslips）。`salary:tax:annual-settlement` 权限预留，**不实现实际申报**（C5）。5 角色 RBAC，无 finance。
 
+### 3.28 Salary Payrolls API（M4-C4）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/salary/payrolls/runs` | 是 | salary:payroll-run:write | 发起算薪批次 |
+| GET | `/salary/payrolls/runs` | 是 | salary:payroll-run:read | 批次列表 |
+| GET | `/salary/payrolls/runs/:id` | 是 | salary:payroll-run:read | 批次详情（含 payslips） |
+| POST | `/salary/payrolls/runs/:id/submit` | 是 | salary:payroll-run:write | HR 提交复核 |
+| POST | `/salary/payrolls/runs/:id/review` | 是 | salary:payroll-run:approve | 财务复核（hr 兼任） |
+| POST | `/salary/payrolls/runs/:id/reject` | 是 | salary:payroll-run:approve | 复核拒绝 |
+| POST | `/salary/payrolls/runs/:id/approve` | 是 | salary:payroll-run:approve | CEO 审批 |
+| POST | `/salary/payrolls/runs/:id/ai-summary` | 是 | salary:payroll-run:write | AI 算薪校验摘要 |
+| POST | `/salary/payrolls/runs/:id/lock` | 是 | salary:payroll-run:approve | 锁定 |
+| GET | `/salary/payrolls/payslips` | 是 | salary:payslip:read | 工资单列表 |
+| GET | `/salary/payrolls/payslips/:id` | 是 | salary:payslip:read | 工资单详情 |
+| POST | `/salary/payrolls/payslips/:id/recalculate` | 是 | salary:payslip:write | 手动重算 |
+
+**错误码**：73401-73410（C4 子区）。
+
+3 张表 `payroll_runs` / `payslips` / `payslip_items`。AI 复用 M0.5-5 `aiSummarizeService`。工资条 PDF / 银企直连 / 个税申报留 C5。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
 |---|---|---|---|
 | V1.0 | 2026-08-25 | 初稿，覆盖 M0 + M0.5 | WorkBuddy AI |
 | V1.2-C3 | 2026-08-27 | 追加 §3.27 Salary Tax API（M4-C3 个税引擎 6 端点） | Cursor |
+| V1.2-C4 | 2026-08-27 | 追加 §3.28 Salary Payrolls API（M4-C4 算薪 12 端点） | Cursor |
 
 ---
 

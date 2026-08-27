@@ -301,6 +301,21 @@
 | 73209 | 400 | TAX_ANNUAL_NOT_IN_PERIOD | 年度汇算不在 3-6 月 | 提示时间 |
 | 73210 | 400 | TAX_CALCULATION_FAILED | 计算异常（税率表缺档） | 提示配置 |
 
+### 8.4 M4-C4 算薪引擎 + 流程（73401-73410）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 73401 | 400 | PAYROLL_RUN_NOT_FOUND | runId 不存在 | 提示 ID 错误 |
+| 73402 | 400 | PAYROLL_RUN_ALREADY_EXISTS | 同 period 已有非 cancelled run | 提示已存在 |
+| 73403 | 400 | PAYROLL_RUN_STATUS_INVALID | 状态机非法流转 | 提示当前状态 |
+| 73404 | 400 | PAYROLL_RUN_PERIOD_INVALID | period 格式错 | 提示格式 |
+| 73405 | 400 | PAYROLL_RUN_HAS_ANOMALY | 异常未解决禁止审批 | 提示解决异常 |
+| 73406 | 400 | PAYROLL_RUN_LOCKED | 锁定后不可改 | 提示已锁定 |
+| 73407 | 400 | PAYSLIP_NOT_FOUND | payslipId 不存在 | 提示 ID 错误 |
+| 73408 | 400 | PAYSLIP_CALCULATION_FAILED | 算薪异常（方案/保险/绩效缺失） | 提示补全 |
+| 73409 | 400 | PAYSLIP_RECALCULATE_LIMIT_EXCEEDED | 重算次数 > 限制 | 提示限制 |
+| 73410 | 400 | PAYSLIP_AI_SUMMARY_FAILED | AI 摘要失败 | 提示重试 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

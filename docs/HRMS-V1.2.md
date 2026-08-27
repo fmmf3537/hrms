@@ -918,7 +918,7 @@ performance_coefficients
 | C1 | 薪级薪档配置 + 员工薪酬方案 **已实现** | 3 | 2d |
 | C2 | 社保公积金方案（西安/北京/四川三地） **已实现** | 3 | 2d |
 | C3 | 个税引擎（工资薪金累计预扣 + 年终奖 + 劳务报酬） **已实现** | 4 | 3d |
-| C4 | 薪酬核算主流程（应发-应扣-实发 + **AI 校验摘要**） | 5 | 4.5d |
+| C4 | 薪酬核算主流程（应发-应扣-实发 + **AI 校验摘要**） **已实现** | 5 | 4.5d |
 | C5 | 劳务费结算通道（独立） | 3 | 2d |
 | C6 | 工资条生成 + 银行代发文件 + **ESS 员工自助最小集（工资条 + 调休/假期查询 tab）** | 4 | 3d |
 | C7 | 薪酬审批流（HR→财务→总经理，走 M0.5 基础设施） | 3 | 2d |
@@ -1194,6 +1194,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M4.0.1** | **2026-08-27** | **feat(salary): M4-C1 薪级薪档配置 + 员工薪酬方案（Cursor 交付，M4 启动）<br>**范围**：salary_grades / salary_grade_levels / employee_salary_plans 3 张表 + 7 端点 + 4 权限点 + 10 错误码（73001-73010）+ 5 项 salary.* configs<br>**强约束**：不写 employee_salary_history（留 C8）；不实现 C2-C8；不创建 payslips / social_insurance / tax_records / service_fees；D1-D6 14 个 performance service 0 行改动；5 角色 RBAC 无 finance | **Cursor + WorkBuddy** |
 | **M4.0.2** | **2026-08-27** | **feat(salary): M4-C2 社保公积金方案（Cursor 交付）<br>**范围**：social_insurance_schemes / housing_fund_schemes / employee_insurance_registrations 3 张表 + 9 端点 + 4 权限点 + 10 错误码（73101-73110）+ 6 项 salary.insurance.* / housing_fund.* configs<br>**强约束**：不实现实际算扣（留 C3）；不写 employee_salary_history；不创建 payslips / tax_records / service_fees；D1-D6 + C1 共 17 service 0 行改动；5 角色 RBAC 无 finance | **Cursor + WorkBuddy** |
 | **M4.0.3** | **2026-08-27** | **feat(salary): M4-C3 个税引擎（Cursor 交付）<br>**范围**：0 新表 + 工资薪金累计预扣简化版 / 年终奖按月换算 / 劳务报酬 3 级超额累进 + 6 端点（`/api/salary/tax/*`）+ 3 权限点 + 10 错误码（73201-73210）+ 10 项 salary.tax.* configs；历史复用 audit_logs<br>**强约束**：不创建 payslips / tax_records；不实现算薪引擎 / 算薪审批 / 银企直连 / 个税实际申报；不写 employee_salary_history；D1-D6 + C1 + C2 共 20 service 0 行改动；5 角色 RBAC 无 finance | **Cursor + WorkBuddy** |
+| **M4.0.4** | **2026-08-27** | **feat(salary): M4-C4 算薪引擎 + 算薪流程 + AI 算薪校验摘要（Cursor 交付）<br>**范围**：payroll_runs / payslips / payslip_items 3 张表 + 12 端点 + 5 权限点 + 10 错误码（73401-73410）+ 6 项 salary.payroll.* configs + 3 级审批（HR→财务复核 hr 兼任→CEO）+ 复用 M0.5-5 aiSummarizeService<br>**强约束**：不实现工资条 PDF/银企直连/个税申报（C5）；不核算销售提成（C6）；不写 employee_salary_history；D1-D6 + C1+C2+C3 共 23 service 0 行改动；5 角色无 finance | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

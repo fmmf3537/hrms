@@ -50,6 +50,12 @@ model User {
   housingFundsCreated      HousingFundScheme[]          @relation("HousingFundCreator")
   insuranceRegsCreated     EmployeeInsuranceRegistration[] @relation("InsuranceRegCreator")
 
+  // M4-C4 算薪批次反向关联
+  payrollRunsCreated       PayrollRun[]                 @relation("PayrollRunCreator")
+  payrollRunsSubmitted     PayrollRun[]                 @relation("PayrollRunSubmitter")
+  payrollRunsReviewed      PayrollRun[]                 @relation("PayrollRunReviewer")
+  payrollRunsApproved      PayrollRun[]                 @relation("PayrollRunApprover")
+
   @@map("users")
 }
 
@@ -203,6 +209,7 @@ model Employee {
   performancePips    PerformancePip[]
   salaryPlans        EmployeeSalaryPlan[]
   insuranceRegistrations EmployeeInsuranceRegistration[]
+  payslips               Payslip[]
 
   @@index([companyId, departmentId])
   @@index([status])
@@ -1733,4 +1740,116 @@ model EmployeeInsuranceRegistration {
   @@index([city, status])
   @@index([status, effectiveFrom, effectiveTo])
   @@map("employee_insurance_registrations")
+}
+
+// ==================== M4-C4 算薪批次 + 工资单 ====================
+
+enum PayrollRunStatus {
+  draft
+  submitted
+  reviewed
+  approved
+  locked
+  cancelled
+}
+
+enum PayslipStatus {
+  calculated
+  approved
+  locked
+}
+
+enum PayslipItemType {
+  earning_base
+  earning_performance
+  earning_overtime
+  earning_allowance
+  earning_commission
+  earning_bonus
+  deduction_social
+  deduction_housing
+  deduction_tax
+  deduction_absence
+}
+
+model PayrollRun {
+  id           String           @id @default(uuid()) @db.Uuid
+  period       String           @db.VarChar(7)
+  status       PayrollRunStatus @default(draft)
+  totalGross   Decimal          @map("total_gross") @db.Decimal(18, 2)
+  totalNet     Decimal          @map("total_net") @db.Decimal(18, 2)
+  anomalyCount Int              @default(0) @map("anomaly_count")
+  remark       String?          @db.Text
+
+  createdById String   @map("created_by_id") @db.Uuid
+  createdBy   User     @relation("PayrollRunCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  submittedAt   DateTime? @map("submitted_at") @db.Timestamptz(6)
+  submittedById String?   @map("submitted_by_id") @db.Uuid
+  submittedBy   User?     @relation("PayrollRunSubmitter", fields: [submittedById], references: [id], onDelete: SetNull)
+  reviewedAt    DateTime? @map("reviewed_at") @db.Timestamptz(6)
+  reviewedById  String?   @map("reviewed_by_id") @db.Uuid
+  reviewedBy    User?     @relation("PayrollRunReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  approvedAt    DateTime? @map("approved_at") @db.Timestamptz(6)
+  approvedById  String?   @map("approved_by_id") @db.Uuid
+  approvedBy    User?     @relation("PayrollRunApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  locked        Boolean   @default(false)
+  lockedAt      DateTime? @map("locked_at") @db.Timestamptz(6)
+
+  payslips Payslip[]
+
+  @@unique([period])
+  @@index([status, period])
+  @@index([period, status])
+  @@map("payroll_runs")
+}
+
+model Payslip {
+  id                    String        @id @default(uuid()) @db.Uuid
+  runId                 String        @map("run_id") @db.Uuid
+  run                   PayrollRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  employeeId            String        @map("employee_id") @db.Uuid
+  employee              Employee      @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  period                String        @db.VarChar(7)
+  baseAmount            Decimal       @map("base_amount") @db.Decimal(12, 2)
+  performanceAmount     Decimal       @map("performance_amount") @db.Decimal(12, 2)
+  overtimeAmount        Decimal       @map("overtime_amount") @db.Decimal(12, 2)
+  allowanceAmount       Decimal       @map("allowance_amount") @db.Decimal(12, 2)
+  salesCommissionAmount Decimal       @default(0) @map("sales_commission_amount") @db.Decimal(12, 2)
+  yearEndBonusAmount    Decimal       @default(0) @map("year_end_bonus_amount") @db.Decimal(12, 2)
+  grossAmount           Decimal       @map("gross_amount") @db.Decimal(12, 2)
+  socialInsuranceAmount Decimal       @map("social_insurance_amount") @db.Decimal(12, 2)
+  housingFundAmount     Decimal       @map("housing_fund_amount") @db.Decimal(12, 2)
+  taxAmount             Decimal       @map("tax_amount") @db.Decimal(12, 2)
+  absenceAmount         Decimal       @map("absence_amount") @db.Decimal(12, 2)
+  deductionAmount       Decimal       @map("deduction_amount") @db.Decimal(12, 2)
+  netAmount             Decimal       @map("net_amount") @db.Decimal(12, 2)
+  status                PayslipStatus @default(calculated)
+  calculatedAt          DateTime      @default(now()) @map("calculated_at") @db.Timestamptz(6)
+  recalculateCount      Int           @default(0) @map("recalculate_count")
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  items PayslipItem[]
+
+  @@unique([runId, employeeId])
+  @@index([employeeId, period])
+  @@index([period, status])
+  @@map("payslips")
+}
+
+model PayslipItem {
+  id          String          @id @default(uuid()) @db.Uuid
+  payslipId   String          @map("payslip_id") @db.Uuid
+  payslip     Payslip         @relation(fields: [payslipId], references: [id], onDelete: Cascade)
+  itemType    PayslipItemType @map("item_type")
+  itemName    String          @map("item_name") @db.VarChar(100)
+  amount      Decimal         @db.Decimal(12, 2)
+  description String?         @db.Text
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([payslipId, itemType])
+  @@map("payslip_items")
 }

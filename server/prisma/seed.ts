@@ -1037,6 +1037,46 @@ const DEFAULT_CONFIGS: Array<{
     value: 200,
     remark: 'C3 批量个税计算上限',
   },
+  {
+    category: 'salary',
+    key: 'payroll.trigger_day',
+    value: 5,
+    remark: 'C4 每月 5 日自动触发（BullMQ 留独立任务）',
+  },
+  {
+    category: 'salary',
+    key: 'payroll.approval_flow',
+    value: {
+      hr: 'payroll:hr_submit',
+      finance: 'payroll:finance_review',
+      ceo: 'payroll:ceo_approve',
+    },
+    remark: 'C4 3 级审批 flowKey',
+  },
+  {
+    category: 'salary',
+    key: 'payroll.lock_after_approve',
+    value: true,
+    remark: 'C4 审批通过后自动锁定',
+  },
+  {
+    category: 'salary',
+    key: 'payroll.anomaly_threshold',
+    value: { absolute_diff: 1000, percentage_diff: 0.1 },
+    remark: 'C4 异常检测：绝对差 1000 或 比例 10%',
+  },
+  {
+    category: 'salary',
+    key: 'payroll.recalculate_limit',
+    value: 3,
+    remark: 'C4 每月最多重算 3 次',
+  },
+  {
+    category: 'salary',
+    key: 'payroll.ai_summary_template_key',
+    value: 'payroll_ai_summary',
+    remark: 'C4 AI 摘要模板 key（复用 M0.5-5）',
+  },
 ];
 
 async function main() {
@@ -1279,6 +1319,35 @@ async function main() {
     });
   }
   console.log('   ✓ performance 5 approval flows (self/manager/calibrate/hr/ceo)');
+
+  const payrollFlowDefs = [
+    { key: 'hr_submit', name: '算薪 HR 提交', approver: 'hr' },
+    { key: 'finance_review', name: '算薪财务复核（hr 兼任）', approver: 'hr' },
+    { key: 'ceo_approve', name: '算薪 CEO 审批', approver: 'executive' },
+  ];
+  for (const def of payrollFlowDefs) {
+    // eslint-disable-next-line no-await-in-loop
+    await prisma.approvalFlow.upsert({
+      where: { category_key_version: { category: 'payroll', key: def.key, version: 1 } },
+      update: {},
+      create: {
+        category: 'payroll',
+        key: def.key,
+        name: def.name,
+        version: 1,
+        enabled: true,
+        description: `算薪审批：${def.name}`,
+        nodes: [{
+          id: 'step1',
+          type: 'sequential',
+          approverType: 'role',
+          approverValue: def.approver,
+          condition: null,
+        }],
+      },
+    });
+  }
+  console.log('   ✓ payroll 3 approval flows (hr_submit/finance_review/ceo_approve)');
 
   console.log('==> Seeding default notification templates (M0.5-2)...');
 
@@ -2974,6 +3043,81 @@ async function main() {
     console.log('   ✓ 15 demo social schemes + 3 housing funds + 3 registrations');
   } else {
     console.log('   ✓ C2 insurance demo already exists (skip)');
+  }
+
+  console.log('==> Seeding payroll runs/payslips (M4-C4)...');
+  const existingC4 = await prisma.payrollRun.findFirst();
+  if (!existingC4 && sampleEmployees.length >= 2) {
+    const [empA, empB] = sampleEmployees;
+    const draftRun = await prisma.payrollRun.create({
+      data: {
+        period: '2026-07',
+        status: 'draft',
+        totalGross: 20000,
+        totalNet: 17800,
+        anomalyCount: 0,
+        remark: 'C4 demo draft',
+        createdById: admin.id,
+      },
+    });
+    const approvedRun = await prisma.payrollRun.create({
+      data: {
+        period: '2026-08',
+        status: 'approved',
+        totalGross: 20000,
+        totalNet: 17800,
+        anomalyCount: 0,
+        remark: 'C4 demo approved',
+        createdById: admin.id,
+        approvedById: admin.id,
+        approvedAt: new Date(2026, 7, 20),
+      },
+    });
+    const slipSeeds = [
+      { run: draftRun, emp: empA, period: '2026-07' },
+      { run: draftRun, emp: empB, period: '2026-07' },
+      { run: approvedRun, emp: empA, period: '2026-08' },
+      { run: approvedRun, emp: empB, period: '2026-08' },
+    ];
+    for (const s of slipSeeds) {
+      // eslint-disable-next-line no-await-in-loop
+      const slip = await prisma.payslip.create({
+        data: {
+          runId: s.run.id,
+          employeeId: s.emp.id,
+          period: s.period,
+          baseAmount: 10000,
+          performanceAmount: 0,
+          overtimeAmount: 0,
+          allowanceAmount: 0,
+          grossAmount: 10000,
+          socialInsuranceAmount: 800,
+          housingFundAmount: 300,
+          taxAmount: 0,
+          absenceAmount: 0,
+          deductionAmount: 1100,
+          netAmount: 8900,
+          status: s.run.status === 'approved' ? 'approved' : 'calculated',
+        },
+      });
+      // eslint-disable-next-line no-await-in-loop
+      await prisma.payslipItem.createMany({
+        data: [
+          {
+            payslipId: slip.id, itemType: 'earning_base', itemName: '基本工资', amount: 10000,
+          },
+          {
+            payslipId: slip.id, itemType: 'deduction_social', itemName: '社保个人', amount: -800,
+          },
+          {
+            payslipId: slip.id, itemType: 'deduction_housing', itemName: '公积金个人', amount: -300,
+          },
+        ],
+      });
+    }
+    console.log('   ✓ 2 demo payroll runs + 4 payslips + items');
+  } else {
+    console.log('   ✓ C4 payroll demo already exists (skip)');
   }
 
   console.log('==> Done.');

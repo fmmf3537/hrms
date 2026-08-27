@@ -12,6 +12,9 @@ import { asyncHandler } from '../middleware/errorHandler';
 import { validate } from '../middleware/validate';
 import * as insuranceRegService from '../services/employee_insurance.service';
 import * as housingFundService from '../services/housing_fund_scheme.service';
+import * as payrollAiService from '../services/payroll_ai_summary.service';
+import * as payrollRunService from '../services/payroll_run.service';
+import * as payslipService from '../services/payslip.service';
 import * as gradeService from '../services/salary_grade.service';
 import * as levelService from '../services/salary_grade_level.service';
 import * as planService from '../services/salary_plan.service';
@@ -550,9 +553,186 @@ taxRouter.get(
   }),
 );
 
+const payrollRunCreateSchema = z.object({
+  period: z.string().min(1),
+  deptIds: z.array(z.string().uuid()).optional(),
+  remark: z.string().max(2000).optional(),
+});
+
+const payrollRunListSchema = z.object({
+  period: z.string().optional(),
+  status: z.enum(['draft', 'submitted', 'reviewed', 'approved', 'locked', 'cancelled']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const payrollRejectSchema = z.object({
+  reason: z.string().min(1).max(2000),
+});
+
+const payrollReviewSchema = z.object({
+  comment: z.string().max(2000).optional(),
+});
+
+const payslipListSchema = z.object({
+  runId: z.string().uuid().optional(),
+  employeeId: z.string().uuid().optional(),
+  period: z.string().optional(),
+  status: z.enum(['calculated', 'approved', 'locked']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const payrollsRouter: RouterType = Router();
+payrollsRouter.post(
+  '/runs',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_WRITE),
+  validate(payrollRunCreateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.createPayrollRun(
+      actorId,
+      req.body as payrollRunService.CreatePayrollRunInput,
+    );
+    res.status(201).json({ success: true, data });
+  }),
+);
+payrollsRouter.get(
+  '/runs',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_READ),
+  validate(payrollRunListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.listPayrollRuns(
+      actorId,
+      req.query as unknown as payrollRunService.ListPayrollRunFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.get(
+  '/runs/:id',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_READ),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.getPayrollRun(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/submit',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_WRITE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.submitPayrollRun(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/review',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_APPROVE),
+  validate(payrollReviewSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.reviewPayrollRun(
+      actorId,
+      req.params.id,
+      req.body as { comment?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/reject',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_APPROVE),
+  validate(payrollRejectSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.rejectPayrollRun(
+      actorId,
+      req.params.id,
+      (req.body as { reason: string }).reason,
+    );
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/approve',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_APPROVE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.approvePayrollRun(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/ai-summary',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_WRITE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollAiService.requestAiSummary(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/lock',
+  requirePermission(PERMISSIONS.SALARY_PAYROLL_RUN_APPROVE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payrollRunService.lockPayrollRun(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.get(
+  '/payslips',
+  requirePermission(PERMISSIONS.SALARY_PAYSLIP_READ),
+  validate(payslipListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payslipService.listPayslips(
+      actorId,
+      req.query as unknown as payslipService.ListPayslipFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.get(
+  '/payslips/:id',
+  requirePermission(PERMISSIONS.SALARY_PAYSLIP_READ),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payslipService.getPayslip(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/payslips/:id/recalculate',
+  requirePermission(PERMISSIONS.SALARY_PAYSLIP_WRITE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payslipService.recalculatePayslip(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+
 router.use('/insurances/social', insuranceRouter);
 router.use('/insurances/housing-fund', housingFundRouter);
 router.use('/insurances/employees', employeeInsuranceRouter);
 router.use('/tax', taxRouter);
+router.use('/payrolls', payrollsRouter);
 
 export default router;

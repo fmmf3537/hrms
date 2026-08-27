@@ -967,12 +967,60 @@ flowchart TD
     L -.-> M[C5 payslips 持久化快照]
 ```
 
+### 4.4 M4-C4 算薪批次 + 工资单 ER + 3 级审批
+
+```mermaid
+erDiagram
+    payroll_runs ||--o{ payslips : contains
+    payslips ||--o{ payslip_items : has
+    employees ||--o{ payslips : receives
+    payroll_runs {
+        uuid id
+        varchar period
+        enum status
+        decimal total_gross
+        decimal total_net
+        int anomaly_count
+        boolean locked
+    }
+    payslips {
+        uuid id
+        uuid run_id
+        uuid employee_id
+        varchar period
+        decimal gross_amount
+        decimal net_amount
+        enum status
+    }
+    payslip_items {
+        uuid id
+        uuid payslip_id
+        enum item_type
+        decimal amount
+    }
+```
+
+```mermaid
+flowchart TD
+    A[HR 发起算薪 createPayrollRun] --> B[draft 写 payslips]
+    B --> C[submit HR 提交]
+    C --> D[submitted 财务复核]
+    D -->|通过| E[reviewed]
+    D -->|拒绝| B
+    E --> F[CEO approve]
+    F --> G[approved]
+    G --> H[lock 锁定]
+    B --> I[AI summarize 对比上月]
+    I -.-> J[C5 工资条 PDF]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
 |---|---|---|---|
 | V1.0 | 2026-08-25 | 初稿，7 业务流程 + 1 架构图 + 2 ER 图 | WorkBuddy AI |
 | V1.2-C3 | 2026-08-27 | 追加 §4.3 M4-C3 个税计算流程图（0 新表，无 ER） | Cursor |
+| V1.2-C4 | 2026-08-27 | 追加 §4.4 M4-C4 payroll_runs/payslips ER + 3 级审批流 | Cursor |
 
 ---
 
