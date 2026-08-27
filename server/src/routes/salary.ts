@@ -11,6 +11,9 @@ import {
 import { asyncHandler } from '../middleware/errorHandler';
 import { validate } from '../middleware/validate';
 import * as bankingExportService from '../services/banking_export.service';
+import * as commissionReportService from '../services/commission_report.service';
+import * as commissionSettlementService from '../services/commission_settlement.service';
+import * as commissionSummaryService from '../services/commission_summary.service';
 import * as insuranceRegService from '../services/employee_insurance.service';
 import * as housingFundService from '../services/housing_fund_scheme.service';
 import * as payrollAiService from '../services/payroll_ai_summary.service';
@@ -850,11 +853,165 @@ c5PayslipRouter.post(
   }),
 );
 
+const commissionSummaryQuery = z.object({
+  groupBy: z.enum(['employee', 'department', 'product', 'report']).optional(),
+  period: z.string().optional(),
+  quarter: z.string().optional(),
+});
+
+const commissionPeriodQuery = z.object({
+  period: z.string().optional(),
+  quarter: z.string().optional(),
+});
+
+const settlementCreateSchema = z.object({
+  year: z.number().int(),
+  quarter: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+  initialStatus: z.enum(['draft', 'pending_confirm']).optional(),
+});
+
+const settlementListSchema = z.object({
+  year: z.coerce.number().int().optional(),
+  status: z.enum(['draft', 'pending_confirm', 'confirmed', 'cancelled']).optional(),
+  periodStart: z.string().optional(),
+  periodEnd: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const settlementConfirmSchema = z.object({
+  remark: z.string().max(2000).optional(),
+});
+
+const settlementCancelSchema = z.object({
+  reason: z.string().min(1).max(2000),
+});
+
+const commissionRouter: RouterType = Router();
+commissionRouter.get(
+  '/summary',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_READ),
+  validate(commissionSummaryQuery, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const q = req.query as { groupBy?: string; period?: string; quarter?: string };
+    const data = q.groupBy === 'report'
+      ? await commissionReportService.getReport(actorId, {
+        groupBy: 'overall',
+        period: q.period,
+        quarter: q.quarter,
+      })
+      : await commissionSummaryService.getSummary(actorId, q);
+    res.json({ success: true, data });
+  }),
+);
+commissionRouter.get(
+  '/employees/:employeeId',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_READ),
+  validate(commissionPeriodQuery, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await commissionSummaryService.getEmployeeSummary(
+      actorId,
+      req.params.employeeId,
+      req.query as { period?: string; quarter?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+commissionRouter.get(
+  '/departments/:departmentId',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_READ),
+  validate(commissionPeriodQuery, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await commissionSummaryService.getDepartmentSummary(
+      actorId,
+      req.params.departmentId,
+      req.query as { period?: string; quarter?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+commissionRouter.post(
+  '/settlements',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_SETTLE),
+  validate(settlementCreateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await commissionSettlementService.createSettlement(
+      actorId,
+      req.body as commissionSettlementService.CreateSettlementInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+commissionRouter.get(
+  '/settlements',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_READ),
+  validate(settlementListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await commissionSettlementService.listSettlements(
+      actorId,
+      req.query as unknown as commissionSettlementService.ListSettlementFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+commissionRouter.get(
+  '/settlements/:id',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_READ),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await commissionSettlementService.getSettlement(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+commissionRouter.post(
+  '/settlements/:id/confirm',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_CONFIRM),
+  validate(settlementConfirmSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await commissionSettlementService.confirmSettlement(
+      actorId,
+      req.params.id,
+      req.body as { remark?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+commissionRouter.post(
+  '/settlements/:id/cancel',
+  requirePermission(PERMISSIONS.SALARY_COMMISSION_CANCEL),
+  validate(settlementCancelSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await commissionSettlementService.cancelSettlement(
+      actorId,
+      req.params.id,
+      req.body as { reason: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+
 router.use('/insurances/social', insuranceRouter);
 router.use('/insurances/housing-fund', housingFundRouter);
 router.use('/insurances/employees', employeeInsuranceRouter);
 router.use('/tax', taxRouter);
 router.use('/payrolls', payrollsRouter);
 router.use('/payslips', c5PayslipRouter);
+router.use('/commissions', commissionRouter);
 
 export default router;

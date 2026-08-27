@@ -1026,6 +1026,21 @@ flowchart LR
     A --> G[report-export excel/pdf mock]
 ```
 
+### 4.6 M4-C6 销售提成季度结算（与 D5 联动）
+
+```mermaid
+flowchart TD
+    A[D5 paid commissions 只读] --> B[4 维度汇总 employee/dept/product/report]
+    A --> C[createSettlement 按财年季度汇总]
+    C --> D{status}
+    D -->|pending_confirm| E[hr 兼任 confirm]
+    D -->|draft / pending_confirm| F[cancel]
+    E --> G[confirmed 终态]
+    F --> H[cancelled 终态]
+    G --> I[mock 不写 payslip_items / 不联动 C4]
+    B --> J[getReport mockMode true]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -1034,6 +1049,7 @@ flowchart LR
 | V1.2-C3 | 2026-08-27 | 追加 §4.3 M4-C3 个税计算流程图（0 新表，无 ER） | Cursor |
 | V1.2-C4 | 2026-08-27 | 追加 §4.4 M4-C4 payroll_runs/payslips ER + 3 级审批流 | Cursor |
 | V1.2-C5 | 2026-08-27 | 追加 §4.5 M4-C5 工资条/银企/个税/报表流程图（0 新表） | Cursor |
+| V1.2-C6 | 2026-08-27 | 追加 §4.6 M4-C6 销售提成季度结算流程图（1 新表） | Cursor |
 
 ---
 

@@ -919,7 +919,7 @@ performance_coefficients
 | C2 | 社保公积金方案（西安/北京/四川三地） **已实现** | 3 | 2d |
 | C3 | 个税引擎（工资薪金累计预扣 + 年终奖 + 劳务报酬） **已实现** | 4 | 3d |
 | C4 | 薪酬核算主流程（应发-应扣-实发 + **AI 校验摘要**） **已实现** | 5 | 4.5d |
-| C5 | 劳务费结算通道（独立） | 3 | 2d |
+| C5 | 劳务费结算通道（独立）**未实现（留二期）**；M4-C6 业务 commit 在本行标注「销售提成核算联动」（**未实现劳务费**） | 3 | 2d |
 | C6 | 工资条生成 + 银行代发文件 + **ESS 员工自助最小集（工资条 + 调休/假期查询 tab）** **已实现（M4-C5：工资条+银企 mock+个税申报 mock+报表，ESS 自助 tab 留前端）** | 4 | 3d |
 | C7 | 薪酬审批流（HR→财务→总经理，走 M0.5 基础设施） | 3 | 2d |
 | C8 | 薪酬数据加密 + 二次授权 | 3 | 2d |
@@ -1196,6 +1196,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M4.0.3** | **2026-08-27** | **feat(salary): M4-C3 个税引擎（Cursor 交付）<br>**范围**：0 新表 + 工资薪金累计预扣简化版 / 年终奖按月换算 / 劳务报酬 3 级超额累进 + 6 端点（`/api/salary/tax/*`）+ 3 权限点 + 10 错误码（73201-73210）+ 10 项 salary.tax.* configs；历史复用 audit_logs<br>**强约束**：不创建 payslips / tax_records；不实现算薪引擎 / 算薪审批 / 银企直连 / 个税实际申报；不写 employee_salary_history；D1-D6 + C1 + C2 共 20 service 0 行改动；5 角色 RBAC 无 finance | **Cursor + WorkBuddy** |
 | **M4.0.4** | **2026-08-27** | **feat(salary): M4-C4 算薪引擎 + 算薪流程 + AI 算薪校验摘要（Cursor 交付）<br>**范围**：payroll_runs / payslips / payslip_items 3 张表 + 12 端点 + 5 权限点 + 10 错误码（73401-73410）+ 6 项 salary.payroll.* configs + 3 级审批（HR→财务复核 hr 兼任→CEO）+ 复用 M0.5-5 aiSummarizeService<br>**强约束**：不实现工资条 PDF/银企直连/个税申报（C5）；不核算销售提成（C6）；不写 employee_salary_history；D1-D6 + C1+C2+C3 共 23 service 0 行改动；5 角色无 finance | **Cursor + WorkBuddy** |
 | **M4.0.5** | **2026-08-27** | **feat(salary): M4-C5 工资条 + 银企代发 + 个税申报 + 工资表导出（Cursor 交付）<br>**范围**：0 新表 + 7 端点 + 4 权限点 + 10 错误码（73501-73510）+ 6 项 salary.payslip/banking/report configs；复用 M0.5-2 notification.sendNotification；银企/个税/报表强制 mock<br>**强约束**：不接真实银行/税务局 API；不实现 UI；不写 employee_salary_history；D1-D6 + C1-C4 共 27 service 0 行改动；5 角色无 finance | **Cursor + WorkBuddy** |
+| **M4.0.6** | **2026-08-27** | **feat(salary): M4-C6 销售提成季度结算 + D5 联动（Cursor 交付）<br>**范围**：commission_settlements 1 张表 + 8 端点（`/api/salary/commissions/*`）+ 4 权限点 + 10 错误码（73601-73610）+ 6 项 salary.commission.* configs + 4 维度汇总 + 季度结算状态机 + 报表 mock<br>**强约束**：不联动 C4 算薪（salesCommissionAmount 继续默认 0）；不写 payslip_items；不改 D5 3 service；不写 employee_salary_history；D1-D6 + C1-C5 共 32 service 0 行改动；5 角色无 finance；V1.2 切片表 C5 劳务费仍未实现 | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

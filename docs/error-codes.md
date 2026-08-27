@@ -331,6 +331,21 @@
 | 73509 | 400 | EXPORT_FAILED | 工资表导出失败 / 格式非法 | 提示重试 |
 | 73510 | 400 | REPORT_PERIOD_INVALID | 报告 period 格式错 | 提示格式 |
 
+### 8.6 M4-C6 销售提成季度结算（73601-73610）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 73601 | 400 | COMMISSION_SUMMARY_FAILED | 4 维度汇总失败 / groupBy 非法 | 提示重试 |
+| 73602 | 404 | COMMISSION_SETTLEMENT_NOT_FOUND | settlementId 不存在 | 提示 ID 错误 |
+| 73603 | 400 | COMMISSION_SETTLEMENT_ALREADY_CONFIRMED | 已 confirmed 不能再次 confirm | 提示状态 |
+| 73604 | 400 | COMMISSION_SETTLEMENT_INVALID_STATUS | 状态机非法 | 提示状态 |
+| 73605 | 400 | COMMISSION_SETTLEMENT_QUARTER_INVALID | quarter 格式错（不是 1-4 或 YYYY-Qn） | 提示格式 |
+| 73606 | 400 | COMMISSION_SETTLEMENT_NO_COMMISSIONS | 季度内无 paid commissions | 提示无数据 |
+| 73607 | 400 | COMMISSION_SETTLEMENT_ALREADY_EXISTS | 同一 (year, quarter) 已存在结算单 | 提示存在 |
+| 73608 | 400 | COMMISSION_SETTLEMENT_CANCEL_FAILED | 已 confirmed 不能 cancel | 提示状态 |
+| 73609 | 400 | COMMISSION_SETTLEMENT_CONFIRM_WINDOW_EXPIRED | 确认窗口已过（默认 7 天） | 提示已过期 |
+| 73610 | 400 | COMMISSION_SETTLEMENT_D5_DATA_MISSING | D5 commissions 数据缺失 | 提示 D5 异常 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
@@ -425,6 +440,7 @@ axios.interceptors.response.use(
 | V1.0 | 2026-08-25 | 初稿，覆盖 M0 + M0.5 基础/公共错误码（0xxxx-6xxxx + 7xxxx 通用业务） | WorkBuddy AI |
 | M4-C1 | 2026-08-27 | 新增 73001-73010（薪级薪档 + 员工薪酬方案） | Cursor |
 | M4-C2 | 2026-08-27 | 新增 73101-73110（三地社保公积金方案 + 员工登记） | Cursor |
+| M4-C6 | 2026-08-27 | 新增 73601-73610（销售提成季度结算） | Cursor |
 
 ## 六、附录：错误码使用统计（M0 + M0.5 预估）
 

@@ -956,6 +956,23 @@
 
 **0 新表**（复用 C4 payslips）。不接真实银行/税务局 API。5 角色 RBAC，无 finance。
 
+### 3.30 Salary Commissions API（M4-C6 销售提成季度结算）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| GET | `/salary/commissions/summary` | 是 | salary:commission:read | 4 维度汇总（groupBy=employee\|department\|product\|report） |
+| GET | `/salary/commissions/employees/:employeeId` | 是 | salary:commission:read | 员工提成明细汇总 |
+| GET | `/salary/commissions/departments/:departmentId` | 是 | salary:commission:read | 部门提成汇总 |
+| POST | `/salary/commissions/settlements` | 是 | salary:commission:settle | 创建季度结算单 |
+| GET | `/salary/commissions/settlements` | 是 | salary:commission:read | 结算单列表 |
+| GET | `/salary/commissions/settlements/:id` | 是 | salary:commission:read | 结算单详情 |
+| POST | `/salary/commissions/settlements/:id/confirm` | 是 | salary:commission:confirm | 财务确认（hr 兼任，mock） |
+| POST | `/salary/commissions/settlements/:id/cancel` | 是 | salary:commission:cancel | 取消 draft / pending_confirm |
+
+**错误码**：73601-73610（C6 子区）。
+
+**1 新表** `commission_settlements`。只读 D5 commissions（status=paid），沿用 D5 公式，不重算。不联动 C4 算薪。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -964,6 +981,7 @@
 | V1.2-C3 | 2026-08-27 | 追加 §3.27 Salary Tax API（M4-C3 个税引擎 6 端点） | Cursor |
 | V1.2-C4 | 2026-08-27 | 追加 §3.28 Salary Payrolls API（M4-C4 算薪 12 端点） | Cursor |
 | V1.2-C5 | 2026-08-27 | 追加 §3.29 Salary Payslip/Banking/Tax-Declare/Report API（M4-C5 7 端点，0 新表） | Cursor |
+| V1.2-C6 | 2026-08-27 | 追加 §3.30 Salary Commissions API（M4-C6 8 端点，1 新表 commission_settlements） | Cursor |
 
 ---
 

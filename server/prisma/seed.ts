@@ -1113,6 +1113,42 @@ const DEFAULT_CONFIGS: Array<{
     value: ['excel', 'pdf'],
     remark: 'C5 工资表导出格式',
   },
+  {
+    category: 'salary',
+    key: 'commission.settlement.fiscal_quarter_start',
+    value: 1,
+    remark: 'C6 财年 Q1 起始月（1=自然年）',
+  },
+  {
+    category: 'salary',
+    key: 'commission.settlement.confirm_window_days',
+    value: 7,
+    remark: 'C6 结算单确认窗口天数',
+  },
+  {
+    category: 'salary',
+    key: 'commission.settlement.max_adjustment_ratio',
+    value: 0.5,
+    remark: 'C6 最大调整比例（C6 不实现调整 API）',
+  },
+  {
+    category: 'salary',
+    key: 'commission.summary.default_group_by',
+    value: 'employee',
+    remark: 'C6 默认汇总维度',
+  },
+  {
+    category: 'salary',
+    key: 'commission.report.summary_fields',
+    value: ['totalAmount', 'recordCount', 'employeeCount'],
+    remark: 'C6 报表默认汇总字段',
+  },
+  {
+    category: 'salary',
+    key: 'commission.settlement.mock_mode',
+    value: true,
+    remark: 'C6 强制 mock，不联动 C4 算薪',
+  },
 ];
 
 async function main() {
@@ -3154,6 +3190,48 @@ async function main() {
     console.log('   ✓ 2 demo payroll runs + 4 payslips + items');
   } else {
     console.log('   ✓ C4 payroll demo already exists (skip)');
+  }
+
+  console.log('==> Seeding C6 commission settlements...');
+  const c6Exists = await prisma.commissionSettlement.findFirst({
+    where: { year: 2026, quarter: 1 },
+  });
+  if (!c6Exists) {
+    await prisma.commissionSettlement.create({
+      data: {
+        year: 2026,
+        quarter: 1,
+        status: 'confirmed',
+        totalAmount: 5000,
+        recordCount: 1,
+        employeeCount: 1,
+        productCount: 1,
+        periodStart: new Date(Date.UTC(2026, 0, 1)),
+        periodEnd: new Date(Date.UTC(2026, 2, 31)),
+        confirmedBy: admin.id,
+        confirmedAt: new Date(),
+        createdBy: admin.id,
+        remark: 'C6 demo Q1 2026 confirmed',
+      },
+    });
+    await prisma.commissionSettlement.create({
+      data: {
+        year: 2026,
+        quarter: 2,
+        status: 'draft',
+        totalAmount: 0,
+        recordCount: 0,
+        employeeCount: 0,
+        productCount: 0,
+        periodStart: new Date(Date.UTC(2026, 3, 1)),
+        periodEnd: new Date(Date.UTC(2026, 5, 30)),
+        createdBy: admin.id,
+        remark: 'C6 demo Q2 2026 draft',
+      },
+    });
+    console.log('   ✓ 2 demo commission_settlements (Q1 confirmed + Q2 draft)');
+  } else {
+    console.log('   ✓ C6 commission settlement demo already exists (skip)');
   }
 
   console.log('==> Done.');

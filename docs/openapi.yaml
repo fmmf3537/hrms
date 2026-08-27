@@ -3040,6 +3040,168 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReportExportResult'
 
+  /salary/commissions/summary:
+    get:
+      tags: [Salary]
+      summary: 销售提成 4 维度汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: groupBy
+          in: query
+          schema: { type: string, enum: [employee, department, product, report] }
+        - name: period
+          in: query
+          schema: { type: string, example: '2026-03' }
+        - name: quarter
+          in: query
+          schema: { type: string, example: '2026-Q1' }
+      responses:
+        '200':
+          description: 汇总成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionSummaryResult'
+  /salary/commissions/employees/{employeeId}:
+    get:
+      tags: [Salary]
+      summary: 员工提成汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: employeeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: period
+          in: query
+          schema: { type: string }
+        - name: quarter
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionEmployeeSummary'
+  /salary/commissions/departments/{departmentId}:
+    get:
+      tags: [Salary]
+      summary: 部门提成汇总
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: departmentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: period
+          in: query
+          schema: { type: string }
+        - name: quarter
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionDepartmentSummary'
+  /salary/commissions/settlements:
+    post:
+      tags: [Salary]
+      summary: 创建季度结算单
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommissionSettlementInput'
+      responses:
+        '200':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionSettlement'
+    get:
+      tags: [Salary]
+      summary: 季度结算单列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: year
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, pending_confirm, confirmed, cancelled] }
+      responses:
+        '200':
+          description: 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCommissionSettlements'
+  /salary/commissions/settlements/{id}:
+    get:
+      tags: [Salary]
+      summary: 季度结算单详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionSettlement'
+  /salary/commissions/settlements/{id}/confirm:
+    post:
+      tags: [Salary]
+      summary: 财务确认季度结算单（hr 兼任，mock）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionSettlement'
+  /salary/commissions/settlements/{id}/cancel:
+    post:
+      tags: [Salary]
+      summary: 取消季度结算单
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelCommissionSettlementInput'
+      responses:
+        '200':
+          description: 取消成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommissionSettlement'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -4167,6 +4329,76 @@ components:
         payslipId: { type: string }
         emailStatus: { type: string }
         systemStatus: { type: string }
+
+    CommissionSummaryResult:
+      type: object
+      properties:
+        groupBy: { type: string, enum: [employee, department, product, report] }
+        period: { type: string }
+        quarter: { type: string }
+        totalAmount: { type: number }
+        items: { type: array, items: { type: object } }
+
+    CommissionEmployeeSummary:
+      type: object
+      properties:
+        employeeId: { type: string }
+        employeeName: { type: string }
+        departmentId: { type: string }
+        departmentName: { type: string }
+        totalAmount: { type: number }
+        recordCount: { type: integer }
+
+    CommissionDepartmentSummary:
+      type: object
+      properties:
+        departmentId: { type: string }
+        departmentName: { type: string }
+        employeeCount: { type: integer }
+        totalAmount: { type: number }
+        recordCount: { type: integer }
+
+    CreateCommissionSettlementInput:
+      type: object
+      required: [year, quarter]
+      properties:
+        year: { type: integer }
+        quarter: { type: integer, enum: [1, 2, 3, 4] }
+        initialStatus: { type: string, enum: [draft, pending_confirm] }
+
+    CommissionSettlement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        year: { type: integer }
+        quarter: { type: integer }
+        status: { type: string, enum: [draft, pending_confirm, confirmed, cancelled] }
+        totalAmount: { type: number }
+        recordCount: { type: integer }
+        employeeCount: { type: integer }
+        productCount: { type: integer }
+
+    PaginatedCommissionSettlements:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/CommissionSettlement' } }
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    CancelCommissionSettlementInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+
+    CommissionReport:
+      type: object
+      properties:
+        groupBy: { type: string }
+        totalAmount: { type: number }
+        mockMode: { type: boolean, enum: [true] }
+
 
 
 

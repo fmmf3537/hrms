@@ -56,6 +56,11 @@ model User {
   payrollRunsReviewed      PayrollRun[]                 @relation("PayrollRunReviewer")
   payrollRunsApproved      PayrollRun[]                 @relation("PayrollRunApprover")
 
+  // M4-C6 销售提成季度结算反向关联
+  commissionSettlementsCreated   CommissionSettlement[] @relation("CommissionSettlementCreator")
+  commissionSettlementsConfirmed CommissionSettlement[] @relation("CommissionSettlementConfirmer")
+  commissionSettlementsCancelled CommissionSettlement[] @relation("CommissionSettlementCanceller")
+
   @@map("users")
 }
 
@@ -1852,4 +1857,43 @@ model PayslipItem {
 
   @@index([payslipId, itemType])
   @@map("payslip_items")
+}
+
+// ==================== M4-C6 销售提成季度结算单 ====================
+enum CommissionSettlementStatus {
+  draft
+  pending_confirm
+  confirmed
+  cancelled
+}
+
+model CommissionSettlement {
+  id            String                      @id @default(uuid()) @db.Uuid
+  year          Int                         @db.SmallInt
+  quarter       Int                         @db.SmallInt // 1-4
+  status        CommissionSettlementStatus  @default(draft)
+  totalAmount   Decimal                     @map("total_amount") @db.Decimal(14, 2)
+  recordCount   Int                         @map("record_count")
+  employeeCount Int                         @map("employee_count")
+  productCount  Int                         @map("product_count")
+  periodStart   DateTime                    @map("period_start") @db.Date
+  periodEnd     DateTime                    @map("period_end") @db.Date
+  confirmedBy   String?                     @map("confirmed_by") @db.Uuid
+  confirmedByUser User?                     @relation("CommissionSettlementConfirmer", fields: [confirmedBy], references: [id], onDelete: SetNull)
+  confirmedAt   DateTime?                   @map("confirmed_at") @db.Timestamptz(6)
+  cancelledBy   String?                     @map("cancelled_by") @db.Uuid
+  cancelledByUser User?                     @relation("CommissionSettlementCanceller", fields: [cancelledBy], references: [id], onDelete: SetNull)
+  cancelledAt   DateTime?                   @map("cancelled_at") @db.Timestamptz(6)
+  cancelReason  String?                     @map("cancel_reason") @db.Text
+  remark        String?                     @db.Text
+  createdBy     String                      @map("created_by") @db.Uuid
+  createdByUser User                        @relation("CommissionSettlementCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  createdAt     DateTime                    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([year, quarter])
+  @@index([status, year, quarter])
+  @@index([year, quarter])
+  @@index([createdBy])
+  @@map("commission_settlements")
 }
