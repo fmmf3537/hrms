@@ -1014,6 +1014,18 @@ flowchart TD
     I -.-> J[C5 工资条 PDF]
 ```
 
+### 4.5 M4-C5 工资条 / 银企 / 个税申报 / 工资表（0 新表）
+
+```mermaid
+flowchart LR
+    A[approved/locked payslip] --> B[generatePayslip HTML+mock PDF]
+    B --> C[deliverPayslip]
+    C --> D[M0.5-2 sendNotification]
+    A --> E[banking-export icbc/ccb/cmb mock]
+    A --> F[tax-declare mock 台账]
+    A --> G[report-export excel/pdf mock]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -1021,6 +1033,7 @@ flowchart TD
 | V1.0 | 2026-08-25 | 初稿，7 业务流程 + 1 架构图 + 2 ER 图 | WorkBuddy AI |
 | V1.2-C3 | 2026-08-27 | 追加 §4.3 M4-C3 个税计算流程图（0 新表，无 ER） | Cursor |
 | V1.2-C4 | 2026-08-27 | 追加 §4.4 M4-C4 payroll_runs/payslips ER + 3 级审批流 | Cursor |
+| V1.2-C5 | 2026-08-27 | 追加 §4.5 M4-C5 工资条/银企/个税/报表流程图（0 新表） | Cursor |
 
 ---
 

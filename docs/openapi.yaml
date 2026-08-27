@@ -2936,6 +2936,109 @@ paths:
       responses:
         '200':
           description: 重算成功
+  /salary/payslips/{id}/payslip/generate:
+    post:
+      tags: [Salary]
+      summary: 生成工资条 HTML + mock PDF
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 生成成功
+  /salary/payslips/{id}/payslip/html:
+    get:
+      tags: [Salary]
+      summary: 读取 HTML 工资条
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 成功
+  /salary/payslips/{id}/payslip/pdf:
+    get:
+      tags: [Salary]
+      summary: 读取 mock PDF 工资条
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: PDF 二进制
+  /salary/payslips/{id}/deliver:
+    post:
+      tags: [Salary]
+      summary: 发放工资条（邮件 + 系统通知）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 发放成功
+  /salary/payrolls/runs/{id}/banking-export:
+    post:
+      tags: [Salary]
+      summary: 银企代发文件（mock）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 导出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BankingExportResult'
+  /salary/payrolls/runs/{id}/tax-declare:
+    post:
+      tags: [Salary]
+      summary: 个税申报台账（mock）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 申报成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaxDeclarationResult'
+  /salary/payrolls/runs/{id}/report-export:
+    post:
+      tags: [Salary]
+      summary: 工资表导出 Excel/PDF（mock）
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 导出成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportExportResult'
 
 components:
   securitySchemes:
@@ -4020,6 +4123,51 @@ components:
         itemType: { type: string }
         itemName: { type: string }
         amount: { type: number }
+
+    BankingExportResult:
+      type: object
+      properties:
+        runId: { type: string }
+        format: { type: string, enum: [icbc, ccb, cmb] }
+        filePath: { type: string }
+        recordCount: { type: integer }
+        totalAmount: { type: number }
+        mockMode: { type: boolean }
+
+    TaxDeclarationResult:
+      type: object
+      properties:
+        runId: { type: string }
+        period: { type: string }
+        totalTaxableIncome: { type: number }
+        totalTax: { type: number }
+        recordCount: { type: integer }
+        mockMode: { type: boolean }
+
+    ReportExportResult:
+      type: object
+      properties:
+        runId: { type: string }
+        format: { type: string, enum: [excel, pdf] }
+        filePath: { type: string }
+        totalGross: { type: number }
+        totalNet: { type: number }
+        mockMode: { type: boolean }
+
+    GeneratePayslipResult:
+      type: object
+      properties:
+        payslipId: { type: string }
+        html: { type: string }
+        fileName: { type: string }
+
+    DeliverPayslipResult:
+      type: object
+      properties:
+        payslipId: { type: string }
+        emailStatus: { type: string }
+        systemStatus: { type: string }
+
 
 
 

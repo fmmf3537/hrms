@@ -1077,6 +1077,42 @@ const DEFAULT_CONFIGS: Array<{
     value: 'payroll_ai_summary',
     remark: 'C4 AI 摘要模板 key（复用 M0.5-5）',
   },
+  {
+    category: 'salary',
+    key: 'payslip.template',
+    value: 'default',
+    remark: 'C5 工资条 HTML/PDF 模板名（实际模板留二期）',
+  },
+  {
+    category: 'salary',
+    key: 'payslip.email_subject',
+    value: '您的 {period} 工资条',
+    remark: 'C5 工资条邮件主题',
+  },
+  {
+    category: 'salary',
+    key: 'payslip.delivery_methods',
+    value: ['email', 'system'],
+    remark: 'C5 工资条发送方式',
+  },
+  {
+    category: 'salary',
+    key: 'banking.mock_mode',
+    value: true,
+    remark: 'C5 银企代发强制 mock，不接真实银行 API',
+  },
+  {
+    category: 'salary',
+    key: 'banking.formats',
+    value: ['icbc', 'ccb', 'cmb'],
+    remark: 'C5 银行代发格式：工行/建行/招行',
+  },
+  {
+    category: 'salary',
+    key: 'report.formats',
+    value: ['excel', 'pdf'],
+    remark: 'C5 工资表导出格式',
+  },
 ];
 
 async function main() {

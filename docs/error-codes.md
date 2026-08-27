@@ -316,6 +316,21 @@
 | 73409 | 400 | PAYSLIP_RECALCULATE_LIMIT_EXCEEDED | 重算次数 > 限制 | 提示限制 |
 | 73410 | 400 | PAYSLIP_AI_SUMMARY_FAILED | AI 摘要失败 | 提示重试 |
 
+### 8.5 M4-C5 工资条 + 银企 + 个税申报 + 报表（73501-73510）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 73501 | 400 | PAYSLIP_NOT_FOUND | payslipId 不存在 | 提示 ID 错误 |
+| 73502 | 400 | PAYSLIP_NOT_APPROVED | payslip.status 非 approved/locked | 提示需先审批 |
+| 73503 | 400 | PAYSLIP_GENERATION_FAILED | PDF / HTML 生成失败 | 提示重试 |
+| 73504 | 400 | BANKING_EXPORT_FAILED | 银行代发文件生成失败 | 提示重试 |
+| 73505 | 400 | BANKING_FORMAT_INVALID | 银行格式不在 icbc / ccb / cmb | 提示合法格式 |
+| 73506 | 400 | TAX_DECLARE_FAILED | 个税申报失败（mock 模式） | 提示重试 |
+| 73507 | 400 | TAX_PERIOD_INVALID | period 格式错 | 提示格式 |
+| 73508 | 400 | DELIVERY_FAILED | 邮件 / 系统通知发送失败 | 提示重试 |
+| 73509 | 400 | EXPORT_FAILED | 工资表导出失败 / 格式非法 | 提示重试 |
+| 73510 | 400 | REPORT_PERIOD_INVALID | 报告 period 格式错 | 提示格式 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |

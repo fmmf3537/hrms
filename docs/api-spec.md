@@ -940,6 +940,22 @@
 
 3 张表 `payroll_runs` / `payslips` / `payslip_items`。AI 复用 M0.5-5 `aiSummarizeService`。工资条 PDF / 银企直连 / 个税申报留 C5。5 角色 RBAC，无 finance。
 
+### 3.29 Salary Payslip / Banking / Tax-Declare / Report API（M4-C5）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/salary/payslips/:id/payslip/generate` | 是 | salary:payslip:generate | 生成 HTML + mock PDF |
+| GET | `/salary/payslips/:id/payslip/html` | 是 | salary:payslip:generate | 读 HTML 工资条 |
+| GET | `/salary/payslips/:id/payslip/pdf` | 是 | salary:payslip:generate | 读 mock PDF |
+| POST | `/salary/payslips/:id/deliver` | 是 | salary:payslip:generate | 邮件 + 系统通知（复用 M0.5-2） |
+| POST | `/salary/payrolls/runs/:id/banking-export` | 是 | salary:banking:export | 银企代发（icbc/ccb/cmb，**mock**） |
+| POST | `/salary/payrolls/runs/:id/tax-declare` | 是 | salary:tax:declare | 个税申报台账（**mock**） |
+| POST | `/salary/payrolls/runs/:id/report-export` | 是 | salary:report:export | 工资表 Excel/PDF（**mock**） |
+
+**错误码**：73501-73510（C5 子区）。
+
+**0 新表**（复用 C4 payslips）。不接真实银行/税务局 API。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -947,6 +963,7 @@
 | V1.0 | 2026-08-25 | 初稿，覆盖 M0 + M0.5 | WorkBuddy AI |
 | V1.2-C3 | 2026-08-27 | 追加 §3.27 Salary Tax API（M4-C3 个税引擎 6 端点） | Cursor |
 | V1.2-C4 | 2026-08-27 | 追加 §3.28 Salary Payrolls API（M4-C4 算薪 12 端点） | Cursor |
+| V1.2-C5 | 2026-08-27 | 追加 §3.29 Salary Payslip/Banking/Tax-Declare/Report API（M4-C5 7 端点，0 新表） | Cursor |
 
 ---
 

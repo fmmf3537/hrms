@@ -10,16 +10,21 @@ import {
 } from '../middleware/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { validate } from '../middleware/validate';
+import * as bankingExportService from '../services/banking_export.service';
 import * as insuranceRegService from '../services/employee_insurance.service';
 import * as housingFundService from '../services/housing_fund_scheme.service';
 import * as payrollAiService from '../services/payroll_ai_summary.service';
 import * as payrollRunService from '../services/payroll_run.service';
 import * as payslipService from '../services/payslip.service';
+import * as payslipDeliveryService from '../services/payslip_delivery.service';
+import * as payslipGeneratorService from '../services/payslip_generator.service';
+import * as reportExportService from '../services/report_export.service';
 import * as gradeService from '../services/salary_grade.service';
 import * as levelService from '../services/salary_grade_level.service';
 import * as planService from '../services/salary_plan.service';
 import * as socialSchemeService from '../services/social_insurance_scheme.service';
 import * as taxService from '../services/tax_calculation.service';
+import * as taxDeclarationService from '../services/tax_declaration.service';
 import * as laborTaxService from '../services/tax_labor_income.service';
 import * as bonusTaxService from '../services/tax_year_end_bonus.service';
 
@@ -585,6 +590,22 @@ const payslipListSchema = z.object({
     .default(20),
 });
 
+const bankingExportSchema = z.object({
+  format: z.enum(['icbc', 'ccb', 'cmb']),
+});
+
+const taxDeclareSchema = z.object({
+  period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+});
+
+const reportExportSchema = z.object({
+  format: z.enum(['excel', 'pdf']),
+});
+
+const payslipDeliverSchema = z.object({
+  methods: z.array(z.enum(['email', 'system'])).optional(),
+});
+
 const payrollsRouter: RouterType = Router();
 payrollsRouter.post(
   '/runs',
@@ -728,11 +749,112 @@ payrollsRouter.post(
     res.json({ success: true, data });
   }),
 );
+payrollsRouter.post(
+  '/runs/:id/banking-export',
+  requirePermission(PERMISSIONS.SALARY_BANKING_EXPORT),
+  validate(bankingExportSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await bankingExportService.exportBankingFile(
+      actorId,
+      req.params.id,
+      req.body as { format: 'icbc' | 'ccb' | 'cmb' },
+    );
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/tax-declare',
+  requirePermission(PERMISSIONS.SALARY_TAX_DECLARE),
+  validate(taxDeclareSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await taxDeclarationService.declareTax(
+      actorId,
+      req.params.id,
+      req.body as { period: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+payrollsRouter.post(
+  '/runs/:id/report-export',
+  requirePermission(PERMISSIONS.SALARY_REPORT_EXPORT),
+  validate(reportExportSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await reportExportService.exportReport(
+      actorId,
+      req.params.id,
+      req.body as { format: 'excel' | 'pdf' },
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+const c5PayslipRouter: RouterType = Router();
+c5PayslipRouter.post(
+  '/:id/payslip/generate',
+  requirePermission(PERMISSIONS.SALARY_PAYSLIP_GENERATE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payslipGeneratorService.generatePayslip(actorId, req.params.id);
+    res.json({
+      success: true,
+      data: {
+        ...data,
+        pdf: data.pdf.toString('base64'),
+      },
+    });
+  }),
+);
+c5PayslipRouter.get(
+  '/:id/payslip/html',
+  requirePermission(PERMISSIONS.SALARY_PAYSLIP_GENERATE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const html = await payslipGeneratorService.getPayslipHtml(actorId, req.params.id);
+    res.json({ success: true, data: { html } });
+  }),
+);
+c5PayslipRouter.get(
+  '/:id/payslip/pdf',
+  requirePermission(PERMISSIONS.SALARY_PAYSLIP_GENERATE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payslipGeneratorService.getPayslipPdf(actorId, req.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${data.fileName}"`);
+    res.send(data.pdf);
+  }),
+);
+c5PayslipRouter.post(
+  '/:id/deliver',
+  requirePermission(PERMISSIONS.SALARY_PAYSLIP_GENERATE),
+  validate(payslipDeliverSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await payslipDeliveryService.deliverPayslip(
+      actorId,
+      req.params.id,
+      req.body as { methods?: string[] },
+    );
+    res.json({ success: true, data });
+  }),
+);
 
 router.use('/insurances/social', insuranceRouter);
 router.use('/insurances/housing-fund', housingFundRouter);
 router.use('/insurances/employees', employeeInsuranceRouter);
 router.use('/tax', taxRouter);
 router.use('/payrolls', payrollsRouter);
+router.use('/payslips', c5PayslipRouter);
 
 export default router;
