@@ -2467,6 +2467,90 @@ paths:
               schema:
                 $ref: '#/components/schemas/SalesCommission'
 
+  /performance/applications/salary-adjustments:
+    post:
+      tags: [Performance]
+      summary: HR 提议调薪
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+    get:
+      tags: [Performance]
+      summary: 调薪提议列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/applications/salary-adjustments/{id}/approve:
+    patch:
+      tags: [Performance]
+      summary: executive 审批或拒绝调薪
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+  /performance/applications/promotions:
+    post:
+      tags: [Performance]
+      summary: HR 提议晋升
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+    get:
+      tags: [Performance]
+      summary: 晋升提议列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/applications/pips:
+    post:
+      tags: [Performance]
+      summary: 触发 PIP
+      security: [{ BearerAuth: [] }]
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformancePip'
+    get:
+      tags: [Performance]
+      summary: PIP 列表
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: 成功
+  /performance/applications/pips/{id}/reviews:
+    post:
+      tags: [Performance]
+      summary: PIP 月度评审
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '201':
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PerformancePipReview'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -3394,4 +3478,25 @@ components:
         finalAmount: { type: number }
         period: { type: string }
         status: { type: string, enum: [calculated, paid, cancelled] }
+
+    PerformancePip:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        employeeId: { type: string, format: uuid }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        status: { type: string, enum: [active, completed, failed, cancelled] }
+        reason: { type: string }
+        outcome: { type: string, nullable: true }
+
+    PerformancePipReview:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        pipId: { type: string, format: uuid }
+        reviewMonth: { type: integer, enum: [1, 2, 3] }
+        reviewDate: { type: string, format: date }
+        rating: { type: string, enum: [improved, no_change, worsened] }
+        comment: { type: string, nullable: true }
 

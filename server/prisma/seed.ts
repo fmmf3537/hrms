@@ -823,6 +823,72 @@ const DEFAULT_CONFIGS: Array<{
     value: false,
     remark: 'D5 是否自动确认（强制 false，财务手动）',
   },
+  {
+    category: 'performance',
+    key: 'salary_adjustment.evaluation_quarters',
+    value: 4,
+    remark: 'D6 调薪参考季度数',
+  },
+  {
+    category: 'performance',
+    key: 'salary_adjustment.s_threshold',
+    value: 0.5,
+    remark: 'D6 S/A 比例阈值',
+  },
+  {
+    category: 'performance',
+    key: 'salary_adjustment.s_adjustment',
+    value: 0.1,
+    remark: 'D6 S 档调薪比例 10%',
+  },
+  {
+    category: 'performance',
+    key: 'salary_adjustment.a_adjustment',
+    value: 0.05,
+    remark: 'D6 A 档调薪比例 5%',
+  },
+  {
+    category: 'performance',
+    key: 'promotion.min_a_count',
+    value: 2,
+    remark: 'D6 晋升最少 A 数',
+  },
+  {
+    category: 'performance',
+    key: 'promotion.min_s_count',
+    value: 1,
+    remark: 'D6 晋升最少 S 数',
+  },
+  {
+    category: 'performance',
+    key: 'promotion.lookback_years',
+    value: 2,
+    remark: 'D6 晋升参考年数',
+  },
+  {
+    category: 'performance',
+    key: 'pip.d_grade_quarters',
+    value: 2,
+    remark: 'D6 PIP 连续 D 季度数',
+  },
+  {
+    category: 'performance',
+    key: 'pip.duration_months',
+    value: 3,
+    remark: 'D6 PIP 期限月数',
+  },
+  {
+    category: 'performance',
+    key: 'pip.review_frequency',
+    value: 'monthly',
+    remark: 'D6 PIP 评审频率',
+  },
+  {
+    category: 'performance',
+    key: 'pip.training_required',
+    value: true,
+    remark: 'D6 PIP 期间必须培训',
+  },
 ];
 
 async function main() {
@@ -2497,6 +2563,50 @@ async function main() {
     }
   } else {
     console.log('   ✓ D5 sales demo already exists (skip)');
+  }
+
+  console.log('==> Seeding performance PIP demo (M3-D6)...');
+  const d6Exists = await prisma.performancePip.findFirst();
+  if (!d6Exists && sampleEmployees.length >= 2) {
+    const start = new Date(`${year}-07-01`);
+    const end = new Date(`${year}-10-01`);
+    const activePip = await prisma.performancePip.create({
+      data: {
+        employeeId: sampleEmployees[0].id,
+        startDate: start,
+        endDate: end,
+        status: 'active',
+        reason: '演示：连续两季度 D 档触发 PIP',
+        triggeredBy: admin.id,
+        createdById: admin.id,
+      },
+    });
+    const donePip = await prisma.performancePip.create({
+      data: {
+        employeeId: sampleEmployees[1].id,
+        startDate: start,
+        endDate: end,
+        status: 'completed',
+        reason: '演示：已完成 PIP',
+        outcome: 'PIP 通过',
+        triggeredBy: admin.id,
+        createdById: admin.id,
+      },
+    });
+    const ratings = ['improved', 'no_change', 'improved'] as const;
+    await Promise.all([activePip, donePip].flatMap((pip) => ratings.map((rating, idx) => prisma.performancePipReview.create({
+      data: {
+        pipId: pip.id,
+        reviewMonth: idx + 1,
+        reviewDate: new Date(year, 6 + idx, 15),
+        rating,
+        comment: `演示评审 ${idx + 1}`,
+        reviewerId: admin.id,
+      },
+    }))));
+    console.log('   ✓ 2 demo PIPs + 6 reviews');
+  } else {
+    console.log('   ✓ D6 PIP demo already exists (skip)');
   }
 
   console.log('==> Done.');

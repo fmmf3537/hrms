@@ -853,6 +853,23 @@
 
 提成公式：`finalAmount = baseAmount × (commissionRate + targetBonusRate)`；D5 的 `targetBonusRate` 固定为 0（销售目标表留 D5+ 联调）。财务确认由 hr 兼任（无 finance 角色）。发放仅标记 `paid`，不联动 M4 薪酬。
 
+### 3.24 Performance Applications API（M3-D6）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/performance/applications/salary-adjustments` | 是 | performance:salary-adjustment:write | HR 提议调薪 |
+| GET | `/performance/applications/salary-adjustments` | 是 | performance:salary-adjustment:read | 调薪提议列表（audit_logs） |
+| PATCH | `/performance/applications/salary-adjustments/:id/approve` | 是 | performance:salary-adjustment:approve | executive 审批/拒绝 |
+| POST | `/performance/applications/promotions` | 是 | performance:promotion:write | HR 提议晋升 |
+| GET | `/performance/applications/promotions` | 是 | performance:promotion:read | 晋升提议列表（audit_logs） |
+| POST | `/performance/applications/pips` | 是 | performance:pip:write | 触发 PIP |
+| GET | `/performance/applications/pips` | 是 | performance:pip:read | PIP 列表 |
+| POST | `/performance/applications/pips/:id/reviews` | 是 | performance:pip:review | PIP 月度评审 |
+
+**错误码**：72901-72910（D6 子区）。
+
+调薪/晋升不建业务表，记录落在 `audit_logs`；实际写入 `employee_salary_history` / `employee_position_history` 留 M4。PIP 失败仅标记 + audit，不调 A6 离职。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

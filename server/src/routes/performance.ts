@@ -14,6 +14,9 @@ import * as gradeService from '../services/performance_grade.service';
 import type { GradeThresholds } from '../services/performance_grade.service';
 import * as payoutService from '../services/performance_payout.service';
 import * as payoutConfigService from '../services/performance_payout_config.service';
+import * as pipService from '../services/performance_pip.service';
+import * as promotionService from '../services/performance_promotion.service';
+import * as adjustmentService from '../services/performance_salary_adjustment.service';
 import * as salesCommissionService from '../services/performance_sales_commission.service';
 import * as salesPaymentService from '../services/performance_sales_payment.service';
 import * as salesProductService from '../services/performance_sales_product.service';
@@ -784,6 +787,182 @@ router.post(
     if (!actorId) return;
     const { paymentId } = req.body as { paymentId: string };
     const data = await salesCommissionService.calculateCommission(actorId, paymentId);
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+// ==================== M3-D6 结果应用 ====================
+
+function requireAppUserId(req: import('express').Request, res: import('express').Response): string | null {
+  const userId = req.user?.userId;
+  if (!userId) {
+    res.status(401).json({ success: false, message: '未认证' });
+    return null;
+  }
+  return userId;
+}
+
+const adjustmentProposeSchema = z.object({
+  employeeId: z.string().uuid(),
+  period: z.string().min(1),
+});
+
+const adjustmentListSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  period: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const adjustmentApproveSchema = z.object({
+  approved: z.boolean(),
+  comment: z.string().max(2000).optional(),
+});
+
+const promotionProposeSchema = z.object({
+  employeeId: z.string().uuid(),
+  proposedPosition: z.string().min(1).max(100),
+  lookbackYears: z.number().int().min(1).max(5)
+    .optional(),
+});
+
+const promotionListSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  id: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const pipTriggerSchema = z.object({
+  employeeId: z.string().uuid(),
+  reason: z.string().min(5).max(2000),
+});
+
+const pipListSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  status: z.enum(['active', 'completed', 'failed', 'cancelled']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const pipReviewSchema = z.object({
+  rating: z.enum(['improved', 'no_change', 'worsened']),
+  comment: z.string().max(2000).optional(),
+});
+
+router.post(
+  '/applications/salary-adjustments',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALARY_ADJUSTMENT_WRITE),
+  validate(adjustmentProposeSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentService.proposeAdjustment(
+      actorId,
+      req.body as adjustmentService.ProposeAdjustmentInput,
+    );
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/applications/salary-adjustments',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALARY_ADJUSTMENT_READ),
+  validate(adjustmentListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentService.listAdjustments(
+      actorId,
+      req.query as adjustmentService.ListAdjustmentFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.patch(
+  '/applications/salary-adjustments/:id/approve',
+  requirePermission(PERMISSIONS.PERFORMANCE_SALARY_ADJUSTMENT_APPROVE),
+  validate(adjustmentApproveSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const body = req.body as { approved: boolean; comment?: string };
+    const data = await adjustmentService.approveAdjustment(actorId, req.params.id, body);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/applications/promotions',
+  requirePermission(PERMISSIONS.PERFORMANCE_PROMOTION_WRITE),
+  validate(promotionProposeSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const data = await promotionService.proposePromotion(
+      actorId,
+      req.body as promotionService.ProposePromotionInput,
+    );
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/applications/promotions',
+  requirePermission(PERMISSIONS.PERFORMANCE_PROMOTION_READ),
+  validate(promotionListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const data = await promotionService.listPromotions(
+      actorId,
+      req.query as promotionService.ListPromotionFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/applications/pips',
+  requirePermission(PERMISSIONS.PERFORMANCE_PIP_WRITE),
+  validate(pipTriggerSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const { employeeId, reason } = req.body as { employeeId: string; reason: string };
+    const data = await pipService.triggerPip(actorId, employeeId, reason);
+    res.status(201).json({ success: true, data });
+  }),
+);
+
+router.get(
+  '/applications/pips',
+  requirePermission(PERMISSIONS.PERFORMANCE_PIP_READ),
+  validate(pipListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const data = await pipService.listPips(actorId, req.query as pipService.ListPipFilter);
+    res.json({ success: true, data });
+  }),
+);
+
+router.post(
+  '/applications/pips/:id/reviews',
+  requirePermission(PERMISSIONS.PERFORMANCE_PIP_REVIEW),
+  validate(pipReviewSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireAppUserId(req, res);
+    if (!actorId) return;
+    const data = await pipService.reviewPip(
+      actorId,
+      req.params.id,
+      req.body as { rating: string; comment?: string },
+    );
     res.status(201).json({ success: true, data });
   }),
 );

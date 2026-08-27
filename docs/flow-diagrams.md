@@ -802,6 +802,46 @@ flowchart TD
     G --> H[联动 M4 留独立任务]
 ```
 
+### 3.8 M3-D6 结果应用 ER + PIP 流程
+
+```mermaid
+erDiagram
+    performance_pips {
+        uuid id PK
+        uuid employee_id FK
+        date start_date
+        date end_date
+        varchar status
+        text reason
+        text outcome
+    }
+    performance_pip_reviews {
+        uuid id PK
+        uuid pip_id FK
+        int review_month
+        date review_date
+        varchar rating
+        uuid reviewer_id
+    }
+    employees ||--o{ performance_pips : subject
+    performance_pips ||--o{ performance_pip_reviews : monthly
+```
+
+```mermaid
+flowchart TD
+    A[近 4 季度 archived] --> B{S/A 比例}
+    B -->|S ≥ 50%| C[提议调薪 10%]
+    B -->|A ≥ 50%| D[提议调薪 5%]
+    B -->|其他| E[不调薪]
+    C --> F[audit_logs]
+    D --> F
+    G[近 2 年 A≥2 或 S≥1] --> H[提议晋升 audit_logs]
+    I[连续 2 季度 D] --> J[performance_pips active]
+    J --> K[月度评审 1/2/3]
+    K -->|improved x3| L[completed]
+    K -->|worsened| M[failed + audit 建议离职]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |

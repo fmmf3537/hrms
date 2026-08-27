@@ -241,6 +241,21 @@
 | 72809 | 400 | SALES_COMMISSION_PERIOD_INVALID | period 格式错（YYYY-MM） | 提示格式 |
 | 72810 | 400 | SALES_COMMISSION_TARGET_NOT_MET | 目标完成率 < 100% | 提示目标（D5 暂不从销售目标表触发） |
 
+### 7.7 M3-D6 结果应用（72901-72910）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 72901 | 400 | ADJUSTMENT_NOT_FOUND | 调薪记录 ID 不存在 | 提示 ID 错误 |
+| 72902 | 400 | ADJUSTMENT_PERIOD_INVALID | 调薪周期格式错（YYYY-Qn） | 提示格式 |
+| 72903 | 400 | ADJUSTMENT_ALREADY_APPROVED | 重复审批 | 提示已审批 |
+| 72904 | 400 | PROMOTION_NOT_FOUND | 晋升记录 ID 不存在 | 提示 ID 错误 |
+| 72905 | 400 | PROMOTION_REQUIREMENT_NOT_MET | 不满足晋升要求 | 提示条件 |
+| 72906 | 400 | PIP_NOT_FOUND | PIP 记录 ID 不存在 | 提示 ID 错误 |
+| 72907 | 400 | PIP_ALREADY_ACTIVE | 员工已有 active PIP | 提示已有 PIP |
+| 72908 | 400 | PIP_D_GRADES_INSUFFICIENT | 连续 2 季度 D 档不满足 | 提示条件 |
+| 72909 | 400 | PIP_REVIEW_OVERDUE | PIP 期间漏评审 | 提示评审 |
+| 72910 | 400 | PIP_STATUS_INVALID_TRANSITION | PIP 状态机非法流转 | 提示状态 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
