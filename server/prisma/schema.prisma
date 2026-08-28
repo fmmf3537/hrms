@@ -65,6 +65,9 @@ model User {
   hrCostAlertsAcknowledged HrCostAlert[] @relation("HrCostAlertAcknowledger")
   hrCostAlertsClosed       HrCostAlert[] @relation("HrCostAlertCloser")
 
+  // M4-C8 调薪申请反向关联
+  salaryAdjustmentsCreated SalaryAdjustment[] @relation("SalaryAdjustmentCreator")
+
   @@map("users")
 }
 
@@ -1952,4 +1955,53 @@ model HrCostAlert {
   @@index([departmentId, status])
   @@index([scanAt])
   @@map("hr_cost_alerts")
+}
+
+// ==================== M4-C8 调薪申请（联动 D6 audit + 写 employee_salary_history）====================
+enum SalaryAdjustmentType {
+  promotion
+  annual_adjust
+  performance
+  market_adjustment
+}
+
+enum SalaryAdjustmentStatus {
+  draft
+  pending
+  approved
+  rejected
+  executed
+  cancelled
+}
+
+model SalaryAdjustment {
+  id                    String                  @id @default(uuid()) @db.Uuid
+  employeeId            String                  @map("employee_id") @db.Uuid
+  adjustmentType        SalaryAdjustmentType    @map("adjustment_type")
+  fromBaseSalary        Decimal                 @map("from_base_salary") @db.Decimal(10, 2)
+  fromPerformanceSalary Decimal?                @map("from_performance_salary") @db.Decimal(10, 2)
+  toBaseSalary          Decimal                 @map("to_base_salary") @db.Decimal(10, 2)
+  toPerformanceSalary   Decimal?                @map("to_performance_salary") @db.Decimal(10, 2)
+  delta                 Decimal                 @db.Decimal(10, 2)
+  effectiveDate         DateTime                @map("effective_date") @db.Date
+  reason                String                  @db.Text
+  remark                String?                 @db.Text
+  approvalInstanceId    String?                 @unique @map("approval_instance_id") @db.Uuid
+  status                SalaryAdjustmentStatus  @default(draft)
+  executedAt            DateTime?               @map("executed_at") @db.Timestamptz(6)
+  executedBy            String?                 @map("executed_by") @db.Uuid
+  cancelledAt           DateTime?               @map("cancelled_at") @db.Timestamptz(6)
+  cancelledBy           String?                 @map("cancelled_by") @db.Uuid
+  cancelReason          String?                 @map("cancel_reason") @db.Text
+  createdBy             String                  @map("created_by") @db.Uuid
+  createdByUser         User                    @relation("SalaryAdjustmentCreator", fields: [createdBy], references: [id], onDelete: Restrict)
+  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([employeeId, effectiveDate, adjustmentType])
+  @@index([employeeId, status])
+  @@index([status, effectiveDate])
+  @@index([adjustmentType, status])
+  @@index([createdBy, status])
+  @@map("salary_adjustments")
 }

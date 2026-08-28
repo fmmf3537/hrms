@@ -23,6 +23,9 @@ import * as payslipService from '../services/payslip.service';
 import * as payslipDeliveryService from '../services/payslip_delivery.service';
 import * as payslipGeneratorService from '../services/payslip_generator.service';
 import * as reportExportService from '../services/report_export.service';
+import * as adjustmentService from '../services/salary_adjustment.service';
+import * as adjustmentExecuteService from '../services/salary_adjustment_execute.service';
+import * as adjustmentQueryService from '../services/salary_adjustment_query.service';
 import * as gradeService from '../services/salary_grade.service';
 import * as levelService from '../services/salary_grade_level.service';
 import * as planService from '../services/salary_plan.service';
@@ -1125,5 +1128,166 @@ router.use('/payrolls', payrollsRouter);
 router.use('/payslips', c5PayslipRouter);
 router.use('/commissions', commissionRouter);
 router.use('/cost-alerts', costAlertRouter);
+
+const adjustmentTypeEnum = z.enum([
+  'promotion', 'annual_adjust', 'performance', 'market_adjustment',
+]);
+const adjustmentStatusEnum = z.enum([
+  'draft', 'pending', 'approved', 'rejected', 'executed', 'cancelled',
+]);
+
+const adjustmentCreateSchema = z.object({
+  employeeId: z.string().uuid(),
+  adjustmentType: adjustmentTypeEnum,
+  toBaseSalary: z.number().positive(),
+  toPerformanceSalary: z.number().min(0).optional(),
+  effectiveDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  reason: z.string().min(1).max(2000),
+  remark: z.string().max(2000).optional(),
+});
+
+const adjustmentListSchema = z.object({
+  employeeId: z.string().uuid().optional(),
+  status: adjustmentStatusEnum.optional(),
+  adjustmentType: adjustmentTypeEnum.optional(),
+  period: z.string().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const adjustmentSubmitSchema = z.object({
+  comment: z.string().max(2000).optional(),
+});
+
+const adjustmentApproveSchema = z.object({
+  action: z.enum(['approve', 'reject']),
+  comment: z.string().max(2000).optional(),
+});
+
+const adjustmentCancelSchema = z.object({
+  reason: z.string().min(1).max(2000),
+});
+
+const executePendingSchema = z.object({
+  asOfDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+const adjustmentRouter: RouterType = Router();
+adjustmentRouter.post(
+  '/execute-pending',
+  requirePermission(PERMISSIONS.SALARY_ADJUSTMENT_EXECUTE),
+  validate(executePendingSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentExecuteService.executePendingAdjustments(
+      actorId,
+      (req.body as { asOfDate: string }).asOfDate,
+    );
+    res.json({ success: true, data });
+  }),
+);
+adjustmentRouter.post(
+  '/',
+  requirePermission(PERMISSIONS.SALARY_ADJUSTMENT_WRITE),
+  validate(adjustmentCreateSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentService.createAdjustment(
+      actorId,
+      req.body as adjustmentService.CreateAdjustmentInput,
+    );
+    res.status(201).json({ success: true, data });
+  }),
+);
+adjustmentRouter.get(
+  '/',
+  requirePermission(
+    PERMISSIONS.SALARY_ADJUSTMENT_READ,
+    PERMISSIONS.SALARY_ADJUSTMENT_READ_SELF,
+  ),
+  validate(adjustmentListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentQueryService.listAdjustments(
+      actorId,
+      req.query as adjustmentQueryService.ListAdjustmentFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+adjustmentRouter.get(
+  '/:id',
+  requirePermission(
+    PERMISSIONS.SALARY_ADJUSTMENT_READ,
+    PERMISSIONS.SALARY_ADJUSTMENT_READ_SELF,
+  ),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentQueryService.getAdjustment(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+adjustmentRouter.post(
+  '/:id/submit',
+  requirePermission(PERMISSIONS.SALARY_ADJUSTMENT_WRITE),
+  validate(adjustmentSubmitSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentService.submitAdjustment(
+      actorId,
+      req.params.id,
+      req.body as { comment?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+adjustmentRouter.post(
+  '/:id/approve',
+  requirePermission(PERMISSIONS.SALARY_ADJUSTMENT_APPROVE),
+  validate(adjustmentApproveSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentService.approveAdjustment(
+      actorId,
+      req.params.id,
+      req.body as adjustmentService.ApproveAdjustmentInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+adjustmentRouter.post(
+  '/:id/execute',
+  requirePermission(PERMISSIONS.SALARY_ADJUSTMENT_EXECUTE),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentExecuteService.executeAdjustment(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+adjustmentRouter.post(
+  '/:id/cancel',
+  requirePermission(PERMISSIONS.SALARY_ADJUSTMENT_CANCEL),
+  validate(adjustmentCancelSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await adjustmentQueryService.cancelAdjustment(
+      actorId,
+      req.params.id,
+      req.body as { reason: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+
+router.use('/adjustments', adjustmentRouter);
 
 export default router;

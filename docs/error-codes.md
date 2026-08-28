@@ -361,6 +361,21 @@
 | 73709 | 400 | ALERT_DEPT_NOT_FOUND | 部门不存在（按部门聚合时） | 提示部门 ID |
 | 73710 | 400 | ALERT_CLOSE_FAILED | 关闭失败（acknowledged 才能 close / reason 必填） | 提示状态 |
 
+### 8.8 M4-C8 调薪实际执行（73801-73810）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理 |
+|---|---|---|---|---|
+| 73801 | 404 | ADJUSTMENT_NOT_FOUND | adjustmentId 不存在 | 提示 ID 错误 |
+| 73802 | 400 | ADJUSTMENT_INVALID_STATUS | 状态机非法（executed / cancelled / rejected 不能再次操作） | 提示状态 |
+| 73803 | 400 | ADJUSTMENT_ALREADY_EXECUTED | 已 executed 不能再次 execute | 提示状态 |
+| 73804 | 404 | ADJUSTMENT_EMPLOYEE_NOT_FOUND | employeeId 不存在或已离职 | 提示员工 |
+| 73805 | 400 | ADJUSTMENT_EFFECTIVE_DATE_INVALID | effective_date 格式错 / < 提前通知天数 / 未到生效日 | 提示日期 |
+| 73806 | 400 | ADJUSTMENT_SALARY_DECREASED | 减薪或涨幅越界 [0.05, 0.30] | 提示涨薪 |
+| 73807 | 400 | ADJUSTMENT_ALREADY_APPROVED | 已 approved 不能再次提交 | 提示状态 |
+| 73808 | 400 | ADJUSTMENT_EXECUTE_FAILED | 实际执行失败（写 history / plans 失败，事务回滚） | 提示重试 |
+| 73809 | 400 | ADJUSTMENT_OVERLAP | 同一员工 effective_date 已有 pending / approved / executed 调薪 | 提示冲突 |
+| 73810 | 400 | ADJUSTMENT_CANCEL_FAILED | 取消失败（executed / rejected 不能 cancel） | 提示状态 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
@@ -457,6 +472,7 @@ axios.interceptors.response.use(
 | M4-C2 | 2026-08-27 | 新增 73101-73110（三地社保公积金方案 + 员工登记） | Cursor |
 | M4-C6 | 2026-08-27 | 新增 73601-73610（销售提成季度结算） | Cursor |
 | M4-C7 | 2026-08-27 | 新增 73701-73710（人力成本预警） | Cursor |
+| M4-C8 | 2026-08-28 | 新增 73801-73810（调薪实际执行） | Cursor |
 
 ## 六、附录：错误码使用统计（M0 + M0.5 预估）
 

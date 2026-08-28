@@ -1179,6 +1179,42 @@ const DEFAULT_CONFIGS: Array<{
     value: 'attrition_alert',
     remark: 'C7 离职率预警通知模板 key',
   },
+  {
+    category: 'salary',
+    key: 'adjustment.max_increase_ratio',
+    value: 0.30,
+    remark: 'C8 单次调薪最大涨幅（30%）',
+  },
+  {
+    category: 'salary',
+    key: 'adjustment.min_increase_ratio',
+    value: 0.05,
+    remark: 'C8 单次调薪最小涨幅（5%）',
+  },
+  {
+    category: 'salary',
+    key: 'adjustment.require_approval_threshold',
+    value: 5000,
+    remark: 'C8 调薪金额超过此值需 CEO 终审（元）',
+  },
+  {
+    category: 'salary',
+    key: 'adjustment.execute_mode',
+    value: 'manual',
+    remark: 'C8 调薪执行模式（manual / auto；auto 留调度任务）',
+  },
+  {
+    category: 'salary',
+    key: 'adjustment.advance_notice_days',
+    value: 7,
+    remark: 'C8 调薪提前通知天数',
+  },
+  {
+    category: 'salary',
+    key: 'adjustment.position_change_link',
+    value: true,
+    remark: 'C8 晋升调薪是否联动岗位历史',
+  },
 ];
 
 async function main() {
@@ -3305,6 +3341,54 @@ async function main() {
     console.log('   ✓ 2 demo hr_cost_alerts (Q1 overtime warning + attrition critical)');
   } else {
     console.log('   ✓ C7 hr cost alert demo already exists (skip)');
+  }
+
+  console.log('==> Seeding C8 salary adjustments...');
+  const c8Exists = await prisma.salaryAdjustment.findFirst();
+  if (!c8Exists) {
+    const c8EmpA = await prisma.employee.findFirst({
+      where: { employeeNo: `XACH${year}0001` },
+    });
+    const c8EmpB = await prisma.employee.findFirst({
+      where: { employeeNo: `XACH${year}0002` },
+    });
+    if (c8EmpA && c8EmpB) {
+      await prisma.salaryAdjustment.create({
+        data: {
+          employeeId: c8EmpA.id,
+          adjustmentType: 'annual_adjust',
+          fromBaseSalary: 10000,
+          fromPerformanceSalary: 2100,
+          toBaseSalary: 11000,
+          toPerformanceSalary: 2310,
+          delta: 1000,
+          effectiveDate: new Date(Date.UTC(2026, 11, 1)),
+          reason: 'C8 demo 年度调薪 draft',
+          status: 'draft',
+          createdBy: admin.id,
+        },
+      });
+      await prisma.salaryAdjustment.create({
+        data: {
+          employeeId: c8EmpB.id,
+          adjustmentType: 'performance',
+          fromBaseSalary: 8000,
+          fromPerformanceSalary: 1200,
+          toBaseSalary: 8800,
+          toPerformanceSalary: 1320,
+          delta: 800,
+          effectiveDate: new Date(Date.UTC(2026, 8, 1)),
+          reason: 'C8 demo 绩效调薪 approved',
+          status: 'approved',
+          createdBy: admin.id,
+        },
+      });
+      console.log('   ✓ 2 demo salary_adjustments (draft + approved)');
+    } else {
+      console.log('   ✓ C8 skip demo (employees missing)');
+    }
+  } else {
+    console.log('   ✓ C8 salary adjustment demo already exists (skip)');
   }
 
   console.log('==> Done.');

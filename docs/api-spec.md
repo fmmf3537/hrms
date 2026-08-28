@@ -988,6 +988,23 @@
 
 **1 新表** `hr_cost_alerts`。只读 C4 payslips + A6 offboarding_records + M1 employees。不创建 BullMQ（仅暴露扫描函数）。不联动 C4 算薪。5 角色 RBAC，无 finance。
 
+### 3.32 Salary Adjustments API（M4-C8 调薪实际执行）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/salary/adjustments` | 是 | salary:adjustment:write | 创建调薪申请（draft） |
+| GET | `/salary/adjustments` | 是 | salary:adjustment:read / read-self | 调薪列表（employeeId / status / adjustmentType / period） |
+| GET | `/salary/adjustments/:id` | 是 | salary:adjustment:read / read-self | 调薪详情 |
+| POST | `/salary/adjustments/:id/submit` | 是 | salary:adjustment:write | 提交审批（draft → pending，走 M0.5-1） |
+| POST | `/salary/adjustments/:id/approve` | 是 | salary:adjustment:approve | 审批（approve / reject） |
+| POST | `/salary/adjustments/:id/execute` | 是 | salary:adjustment:execute | 单条执行（写 salary_history + 同步 salary_plans） |
+| POST | `/salary/adjustments/:id/cancel` | 是 | salary:adjustment:cancel | 取消（draft / pending → cancelled） |
+| POST | `/salary/adjustments/execute-pending` | 是 | salary:adjustment:execute | 批量执行 approved + effectiveDate ≤ asOfDate |
+
+**错误码**：73801-73810（C8 子区）。
+
+**1 新表** `salary_adjustments`。prisma 写 M1 `employee_salary_history` / `employee_position_history`，同步 C1 `employee_salary_plans`。不创建 BullMQ（仅暴露 `executePendingAdjustments`）。不更新 `employees.baseSalary`。不调 D6 / C4 service。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -998,6 +1015,7 @@
 | V1.2-C5 | 2026-08-27 | 追加 §3.29 Salary Payslip/Banking/Tax-Declare/Report API（M4-C5 7 端点，0 新表） | Cursor |
 | V1.2-C6 | 2026-08-27 | 追加 §3.30 Salary Commissions API（M4-C6 8 端点，1 新表 commission_settlements） | Cursor |
 | V1.2-C7 | 2026-08-27 | 追加 §3.31 Salary Cost Alerts API（M4-C7 6 端点，1 新表 hr_cost_alerts） | Cursor |
+| V1.2-C8 | 2026-08-28 | 追加 §3.32 Salary Adjustments API（M4-C8 8 端点，1 新表 salary_adjustments） | Cursor |
 
 ---
 

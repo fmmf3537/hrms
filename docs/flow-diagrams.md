@@ -1061,6 +1061,32 @@ flowchart TD
     A -.-> N[BullMQ 每日 02:00 留 M0.5 独立任务]
 ```
 
+### 4.8 M4-C8 调薪实际执行（联动 D6 + 写 employee_salary_history）
+
+```mermaid
+flowchart TD
+    A[POST /adjustments 创建 draft] --> B[POST /submit 走 M0.5-1]
+    B --> C[pending]
+    C --> D[POST /approve]
+    D -->|中间节点| C
+    D -->|全部通过| E[approved]
+    D -->|拒绝| F[rejected]
+    E --> G{effectiveDate <= today}
+    G -->|否| H[73805 未到生效日]
+    G -->|是| I[事务]
+    I --> J[写 employee_salary_history]
+    I --> K[旧 plan effectiveTo + 新 plan]
+    I --> L{promotion 且 position_change_link}
+    L -->|是| M[写 employee_position_history]
+    L -->|否| N[不写岗位历史]
+    J --> O[executed + 通知员工]
+    K --> O
+    M --> O
+    A --> P[draft/pending 可 cancel]
+    E --> Q[POST /execute-pending 批量]
+    Q -.-> R[BullMQ 调度留 M0.5 独立任务]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -1071,6 +1097,7 @@ flowchart TD
 | V1.2-C5 | 2026-08-27 | 追加 §4.5 M4-C5 工资条/银企/个税/报表流程图（0 新表） | Cursor |
 | V1.2-C6 | 2026-08-27 | 追加 §4.6 M4-C6 销售提成季度结算流程图（1 新表） | Cursor |
 | V1.2-C7 | 2026-08-27 | 追加 §4.7 M4-C7 人力成本预警流程图（1 新表 hr_cost_alerts） | Cursor |
+| V1.2-C8 | 2026-08-28 | 追加 §4.8 M4-C8 调薪执行流程图（1 新表 salary_adjustments） | Cursor |
 
 ---
 
