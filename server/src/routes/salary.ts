@@ -14,6 +14,7 @@ import * as bankingExportService from '../services/banking_export.service';
 import * as commissionReportService from '../services/commission_report.service';
 import * as commissionSettlementService from '../services/commission_settlement.service';
 import * as commissionSummaryService from '../services/commission_summary.service';
+import * as costAlertService from '../services/cost_alert.service';
 import * as insuranceRegService from '../services/employee_insurance.service';
 import * as housingFundService from '../services/housing_fund_scheme.service';
 import * as payrollAiService from '../services/payroll_ai_summary.service';
@@ -1006,6 +1007,116 @@ commissionRouter.post(
   }),
 );
 
+const costAlertScanSchema = z.object({
+  period: z.string().min(7).max(7),
+  alertType: z.enum(['overtime_ratio', 'attrition_monthly', 'all']).optional(),
+});
+
+const costAlertListSchema = z.object({
+  alertType: z.enum(['overtime_ratio', 'attrition_monthly']).optional(),
+  period: z.string().optional(),
+  status: z.enum(['active', 'acknowledged', 'closed']).optional(),
+  severity: z.enum(['warning', 'critical']).optional(),
+  departmentId: z.string().uuid().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100)
+    .default(20),
+});
+
+const costAlertSummarySchema = z.object({
+  period: z.string().min(7).max(7),
+});
+
+const costAlertAckSchema = z.object({
+  note: z.string().max(2000).optional(),
+});
+
+const costAlertCloseSchema = z.object({
+  reason: z.string().min(1).max(2000),
+  remark: z.string().max(2000).optional(),
+});
+
+const costAlertRouter: RouterType = Router();
+costAlertRouter.post(
+  '/scan',
+  requirePermission(PERMISSIONS.SALARY_COST_ALERT_SCAN),
+  validate(costAlertScanSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await costAlertService.scanCostAlerts(
+      actorId,
+      req.body as costAlertService.ScanCostAlertsInput,
+    );
+    res.json({ success: true, data });
+  }),
+);
+costAlertRouter.get(
+  '/summary',
+  requirePermission(PERMISSIONS.SALARY_COST_ALERT_READ),
+  validate(costAlertSummarySchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await costAlertService.getAlertSummary(actorId, String(req.query.period));
+    res.json({ success: true, data });
+  }),
+);
+costAlertRouter.get(
+  '/',
+  requirePermission(PERMISSIONS.SALARY_COST_ALERT_READ),
+  validate(costAlertListSchema, 'query'),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await costAlertService.listAlerts(
+      actorId,
+      req.query as unknown as costAlertService.ListAlertFilter,
+    );
+    res.json({ success: true, data });
+  }),
+);
+costAlertRouter.get(
+  '/:id',
+  requirePermission(PERMISSIONS.SALARY_COST_ALERT_READ),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await costAlertService.getAlert(actorId, req.params.id);
+    res.json({ success: true, data });
+  }),
+);
+costAlertRouter.post(
+  '/:id/acknowledge',
+  requirePermission(PERMISSIONS.SALARY_COST_ALERT_ACK),
+  validate(costAlertAckSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await costAlertService.acknowledgeAlert(
+      actorId,
+      req.params.id,
+      req.body as { note?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+costAlertRouter.post(
+  '/:id/close',
+  requirePermission(PERMISSIONS.SALARY_COST_ALERT_CLOSE),
+  validate(costAlertCloseSchema),
+  asyncHandler(async (req, res) => {
+    const actorId = requireUserId(req, res);
+    if (!actorId) return;
+    const data = await costAlertService.closeAlert(
+      actorId,
+      req.params.id,
+      req.body as { reason: string; remark?: string },
+    );
+    res.json({ success: true, data });
+  }),
+);
+
 router.use('/insurances/social', insuranceRouter);
 router.use('/insurances/housing-fund', housingFundRouter);
 router.use('/insurances/employees', employeeInsuranceRouter);
@@ -1013,5 +1124,6 @@ router.use('/tax', taxRouter);
 router.use('/payrolls', payrollsRouter);
 router.use('/payslips', c5PayslipRouter);
 router.use('/commissions', commissionRouter);
+router.use('/cost-alerts', costAlertRouter);
 
 export default router;

@@ -1041,6 +1041,26 @@ flowchart TD
     B --> J[getReport mockMode true]
 ```
 
+### 4.7 M4-C7 人力成本预警（加班费占比 + 离职率）
+
+```mermaid
+flowchart TD
+    A[POST /cost-alerts/scan 或 scan 函数] --> B{alertType}
+    B -->|overtime_ratio / all| C[只读 C4 payslips + items]
+    C --> D[按部门 overtime / gross]
+    D --> E{ratio > 阈值}
+    E -->|critical / warning| F[create hr_cost_alerts]
+    E -->|未超| G[不创建]
+    B -->|attrition_monthly / all| H[只读 A6 offboarding + M1 employees]
+    H --> I[并集去重按部门 rate]
+    I --> E
+    F --> J[sendNotification bypassTemplate]
+    F --> K[active]
+    K --> L[acknowledge]
+    L --> M[closed]
+    A -.-> N[BullMQ 每日 02:00 留 M0.5 独立任务]
+```
+
 ## 四、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -1050,6 +1070,7 @@ flowchart TD
 | V1.2-C4 | 2026-08-27 | 追加 §4.4 M4-C4 payroll_runs/payslips ER + 3 级审批流 | Cursor |
 | V1.2-C5 | 2026-08-27 | 追加 §4.5 M4-C5 工资条/银企/个税/报表流程图（0 新表） | Cursor |
 | V1.2-C6 | 2026-08-27 | 追加 §4.6 M4-C6 销售提成季度结算流程图（1 新表） | Cursor |
+| V1.2-C7 | 2026-08-27 | 追加 §4.7 M4-C7 人力成本预警流程图（1 新表 hr_cost_alerts） | Cursor |
 
 ---
 

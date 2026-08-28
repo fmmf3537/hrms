@@ -1149,6 +1149,36 @@ const DEFAULT_CONFIGS: Array<{
     value: true,
     remark: 'C6 强制 mock，不联动 C4 算薪',
   },
+  {
+    category: 'salary',
+    key: 'cost_alert.overtime_ratio.severity_critical',
+    value: 0.3,
+    remark: 'C7 加班费占比严重度阈值（30%）',
+  },
+  {
+    category: 'salary',
+    key: 'cost_alert.attrition.severity_critical',
+    value: 0.1,
+    remark: 'C7 离职率严重度阈值（10%）',
+  },
+  {
+    category: 'salary',
+    key: 'cost_alert.scan.include_deactivated_employees',
+    value: false,
+    remark: 'C7 扫描是否包含已离职员工',
+  },
+  {
+    category: 'salary',
+    key: 'cost_alert.notification.template_overtime',
+    value: 'overtime_ratio_alert',
+    remark: 'C7 加班费占比预警通知模板 key',
+  },
+  {
+    category: 'salary',
+    key: 'cost_alert.notification.template_attrition',
+    value: 'attrition_alert',
+    remark: 'C7 离职率预警通知模板 key',
+  },
 ];
 
 async function main() {
@@ -3232,6 +3262,49 @@ async function main() {
     console.log('   ✓ 2 demo commission_settlements (Q1 confirmed + Q2 draft)');
   } else {
     console.log('   ✓ C6 commission settlement demo already exists (skip)');
+  }
+
+  console.log('==> Seeding C7 hr cost alerts...');
+  const c7Exists = await prisma.hrCostAlert.findFirst({
+    where: { period: '2026-01', alertType: 'overtime_ratio' },
+  });
+  if (!c7Exists) {
+    const c7Dept = await prisma.department.findFirst({ where: { code: 'TECH' } });
+    await prisma.hrCostAlert.create({
+      data: {
+        alertType: 'overtime_ratio',
+        period: '2026-01',
+        departmentId: c7Dept?.id ?? null,
+        threshold: 0.2,
+        actualValue: 0.25,
+        severity: 'warning',
+        status: 'active',
+        scanAt: new Date('2026-01-15T02:00:00.000Z'),
+        contextSnapshot: {
+          overtimeAmount: 25000, totalGross: 100000, overtimeRatio: 0.25, payslipCount: 4,
+        },
+        remark: 'C7 demo Q1 2026 overtime_ratio warning',
+      },
+    });
+    await prisma.hrCostAlert.create({
+      data: {
+        alertType: 'attrition_monthly',
+        period: '2026-01',
+        departmentId: c7Dept?.id ?? null,
+        threshold: 0.05,
+        actualValue: 0.12,
+        severity: 'critical',
+        status: 'active',
+        scanAt: new Date('2026-01-15T02:00:00.000Z'),
+        contextSnapshot: {
+          resignedCount: 3, activeCount: 22, attritionRate: 0.12,
+        },
+        remark: 'C7 demo Q1 2026 attrition critical',
+      },
+    });
+    console.log('   ✓ 2 demo hr_cost_alerts (Q1 overtime warning + attrition critical)');
+  } else {
+    console.log('   ✓ C7 hr cost alert demo already exists (skip)');
   }
 
   console.log('==> Done.');

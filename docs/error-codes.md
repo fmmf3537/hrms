@@ -346,6 +346,21 @@
 | 73609 | 400 | COMMISSION_SETTLEMENT_CONFIRM_WINDOW_EXPIRED | 确认窗口已过（默认 7 天） | 提示已过期 |
 | 73610 | 400 | COMMISSION_SETTLEMENT_D5_DATA_MISSING | D5 commissions 数据缺失 | 提示 D5 异常 |
 
+### 8.7 M4-C7 人力成本预警（73701-73710）
+
+| code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
+|---|---|---|---|---|
+| 73701 | 404 | ALERT_NOT_FOUND | alertId 不存在 | 提示 ID 错误 |
+| 73702 | 400 | ALERT_INVALID_STATUS | 状态机非法（closed 不能 acknowledge） | 提示状态 |
+| 73703 | 400 | ALERT_SCAN_FAILED | 扫描失败（prisma 查询失败 / 阈值配置缺失） | 提示重试 |
+| 73704 | 400 | ALERT_OVERTIME_DATA_MISSING | 加班费数据缺失（payslips / overtime_requests 关联查询失败） | 提示 C4 数据异常 |
+| 73705 | 400 | ALERT_ATTRITION_DATA_MISSING | 离职数据缺失（offboarding_records / employees 关联查询失败） | 提示 A6/M1 数据异常 |
+| 73706 | 400 | ALERT_ALREADY_ACKNOWLEDGED | 已 acknowledged 不能再次 ack | 提示状态 |
+| 73707 | 400 | ALERT_PERIOD_INVALID | period 格式错（不是 YYYY-MM） | 提示格式 |
+| 73708 | 400 | ALERT_THRESHOLD_INVALID | 阈值配置无效（hr_attrition.* configs 缺失或格式错） | 提示配置 |
+| 73709 | 400 | ALERT_DEPT_NOT_FOUND | 部门不存在（按部门聚合时） | 提示部门 ID |
+| 73710 | 400 | ALERT_CLOSE_FAILED | 关闭失败（acknowledged 才能 close / reason 必填） | 提示状态 |
+
 ### 9xxxx —— 系统级（出现即 bug）
 
 | code | HTTP | 名称 | 触发条件 | 客户端处理建议 |
@@ -441,6 +456,7 @@ axios.interceptors.response.use(
 | M4-C1 | 2026-08-27 | 新增 73001-73010（薪级薪档 + 员工薪酬方案） | Cursor |
 | M4-C2 | 2026-08-27 | 新增 73101-73110（三地社保公积金方案 + 员工登记） | Cursor |
 | M4-C6 | 2026-08-27 | 新增 73601-73610（销售提成季度结算） | Cursor |
+| M4-C7 | 2026-08-27 | 新增 73701-73710（人力成本预警） | Cursor |
 
 ## 六、附录：错误码使用统计（M0 + M0.5 预估）
 

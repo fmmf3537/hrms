@@ -973,6 +973,21 @@
 
 **1 新表** `commission_settlements`。只读 D5 commissions（status=paid），沿用 D5 公式，不重算。不联动 C4 算薪。5 角色 RBAC，无 finance。
 
+### 3.31 Salary Cost Alerts API（M4-C7 人力成本预警）
+
+| Method | Path | 鉴权 | 权限 | 描述 |
+|---|---|---|---|---|
+| POST | `/salary/cost-alerts/scan` | 是 | salary:cost-alert:scan | 手动触发扫描（overtime_ratio / attrition_monthly / all） |
+| GET | `/salary/cost-alerts` | 是 | salary:cost-alert:read | 预警列表（alertType / period / status / severity 过滤） |
+| GET | `/salary/cost-alerts/summary` | 是 | salary:cost-alert:read | 按 alertType / severity / status 统计 |
+| GET | `/salary/cost-alerts/:id` | 是 | salary:cost-alert:read | 预警详情 |
+| POST | `/salary/cost-alerts/:id/acknowledge` | 是 | salary:cost-alert:ack | 确认（active → acknowledged） |
+| POST | `/salary/cost-alerts/:id/close` | 是 | salary:cost-alert:close | 关闭（acknowledged → closed，reason 必填） |
+
+**错误码**：73701-73710（C7 子区）。
+
+**1 新表** `hr_cost_alerts`。只读 C4 payslips + A6 offboarding_records + M1 employees。不创建 BullMQ（仅暴露扫描函数）。不联动 C4 算薪。5 角色 RBAC，无 finance。
+
 ## 五、变更记录
 
 | 版本 | 日期 | 变更说明 | 变更人 |
@@ -982,6 +997,7 @@
 | V1.2-C4 | 2026-08-27 | 追加 §3.28 Salary Payrolls API（M4-C4 算薪 12 端点） | Cursor |
 | V1.2-C5 | 2026-08-27 | 追加 §3.29 Salary Payslip/Banking/Tax-Declare/Report API（M4-C5 7 端点，0 新表） | Cursor |
 | V1.2-C6 | 2026-08-27 | 追加 §3.30 Salary Commissions API（M4-C6 8 端点，1 新表 commission_settlements） | Cursor |
+| V1.2-C7 | 2026-08-27 | 追加 §3.31 Salary Cost Alerts API（M4-C7 6 端点，1 新表 hr_cost_alerts） | Cursor |
 
 ---
 

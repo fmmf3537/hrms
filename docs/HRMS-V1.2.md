@@ -921,7 +921,7 @@ performance_coefficients
 | C4 | 薪酬核算主流程（应发-应扣-实发 + **AI 校验摘要**） **已实现** | 5 | 4.5d |
 | C5 | 劳务费结算通道（独立）**未实现（留二期）**；M4-C6 业务 commit 在本行标注「销售提成核算联动」（**未实现劳务费**） | 3 | 2d |
 | C6 | 工资条生成 + 银行代发文件 + **ESS 员工自助最小集（工资条 + 调休/假期查询 tab）** **已实现（M4-C5：工资条+银企 mock+个税申报 mock+报表，ESS 自助 tab 留前端）** | 4 | 3d |
-| C7 | 薪酬审批流（HR→财务→总经理，走 M0.5 基础设施） | 3 | 2d |
+| C7 | 薪酬审批流（HR→财务→总经理，走 M0.5 基础设施）**本切片由 M4-C4 业务 commit 实现（3 级审批 HR→财务→CEO），M4-C7 业务 commit 实现 2 项人力成本预警（V1.2 §四.8 C4 行承诺兜底）** | 3 | 2d |
 | C8 | 薪酬数据加密 + 二次授权 | 3 | 2d |
 
 **C4 切片内嵌 AI 算薪校验摘要**（M0.5 底座已搭好）：
@@ -1197,6 +1197,7 @@ AI 生成的代码必须经人工评审，重点检查：
 | **M4.0.4** | **2026-08-27** | **feat(salary): M4-C4 算薪引擎 + 算薪流程 + AI 算薪校验摘要（Cursor 交付）<br>**范围**：payroll_runs / payslips / payslip_items 3 张表 + 12 端点 + 5 权限点 + 10 错误码（73401-73410）+ 6 项 salary.payroll.* configs + 3 级审批（HR→财务复核 hr 兼任→CEO）+ 复用 M0.5-5 aiSummarizeService<br>**强约束**：不实现工资条 PDF/银企直连/个税申报（C5）；不核算销售提成（C6）；不写 employee_salary_history；D1-D6 + C1+C2+C3 共 23 service 0 行改动；5 角色无 finance | **Cursor + WorkBuddy** |
 | **M4.0.5** | **2026-08-27** | **feat(salary): M4-C5 工资条 + 银企代发 + 个税申报 + 工资表导出（Cursor 交付）<br>**范围**：0 新表 + 7 端点 + 4 权限点 + 10 错误码（73501-73510）+ 6 项 salary.payslip/banking/report configs；复用 M0.5-2 notification.sendNotification；银企/个税/报表强制 mock<br>**强约束**：不接真实银行/税务局 API；不实现 UI；不写 employee_salary_history；D1-D6 + C1-C4 共 27 service 0 行改动；5 角色无 finance | **Cursor + WorkBuddy** |
 | **M4.0.6** | **2026-08-27** | **feat(salary): M4-C6 销售提成季度结算 + D5 联动（Cursor 交付）<br>**范围**：commission_settlements 1 张表 + 8 端点（`/api/salary/commissions/*`）+ 4 权限点 + 10 错误码（73601-73610）+ 6 项 salary.commission.* configs + 4 维度汇总 + 季度结算状态机 + 报表 mock<br>**强约束**：不联动 C4 算薪（salesCommissionAmount 继续默认 0）；不写 payslip_items；不改 D5 3 service；不写 employee_salary_history；D1-D6 + C1-C5 共 32 service 0 行改动；5 角色无 finance；V1.2 切片表 C5 劳务费仍未实现 | **Cursor + WorkBuddy** |
+| **M4.0.7 / C7.0.1** | **2026-08-27** | **feat(salary): M4-C7 人力成本预警（加班费占比 + 离职率）（Cursor 交付）<br>**范围**：hr_cost_alerts 1 张表 + 6 端点（`/api/salary/cost-alerts/*`）+ 4 权限点 + 10 错误码（73701-73710）+ 5 项 salary.cost_alert.* configs + 加班费占比/离职率按部门扫描 + 预警确认/关闭状态机<br>**强约束**：不创建 BullMQ 队列（仅暴露 scanOvertimeRatioAlerts / scanAttritionAlerts）；不联动 C4 算薪（仅 prisma 读 payslips）；不实现预算/调薪池/倒挂（二期 BI）；D1-D6 + C1-C6 共 32 service + M0.5 4 service = 36 service 0 行改动；5 角色无 finance；V1.2 切片表 C7 薪酬审批流已由 M4-C4 实现 | **Cursor + WorkBuddy** |
 
 ### 7.4 历史文档归档说明
 

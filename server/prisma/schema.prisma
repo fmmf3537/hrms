@@ -61,6 +61,10 @@ model User {
   commissionSettlementsConfirmed CommissionSettlement[] @relation("CommissionSettlementConfirmer")
   commissionSettlementsCancelled CommissionSettlement[] @relation("CommissionSettlementCanceller")
 
+  // M4-C7 人力成本预警反向关联
+  hrCostAlertsAcknowledged HrCostAlert[] @relation("HrCostAlertAcknowledger")
+  hrCostAlertsClosed       HrCostAlert[] @relation("HrCostAlertCloser")
+
   @@map("users")
 }
 
@@ -1896,4 +1900,56 @@ model CommissionSettlement {
   @@index([year, quarter])
   @@index([createdBy])
   @@map("commission_settlements")
+}
+
+// ==================== M4-C7 人力成本预警（加班费占比 + 离职率）====================
+enum HrCostAlertType {
+  overtime_ratio
+  attrition_monthly
+}
+
+enum HrCostAlertSeverity {
+  warning
+  critical
+}
+
+enum HrCostAlertStatus {
+  active
+  acknowledged
+  closed
+}
+
+model HrCostAlert {
+  id           String              @id @default(uuid()) @db.Uuid
+  alertType    HrCostAlertType     @map("alert_type")
+  period       String              @db.VarChar(7) // YYYY-MM
+  departmentId String?             @map("department_id") @db.Uuid // null = 公司级预警
+  threshold    Decimal             @db.Decimal(5, 4)
+  actualValue  Decimal             @map("actual_value") @db.Decimal(5, 4)
+  severity     HrCostAlertSeverity
+  status       HrCostAlertStatus   @default(active)
+  scanAt       DateTime            @map("scan_at") @db.Timestamptz(6)
+  // 关联数据快照（详情展示，不依赖二次查询）
+  contextSnapshot Json             @map("context_snapshot")
+
+  acknowledgedBy     String?   @map("acknowledged_by") @db.Uuid
+  acknowledgedByUser User?     @relation("HrCostAlertAcknowledger", fields: [acknowledgedBy], references: [id], onDelete: SetNull)
+  acknowledgedAt     DateTime? @map("acknowledged_at") @db.Timestamptz(6)
+  acknowledgeNote    String?   @map("acknowledge_note") @db.Text
+
+  closedBy     String?   @map("closed_by") @db.Uuid
+  closedByUser User?     @relation("HrCostAlertCloser", fields: [closedBy], references: [id], onDelete: SetNull)
+  closedAt     DateTime? @map("closed_at") @db.Timestamptz(6)
+  closeReason  String?   @map("close_reason") @db.Text
+
+  remark    String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([alertType, period, departmentId])
+  @@index([alertType, status, period])
+  @@index([status, severity, period])
+  @@index([departmentId, status])
+  @@index([scanAt])
+  @@map("hr_cost_alerts")
 }

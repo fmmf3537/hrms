@@ -3202,6 +3202,135 @@ paths:
               schema:
                 $ref: '#/components/schemas/CommissionSettlement'
 
+  /salary/cost-alerts/scan:
+    post:
+      tags: [Salary]
+      summary: 手动触发人力成本预警扫描
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanCostAlertsInput'
+      responses:
+        '200':
+          description: 扫描完成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanCostAlertsResult'
+  /salary/cost-alerts:
+    get:
+      tags: [Salary]
+      summary: 人力成本预警列表
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: alertType
+          in: query
+          schema: { type: string, enum: [overtime_ratio, attrition_monthly] }
+        - name: period
+          in: query
+          schema: { type: string, example: '2026-01' }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, acknowledged, closed] }
+        - name: severity
+          in: query
+          schema: { type: string, enum: [warning, critical] }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: 列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedHrCostAlerts'
+  /salary/cost-alerts/summary:
+    get:
+      tags: [Salary]
+      summary: 人力成本预警统计
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema: { type: string, example: '2026-01' }
+      responses:
+        '200':
+          description: 统计
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HrCostAlertSummary'
+  /salary/cost-alerts/{id}:
+    get:
+      tags: [Salary]
+      summary: 人力成本预警详情
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HrCostAlert'
+  /salary/cost-alerts/{id}/acknowledge:
+    post:
+      tags: [Salary]
+      summary: 确认预警
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AcknowledgeCostAlertInput'
+      responses:
+        '200':
+          description: 确认成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HrCostAlert'
+  /salary/cost-alerts/{id}/close:
+    post:
+      tags: [Salary]
+      summary: 关闭预警
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseCostAlertInput'
+      responses:
+        '200':
+          description: 关闭成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HrCostAlert'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -4398,6 +4527,61 @@ components:
         groupBy: { type: string }
         totalAmount: { type: number }
         mockMode: { type: boolean, enum: [true] }
+
+    ScanCostAlertsInput:
+      type: object
+      required: [period]
+      properties:
+        period: { type: string, example: '2026-01' }
+        alertType: { type: string, enum: [overtime_ratio, attrition_monthly, all] }
+
+    ScanCostAlertsResult:
+      type: object
+      properties:
+        period: { type: string }
+        alertCount: { type: integer }
+
+    HrCostAlert:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        alertType: { type: string, enum: [overtime_ratio, attrition_monthly] }
+        period: { type: string }
+        departmentId: { type: string, format: uuid, nullable: true }
+        threshold: { type: number }
+        actualValue: { type: number }
+        severity: { type: string, enum: [warning, critical] }
+        status: { type: string, enum: [active, acknowledged, closed] }
+
+    PaginatedHrCostAlerts:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/HrCostAlert' } }
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    HrCostAlertSummary:
+      type: object
+      properties:
+        period: { type: string }
+        total: { type: integer }
+        byAlertType: { type: object }
+        bySeverity: { type: object }
+        byStatus: { type: object }
+
+    AcknowledgeCostAlertInput:
+      type: object
+      properties:
+        note: { type: string }
+
+    CloseCostAlertInput:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+        remark: { type: string }
+
 
 
 
