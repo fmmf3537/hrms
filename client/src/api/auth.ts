@@ -1,36 +1,79 @@
-import request from './request';
+/**
+ * 认证 API（M5-2-0）
+ * @module api/auth
+ * @description 复用 POST /api/auth/login|refresh|logout 与 GET /api/auth/me；0 新端点
+ */
+
+import http from './http';
 import type {
-  ApiResponse, LoginParams, LoginResponse, RefreshTokenResponse, UserInfo,
-} from '@/types';
+  ApiResponse,
+  HealthCheck,
+  LoginRequest,
+  LoginResponse,
+  RefreshResponse,
+  UserInfo,
+} from './types';
 
-/**
- * 用户登录
- */
-export function login(params: LoginParams): Promise<ApiResponse<LoginResponse>> {
-  return request.post('/auth/login', params) as unknown as Promise<ApiResponse<LoginResponse>>;
+function asEnvelope<T>(value: unknown): ApiResponse<T> {
+  if (value && typeof value === 'object' && 'success' in value) {
+    return value as ApiResponse<T>;
+  }
+  throw new Error('接口响应格式异常');
 }
 
 /**
- * 刷新 accessToken（服务端会同时返回新的 refreshToken，前端必须同步更新本地存储）
+ * 登录。成功返回 tokens + user（含 roles / permissions）
  */
-export function refreshToken(refreshTokenValue: string): Promise<ApiResponse<RefreshTokenResponse>> {
-  return request.post('/auth/refresh', {
-    refreshToken: refreshTokenValue,
-  }) as unknown as Promise<ApiResponse<RefreshTokenResponse>>;
+export async function login(data: LoginRequest): Promise<LoginResponse> {
+  const envelope = asEnvelope<LoginResponse>(await http.post('/auth/login', data));
+  if (!envelope.success || !envelope.data) {
+    throw new Error(envelope.error || envelope.message || '登录失败');
+  }
+  return envelope.data;
 }
 
 /**
- * 退出登录（需 Authorization 头）
+ * 登出（尽力通知后端吊销 refresh；body 需带 refreshToken）
  */
-export function logout(refreshTokenValue: string): Promise<ApiResponse> {
-  return request.post('/auth/logout', {
-    refreshToken: refreshTokenValue,
-  }) as unknown as Promise<ApiResponse>;
+export async function logout(refreshTokenValue?: string | null): Promise<void> {
+  await http.post('/auth/logout', { refreshToken: refreshTokenValue ?? undefined });
 }
 
 /**
- * 获取当前登录用户信息
+ * Refresh token rotation：必须用新 refresh 覆盖本地存储
  */
-export function getCurrentUser(): Promise<ApiResponse<{ user: UserInfo }>> {
-  return request.get('/auth/me') as unknown as Promise<ApiResponse<{ user: UserInfo }>>;
+export async function refreshToken(refreshTokenValue: string): Promise<RefreshResponse> {
+  const envelope = asEnvelope<RefreshResponse>(
+    await http.post('/auth/refresh', { refreshToken: refreshTokenValue }),
+  );
+  if (!envelope.success || !envelope.data) {
+    throw new Error(envelope.error || envelope.message || '刷新登录态失败');
+  }
+  return envelope.data;
+}
+
+/**
+ * 当前用户（GET /api/auth/me → { user }）
+ */
+export async function getUserInfo(): Promise<UserInfo> {
+  const envelope = asEnvelope<{ user: UserInfo }>(await http.get('/auth/me'));
+  if (!envelope.success || !envelope.data?.user) {
+    throw new Error(envelope.error || envelope.message || '获取用户信息失败');
+  }
+  return envelope.data.user;
+}
+
+/**
+ * 运维健康检查（M5-1 裸 JSON：{ status, uptime, db, redis }）
+ */
+export async function getHealth(): Promise<HealthCheck> {
+  const raw: unknown = await http.get('/health');
+  if (raw && typeof raw === 'object' && 'status' in raw) {
+    return raw as HealthCheck;
+  }
+  const envelope = asEnvelope<HealthCheck>(raw);
+  if (envelope.data) {
+    return envelope.data;
+  }
+  throw new Error('健康检查响应格式异常');
 }

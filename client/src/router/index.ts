@@ -1,58 +1,64 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import { Odometer } from '@element-plus/icons-vue';
-import { useAuthStore } from '@/stores/auth';
+/**
+ * Vue Router 4 路由表（M5-2-0 共享基础设施）
+ * @module router/index
+ * @description /login 公开；/ 默认布局 + dashboard；M1-M4 业务路由留 M5-2-A/B/C/D
+ * @auth 未登录访问需登录页；已登录访问 /login 回工作台
+ * 注意：子路由 meta 默认不合并，守卫必须用 to.matched 判断 requiresAuth
+ */
 
-// 路由配置
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
+import { getToken } from '@/utils/auth';
+
+export interface AuthGuardResult {
+  type: 'login' | 'dashboard' | 'allow';
+  redirect?: string;
+}
+
+/**
+ * 纯函数路由守卫（供单测，不依赖 Vue Router 实例）
+ * 校验链：
+ *  1. 目标需要登录 && 无 token → /login?redirect=*
+ *  2. 目标是 Login && 有 token → /dashboard
+ *  3. 其他 → 放行
+ */
+export function resolveAuthGuard(
+  toName: string | symbol | undefined | null,
+  requiresAuth: boolean,
+  token: string | null,
+  fullPath: string,
+): AuthGuardResult {
+  if (requiresAuth && !token) {
+    return { type: 'login', redirect: fullPath };
+  }
+  if (toName === 'Login' && token) {
+    return { type: 'dashboard' };
+  }
+  return { type: 'allow' };
+}
+
 const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/login/index.vue'),
-    meta: {
-      public: true,
-      title: '登录',
-    },
+    component: () => import('@/views/Login.vue'),
+    meta: { public: true, title: '登录' },
   },
   {
     path: '/',
-    name: 'Layout',
     component: () => import('@/layouts/DefaultLayout.vue'),
-    redirect: '/dashboard',
+    meta: { requiresAuth: true },
     children: [
+      { path: '', redirect: '/dashboard' },
       {
-        path: '/dashboard',
+        path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('@/views/dashboard/index.vue'),
-        meta: {
-          title: '工作台',
-          icon: Odometer,
-        },
+        component: () => import('@/views/Dashboard.vue'),
+        meta: { title: '工作台' },
       },
+      // M5-2-A/B/C/D 子切片追加业务模块路由
     ],
   },
-  {
-    path: '/403',
-    name: 'Forbidden',
-    component: () => import('@/views/error/403.vue'),
-    meta: {
-      public: true,
-      title: '无权限',
-    },
-  },
-  {
-    path: '/404',
-    name: 'NotFound',
-    component: () => import('@/views/error/404.vue'),
-    meta: {
-      public: true,
-      title: '页面不存在',
-    },
-  },
-  {
-    path: '/:pathMatch(.*)*',
-    redirect: '/404',
-  },
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ];
 
 const router = createRouter({
@@ -63,44 +69,23 @@ const router = createRouter({
   },
 });
 
-// 路由守卫
-router.beforeEach(async (to, _from, next) => {
-  const authStore = useAuthStore();
-
-  // 设置页面标题
+router.beforeEach((to, _from, next) => {
   if (to.meta.title) {
-    document.title = `${to.meta.title} - 辰航卓越 HRMS`;
+    document.title = `${String(to.meta.title)} - 辰航卓越 HRMS`;
   }
 
-  // 公开路由直接放行
-  if (to.meta.public) {
-    // 已登录用户访问登录页，重定向到首页
-    if (to.path === '/login' && authStore.isLoggedIn) {
-      next('/');
-      return;
-    }
-    next();
+  const token = getToken();
+  const requiresAuth = to.matched.some((record) => Boolean(record.meta.requiresAuth));
+  const decision = resolveAuthGuard(to.name, requiresAuth, token, to.fullPath);
+
+  if (decision.type === 'login') {
+    next({ name: 'Login', query: { redirect: decision.redirect } });
     return;
   }
-
-  // 非公开路由：检查是否已登录
-  if (!authStore.isLoggedIn) {
-    ElMessage.warning('请先登录');
-    next({ path: '/login', query: { redirect: to.fullPath } });
+  if (decision.type === 'dashboard') {
+    next({ name: 'Dashboard' });
     return;
   }
-
-  // 已登录但没有用户信息（如刷新页面后）：先拉取用户信息
-  if (!authStore.userInfo) {
-    const success = await authStore.fetchCurrentUser();
-    if (!success) {
-      ElMessage.error('获取用户信息失败，请重新登录');
-      authStore.clearAuth();
-      next({ path: '/login', query: { redirect: to.fullPath } });
-      return;
-    }
-  }
-
   next();
 });
 
