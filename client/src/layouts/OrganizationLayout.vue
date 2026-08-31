@@ -5,7 +5,17 @@
  */
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Connection, OfficeBuilding, Share, User } from '@element-plus/icons-vue';
+import {
+  Back,
+  Check,
+  Connection,
+  Document,
+  OfficeBuilding,
+  Share,
+  Switch,
+  User,
+  UserFilled,
+} from '@element-plus/icons-vue';
 import { useUserStore } from '@/stores/user';
 import { filterOrgMenu, resolveOrgActiveKey } from '@/router/organization';
 
@@ -14,6 +24,11 @@ const ICONS = {
   Connection,
   User,
   Share,
+  UserFilled,
+  Check,
+  Switch,
+  Back,
+  Document,
 } as const;
 
 const route = useRoute();
