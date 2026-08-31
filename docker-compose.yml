@@ -1,9 +1,11 @@
-# M0-03: dev infrastructure compose | adapted from recruiting-system | 2026-08-23
-# 仅用于本地开发：启动 PostgreSQL + Redis
-# server / client 由 pnpm dev 在本地启动，不进容器
+# M5-1: production-like compose | HRMS
+# 4 服务：PostgreSQL + Redis + Server + Client
+# 启动：docker-compose up -d（自动 build + 健康检查 + 网络）
+# 部署：deploy.sh / deploy.ps1 一键部署
+# 本地开发仍可用 postgres / redis 的 127.0.0.1 端口映射（现有配置保留）
 
 services:
-  # PostgreSQL 数据库（含 pgvector 扩展，M0.5-5 AI 切片依赖）
+  # ===== PostgreSQL（含 pgvector 扩展，M0.5-5 AI 切片依赖）=====
   postgres:
     image: pgvector/pgvector:pg16
     container_name: hrms_postgres
@@ -12,12 +14,10 @@ services:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
       POSTGRES_DB: ${DB_NAME:-hrms}
-      # 强制 UTF-8 + 中国时区
       LANG: C.UTF-8
       TZ: Asia/Shanghai
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # 自动启用 pgvector 扩展（仅首次启动时执行）
       - ./server/prisma/init-scripts:/docker-entrypoint-initdb.d:ro
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
@@ -29,7 +29,7 @@ services:
     networks:
       - hrms_network
 
-  # Redis（BullMQ 队列 + JWT refresh token 黑名单 + 缓存）
+  # ===== Redis（BullMQ 队列 + JWT refresh token 黑名单 + 缓存）=====
   redis:
     image: redis:7-alpine
     container_name: hrms_redis
@@ -46,11 +46,83 @@ services:
     networks:
       - hrms_network
 
+  # ===== Server（Express + Prisma，hrms-server:1.0.0）=====
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: hrms-server:1.0.0
+    container_name: hrms_server
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-hrms}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      NODE_ENV: production
+      PORT: 3001
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+      OCR_PROVIDER: ${OCR_PROVIDER:-mock}
+      OCR_SECRET_ID: ${OCR_SECRET_ID:-}
+      OCR_SECRET_KEY: ${OCR_SECRET_KEY:-}
+      SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+      SMS_ACCESS_KEY: ${SMS_ACCESS_KEY:-}
+      SMS_ACCESS_SECRET: ${SMS_ACCESS_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - hrms_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - server_uploads:/app/server/uploads
+      - server_logs:/app/server/logs
+
+  # ===== Client（Vite build + nginx alpine，hrms-client:1.0.0）=====
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    image: hrms-client:1.0.0
+    container_name: hrms_client
+    restart: unless-stopped
+    ports:
+      - "${CLIENT_PORT:-80}:80"
+    depends_on:
+      - server
+    networks:
+      - hrms_network
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 volumes:
   postgres_data:
     name: hrms_postgres_data
   redis_data:
     name: hrms_redis_data
+  server_uploads:
+    name: hrms_server_uploads
+  server_logs:
+    name: hrms_server_logs
 
 networks:
   hrms_network:

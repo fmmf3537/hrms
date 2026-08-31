@@ -1,0 +1,56 @@
+# M5-1: server 多阶段构建（deps → builder → prod-deps → runner）
+# 生产入口：prisma migrate deploy + node dist/index.js
+# 健康检查：GET /api/health
+
+# ===== Stage 1: deps（pnpm fetch）=====
+FROM node:20-alpine AS deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY server/package.json ./server/
+COPY client/package.json ./client/
+COPY mobile/package.json ./mobile/
+RUN pnpm install --frozen-lockfile --filter=hrms-server...
+
+# ===== Stage 2: builder（prisma generate + tsc）=====
+FROM node:20-alpine AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/server/node_modules ./server/node_modules
+COPY . .
+RUN cd server && npx prisma generate
+RUN cd server && pnpm build
+
+# ===== Stage 3: prod-deps（生产依赖）=====
+FROM node:20-alpine AS prod-deps
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@8.15.0 --activate
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
+COPY server/package.json ./server/
+COPY client/package.json ./client/
+COPY mobile/package.json ./mobile/
+RUN pnpm install --prod --frozen-lockfile --filter=hrms-server...
+
+# ===== Stage 4: runner（生产运行时，非 root 用户）=====
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3001
+RUN apk add --no-cache wget \
+  && addgroup -g 1001 -S nodejs \
+  && adduser -S hrms -u 1001
+COPY --from=builder --chown=hrms:nodejs /app/server/dist ./server/dist
+COPY --from=builder --chown=hrms:nodejs /app/server/prisma ./server/prisma
+COPY --from=builder --chown=hrms:nodejs /app/server/package.json ./server/package.json
+COPY --from=prod-deps --chown=hrms:nodejs /app/server/node_modules ./server/node_modules
+COPY --from=prod-deps --chown=hrms:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=hrms:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=hrms:nodejs /app/server/node_modules/prisma ./server/node_modules/prisma
+COPY --from=builder --chown=hrms:nodejs /app/server/node_modules/@prisma ./server/node_modules/@prisma
+RUN mkdir -p /app/server/uploads /app/server/logs && chown -R hrms:nodejs /app/server
+USER hrms
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
+CMD ["sh", "-c", "cd server && npx prisma migrate deploy && node dist/index.js"]

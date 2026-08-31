@@ -8,6 +8,7 @@ import { env } from './lib/env';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rate-limit';
 import routes from './routes';
+import { handleHealth } from './routes/health';
 
 // 创建 Express 应用
 const app: Application = express();
@@ -43,6 +44,9 @@ app.use(compression());
 // 部署在 Nginx 反向代理之后：信任第一层代理，
 // 使 req.ip 取 X-Forwarded-For 中的真实客户端 IP（限流按真实 IP 聚桶）
 app.set('trust proxy', 1);
+
+// M5-1: 运维健康检查（公开、不限流，供 Docker healthcheck）
+app.get('/api/health', handleHealth);
 
 // 全局限流：1 分钟内最多 100 次请求
 app.use(apiLimiter);
