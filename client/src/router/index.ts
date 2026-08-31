@@ -8,6 +8,7 @@
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router';
 import { getToken } from '@/utils/auth';
+import organizationRoutes from './organization';
 
 export interface AuthGuardResult {
   type: 'login' | 'dashboard' | 'allow';
@@ -58,6 +59,7 @@ const routes: RouteRecordRaw[] = [
       // M5-2-A/B/C/D 子切片追加业务模块路由
     ],
   },
+  ...organizationRoutes,
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ];
 
