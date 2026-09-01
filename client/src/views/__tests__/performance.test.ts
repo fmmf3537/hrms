@@ -147,7 +147,8 @@ describe('views/__tests__/performance.test.ts', () => {
 
   it('路由表 children 5 条 + resolveActiveKey 5 前缀', () => {
     const children = performanceRoutes[0].children ?? [];
-    expectEqual(children.length, 6, '1 redirect + 5 children');
+    // M5-2-D2 追加了 records + records/:id 2 路由 → 1 redirect + 5 D1 + 2 D2 = 8 children
+    expectEqual(children.length, 8, '1 redirect + 5 D1 children + 2 D2 children');
     expectEqual(children[0].path ?? '', '', 'redirect path');
     expectEqual(resolvePerformanceActiveKey('/performance/cycles'), 'cycles', 'cycles active');
     expectEqual(resolvePerformanceActiveKey('/performance/indicators'), 'indicators', 'indicators active');
