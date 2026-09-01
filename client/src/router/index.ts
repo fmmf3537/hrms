@@ -11,6 +11,7 @@ import { getToken } from '@/utils/auth';
 import organizationRoutes from './organization';
 import attendanceRoutes from './attendance';
 import salaryRoutes from './salary';
+import performanceRoutes from './performance';
 
 export interface AuthGuardResult {
   type: 'login' | 'dashboard' | 'allow';
@@ -64,6 +65,7 @@ const routes: RouteRecordRaw[] = [
   ...organizationRoutes,
   ...attendanceRoutes,
   ...salaryRoutes,
+  ...performanceRoutes,
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ];
 
