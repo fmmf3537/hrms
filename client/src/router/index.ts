@@ -10,6 +10,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { getToken } from '@/utils/auth';
 import organizationRoutes from './organization';
 import attendanceRoutes from './attendance';
+import salaryRoutes from './salary';
 
 export interface AuthGuardResult {
   type: 'login' | 'dashboard' | 'allow';
@@ -62,6 +63,7 @@ const routes: RouteRecordRaw[] = [
   },
   ...organizationRoutes,
   ...attendanceRoutes,
+  ...salaryRoutes,
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ];
 

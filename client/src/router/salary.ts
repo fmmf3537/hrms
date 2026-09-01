@@ -1,0 +1,180 @@
+/**
+ * 薪酬核算子路由表（M5-2-C1）
+ * @module router/salary
+ * @description 路径前缀 /salary；grades/:id 必须在 grades 列表之后、其它静态路径之前无冲突
+ */
+
+import type { RouteRecordRaw } from 'vue-router';
+import type { UserInfo } from '@/api/types';
+import { hasPermission } from '@/utils/permission';
+
+export interface SalaryMenuItem {
+  key: string;
+  label: string;
+  employeeLabel?: string;
+  icon: string;
+  to: string;
+  permission: string;
+  hideForEmployee?: boolean;
+}
+
+export const SALARY_MENU: SalaryMenuItem[] = [
+  {
+    key: 'grade',
+    label: '薪级薪档',
+    icon: 'Money',
+    to: '/salary/grades',
+    permission: 'salary:grade:read',
+    hideForEmployee: true,
+  },
+  {
+    key: 'plan',
+    label: '薪酬方案',
+    employeeLabel: '我的薪酬方案',
+    icon: 'Coin',
+    to: '/salary/plans',
+    permission: 'salary:plan:read',
+  },
+  {
+    key: 'social',
+    label: '社保方案',
+    icon: 'Tickets',
+    to: '/salary/insurances/social',
+    permission: 'salary:insurance:read',
+    hideForEmployee: true,
+  },
+  {
+    key: 'fund',
+    label: '公积金方案',
+    icon: 'Wallet',
+    to: '/salary/insurances/housing-fund',
+    permission: 'salary:housing-fund:read',
+    hideForEmployee: true,
+  },
+  {
+    key: 'registration',
+    label: '参保登记',
+    employeeLabel: '我的参保',
+    icon: 'Postcard',
+    to: '/salary/insurances/employees',
+    permission: 'salary:insurance:read',
+  },
+  {
+    key: 'tax-calc',
+    label: '个税工具',
+    icon: 'Operation',
+    to: '/salary/tax/calculator',
+    permission: 'salary:tax:calculate',
+    hideForEmployee: true,
+  },
+  {
+    key: 'tax-history',
+    label: '个税查询',
+    employeeLabel: '我的个税',
+    icon: 'DataLine',
+    to: '/salary/tax/history',
+    permission: 'salary:tax:read',
+  },
+];
+
+export function filterSalaryMenu(user: UserInfo | null): SalaryMenuItem[] {
+  const elevated = ['admin', 'hr', 'dept_head', 'executive'];
+  const isEmployee =
+    Boolean(user?.roles.includes('employee')) &&
+    !user?.roles.some((r) => elevated.includes(r));
+  return SALARY_MENU.filter((item) => {
+    if (isEmployee && item.hideForEmployee) {
+      return false;
+    }
+    return hasPermission(user, item.permission);
+  }).map((item) => ({
+    ...item,
+    label: isEmployee && item.employeeLabel ? item.employeeLabel : item.label,
+  }));
+}
+
+export function resolveSalaryActiveKey(path: string): string {
+  if (path.startsWith('/salary/grades')) {
+    return 'grade';
+  }
+  if (path.startsWith('/salary/plans')) {
+    return 'plan';
+  }
+  if (path.startsWith('/salary/insurances/housing-fund')) {
+    return 'fund';
+  }
+  if (path.startsWith('/salary/insurances/employees')) {
+    return 'registration';
+  }
+  if (path.startsWith('/salary/insurances/social')) {
+    return 'social';
+  }
+  if (path.startsWith('/salary/tax/calculator')) {
+    return 'tax-calc';
+  }
+  if (path.startsWith('/salary/tax/history')) {
+    return 'tax-history';
+  }
+  return '';
+}
+
+const salaryRoutes: RouteRecordRaw[] = [
+  {
+    path: '/salary',
+    component: () => import('@/layouts/SalaryLayout.vue'),
+    meta: { requiresAuth: true, title: '薪酬核算' },
+    children: [
+      { path: '', redirect: '/salary/grades' },
+      {
+        path: 'grades',
+        name: 'GradeList',
+        component: () => import('@/views/salary/grade/GradeList.vue'),
+        meta: { title: '薪级薪档' },
+      },
+      {
+        path: 'grades/:id',
+        name: 'GradeDetail',
+        component: () => import('@/views/salary/grade/GradeDetail.vue'),
+        meta: { title: '薪档管理' },
+      },
+      {
+        path: 'plans',
+        name: 'SalaryPlanList',
+        component: () => import('@/views/salary/plan/SalaryPlanList.vue'),
+        meta: { title: '薪酬方案' },
+      },
+      {
+        path: 'insurances/social',
+        name: 'SocialSchemeList',
+        component: () => import('@/views/salary/insurance/SocialSchemeList.vue'),
+        meta: { title: '社保方案' },
+      },
+      {
+        path: 'insurances/housing-fund',
+        name: 'HousingFundList',
+        component: () => import('@/views/salary/insurance/HousingFundList.vue'),
+        meta: { title: '公积金方案' },
+      },
+      {
+        path: 'insurances/employees',
+        name: 'EmployeeInsuranceList',
+        component: () => import('@/views/salary/insurance/EmployeeInsuranceList.vue'),
+        meta: { title: '参保登记' },
+      },
+      {
+        path: 'tax/calculator',
+        name: 'TaxCalculator',
+        component: () => import('@/views/salary/tax/TaxCalculator.vue'),
+        meta: { title: '个税工具' },
+      },
+      {
+        path: 'tax/history',
+        name: 'TaxHistory',
+        component: () => import('@/views/salary/tax/TaxHistory.vue'),
+        meta: { title: '个税查询' },
+      },
+    ],
+  },
+];
+
+export default salaryRoutes;
