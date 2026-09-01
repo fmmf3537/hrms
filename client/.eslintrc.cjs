@@ -45,8 +45,10 @@ module.exports = {
     'class-methods-use-this': 'off',
     // Pinia store 等单具名导出文件不适用 default export 偏好
     'import/prefer-default-export': 'off',
-    // vite/vitest 等配置文件允许引用 devDependencies
-    'import/no-extraneous-dependencies': ['error', { devDependencies: ['**/*.config.ts', '**/*.config.js', '**/*.config.cjs'] }],
+    // vite/vitest 配置文件与测试文件允许引用 devDependencies
+    'import/no-extraneous-dependencies': ['error', {
+      devDependencies: ['**/*.config.ts', '**/*.config.js', '**/*.config.cjs', '**/tests/**', '**/__tests__/**', '**/*.test.ts'],
+    }],
     'max-len': ['error', { code: 120, ignoreStrings: true, ignoreTemplateLiterals: true }],
   },
   settings: {
