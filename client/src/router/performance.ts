@@ -1,20 +1,28 @@
 /**
- * 绩效管理子路由表（M5-2-D1 + M5-2-D2）
+ * 绩效管理子路由表（M5-2-D1 + M5-2-D2 + M5-2-D3）
  * @module router/performance
  * @description 路径前缀 /performance；D1 5 菜单（cycles / indicators / schemes / coefficients / grade-thresholds）
  *              + D2 1 菜单（records 考核记录 / 我的考核）
+ *              + **D3 3 菜单（grade-actions / payouts / payout-config）**
  * - D1 权限矩阵（与 server/src/constants/permissions.ts 一致）：
  *   - performance:cycle:read | write        admin / hr / dept_head(read only)
  *   - performance:indicator:read | write    admin / hr / dept_head(read only)
  *   - performance:scheme:read | write       admin / hr / dept_head(read only)
  *   - performance:coefficient:read          admin / hr / dept_head / executive
- *   - performance:coefficient:write         admin / hr / executive（**executive 也能改**）
+ *   - performance:coefficient:write         admin / hr / executive（*executive 也能改*）
  *   - performance:grade:threshold:read      admin / hr / executive
- *   - performance:grade:threshold:write     admin / hr（**executive 不能改**）
- *   - employee 全部无权限 → 菜单空（filter 函数天然处理）
- * - D2 新增：performance:record:read    admin/hr/dept_head/executive/employee（**employee 也有**）
- *         performance:record:write   admin/hr（创建/归档/驳回）
- * @auth meta.requiresAuth + PerformanceLayout 菜单按真实权限点过滤
+ *   - performance:grade:threshold:write     admin / hr（*executive 不能改*）
+ *   - employee 全部无权除了 → 菜单空（filter 函数天然处理）
+ * - D2 新增：performance:record:read    admin/hr/dept_head/executive/employee（*employee 也有*）
+ *         performance:record:write   admin/hr（创建 / 归档 / 驳回）
+ * - **D3 新增（M5-2-D3）**：
+ *   - performance:grade:calculate    admin/hr/executive（calibrate-ratios 用 record:read）
+ *   - performance:payout:read        5 角色全开
+ *   - performance:payout:write       admin/hr（payout-config 菜单以此为权限）
+ *   - performance:payout:calculate   admin/hr/executive
+ *   - performance:payout:settle      admin/hr/executive（prepay + settle 共用）
+ *
+ * @auth meta.requiresAuth + PerformanceLayout 菜单按实际权限点过滤
  */
 
 import type { RouteRecordRaw } from 'vue-router';
@@ -27,6 +35,8 @@ export interface PerformanceMenuItem {
   icon: string;
   to: string;
   permission: string;
+  /** 仅 employee 角色显示的标签（如「我的奖金」） */
+  employeeLabel?: string;
 }
 
 export const PERFORMANCE_MENU: PerformanceMenuItem[] = [
@@ -79,22 +89,64 @@ export const PERFORMANCE_D2_MENU: PerformanceMenuItem[] = [
   },
 ];
 
+// ============ M5-2-D3 等级计算 + 奖金兑现 + 兑现配置 ============
+// 图标复用 PerformanceLayout 已注册 5 图标（Calendar/Aim/Files/SetUp/Medal）
+// 菜单权限点选择：
+//   - grade-actions: grade:calculate（admin/hr/executive，**dept_head/employee 不可达 calibrate-ratios 区块**，可接受取舍）
+//   - payouts:       payout:read（5 角色全开，ESS 「我的奖金」）
+//   - payout-config: payout:write（admin/hr，菜单语义更干净；非写角色页面仅读但菜单隐藏）
+
+export const PERFORMANCE_D3_MENU: PerformanceMenuItem[] = [
+  {
+    key: 'grade-actions',
+    label: '等级计算',
+    icon: 'Aim',
+    to: '/performance/grade-actions',
+    permission: 'performance:grade:calculate',
+  },
+  {
+    key: 'payouts',
+    label: '奖金兑现',
+    employeeLabel: '我的奖金',
+    icon: 'SetUp',
+    to: '/performance/payouts',
+    permission: 'performance:payout:read',
+  },
+  {
+    key: 'payout-config',
+    label: '兑现配置',
+    icon: 'Medal',
+    to: '/performance/payout-config',
+    permission: 'performance:payout:write',
+  },
+];
+
 /**
- * 5 角色 RBAC：5 + 1 菜单按权限点过滤
+ * 5 角色 RBAC，? + 1 菜单按权限点过滤
  * 反直觉点：
  *  - executive 能改 coefficient 但不能改 threshold → threshold 菜单可看但保存按钮仅 admin/hr
  *  - dept_head 有 cycle/indicator/scheme/coefficient read，无 grade threshold read → 阈值菜单不可见
- *  - employee 全切片只有 record:read（无 cycle/indicator/scheme/coefficient/threshold read）
- *    → 菜单只剩「我的考核」（employeeLabel 在模板侧处理）
+ *  - employee 全切片只?record:read（无 cycle/indicator/scheme/coefficient/threshold read）
+ *    → 菜单只剩「考核记录」（employeeLabel 为空时用 label）；D3 后多「我的奖金」
+ *  - D3 等级计算菜单 dept_head/employee 不可见 → calibrate-ratios 区块随之不可达（可接受取舍）
  */
 export function filterPerformanceMenu(user: UserInfo | null): PerformanceMenuItem[] {
-  return [...PERFORMANCE_MENU, ...PERFORMANCE_D2_MENU].filter((item) =>
+  const all = [...PERFORMANCE_MENU, ...PERFORMANCE_D2_MENU, ...PERFORMANCE_D3_MENU].filter((item) =>
     hasPermission(user, item.permission),
   );
+  // employee 角色展示 employeeLabel（仅当存在时）
+  const isEmployee = (user?.roles ?? []).includes('employee');
+  if (isEmployee) {
+    return all.map((m) =>
+      m.employeeLabel ? { ...m, label: m.employeeLabel } : m,
+    );
+  }
+  return all;
 }
 
 /**
- * 路径 → 菜单 key（6 前缀分支：5 D1 + 1 D2）
+ * 路径 → 菜单 key；前缀分支；D1 + 1 D2 + **3 D3**
+ * 注意：/performance/payouts 与 /performance/payout-config 互不前缀
  */
 export function resolvePerformanceActiveKey(path: string): string {
   if (path.startsWith('/performance/cycles')) {
@@ -114,6 +166,16 @@ export function resolvePerformanceActiveKey(path: string): string {
   }
   if (path.startsWith('/performance/records')) {
     return 'records';
+  }
+  // D3：grade-actions / payouts / payout-config（顺序安全，互不前缀）
+  if (path.startsWith('/performance/grade-actions')) {
+    return 'grade-actions';
+  }
+  if (path.startsWith('/performance/payout-config')) {
+    return 'payout-config';
+  }
+  if (path.startsWith('/performance/payouts')) {
+    return 'payouts';
   }
   return '';
 }
@@ -167,6 +229,31 @@ const performanceRoutes: RouteRecordRaw[] = [
         name: 'RecordDetail',
         component: () => import('@/views/performance/record/RecordDetail.vue'),
         meta: { title: '考核详情' },
+      },
+      // ============ M5-2-D3 等级计算 + 奖金兑现 4 路由追加 ============
+      {
+        path: 'grade-actions',
+        name: 'GradeActions',
+        component: () => import('@/views/performance/grade/GradeActions.vue'),
+        meta: { title: '等级计算' },
+      },
+      {
+        path: 'payout-config',
+        name: 'PayoutConfig',
+        component: () => import('@/views/performance/payout/PayoutConfig.vue'),
+        meta: { title: '兑现配置' },
+      },
+      {
+        path: 'payouts',
+        name: 'PayoutList',
+        component: () => import('@/views/performance/payout/PayoutList.vue'),
+        meta: { title: '奖金兑现' },
+      },
+      {
+        path: 'payouts/:id',
+        name: 'PayoutDetail',
+        component: () => import('@/views/performance/payout/PayoutDetail.vue'),
+        meta: { title: '奖金单详情' },
       },
     ],
   },

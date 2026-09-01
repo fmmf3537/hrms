@@ -1,12 +1,14 @@
 /**
- * 绩效视图 + 状态映射单测（M5-2-D1）内联断言
+ * 绩效视图 + 状态映射单测（M5-2-D1 + D2）内联断言
  *
  * 覆盖要点：
- *  - 5 个视图组件可导入
+ *  - 5 个视图组件可被导入
  *  - CYCLE_STATUS_MAP / SCHEME_STATUS_MAP / INDICATOR_STATUS_MAP 完整映射
  *  - filterPerformanceMenu 角色可见性（employee → 空；dept_head → 4 项无 grade-thresholds；executive → 5 项全有）
  *  - resolvePerformanceActiveKey 路径匹配
  *  - 5 角色 RBAC 无 finance
+ *
+ * **M5-2-D3 调整**：children 计数 8 → 12（追加 4 路由：grade-actions / payout-config / payouts / payouts/:id）
  */
 import performanceRoutes, {
   PERFORMANCE_MENU,
@@ -62,7 +64,7 @@ function mockUser(roles: string[], permissions: string[]): UserInfo {
 }
 
 describe('views/__tests__/performance.test.ts', () => {
-  it('5 个绩效视图组件可导入', () => {
+  it('5 个 D1 绩效视图组件可被导入', () => {
     expectEqual(typeof CycleList, 'object', 'CycleList');
     expectEqual(typeof IndicatorList, 'object', 'IndicatorList');
     expectEqual(typeof SchemeList, 'object', 'SchemeList');
@@ -81,7 +83,7 @@ describe('views/__tests__/performance.test.ts', () => {
     expectEqual(INDICATOR_STATUS_MAP.archived.label, '已归档', 'indicator archived');
   });
 
-  it('5 菜单 + 5 角色 RBAC 无 finance', () => {
+  it('D1 5 菜单 + 5 角色 RBAC 无 finance', () => {
     expectEqual(PERFORMANCE_MENU.length, 5, '5 menus');
     expectEqual(
       PERFORMANCE_MENU.map((m) => m.permission).join(',').includes('finance'),
@@ -145,10 +147,12 @@ describe('views/__tests__/performance.test.ts', () => {
     );
   });
 
-  it('路由表 children 5 条 + resolveActiveKey 5 前缀', () => {
+  it('路由表 children 计数 + resolveActiveKey 前缀匹配（D3 追加 4 路由 → 12 children）', () => {
     const children = performanceRoutes[0].children ?? [];
-    // M5-2-D2 追加了 records + records/:id 2 路由 → 1 redirect + 5 D1 + 2 D2 = 8 children
-    expectEqual(children.length, 8, '1 redirect + 5 D1 children + 2 D2 children');
+    // M5-2-D1：1 redirect + 5 D1 = 6
+    // M5-2-D2 追加 2 路由（records + records/:id）→ 8 children
+    // M5-2-D3 追加 4 路由（grade-actions + payout-config + payouts + payouts/:id）→ **12 children**
+    expectEqual(children.length, 12, '1 redirect + 5 D1 + 2 D2 + 4 D3 = 12 children');
     expectEqual(children[0].path ?? '', '', 'redirect path');
     expectEqual(resolvePerformanceActiveKey('/performance/cycles'), 'cycles', 'cycles active');
     expectEqual(resolvePerformanceActiveKey('/performance/indicators'), 'indicators', 'indicators active');

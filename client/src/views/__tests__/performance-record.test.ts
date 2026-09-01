@@ -286,13 +286,19 @@ describe('views/__tests__/performance-record.test.ts', () => {
     expectEqual(resolvePerformanceActiveKey('/performance/cycles'), 'cycles', 'cycles');
   });
 
-  it('路由表 children 7 条（1 + 5 + 2） + 菜单 to 路径', () => {
+  it('路由表 children 12 条（1 redirect + 5 D1 + 2 D2 + 4 D3） + 菜单 to 路径', () => {
     const children = performanceRoutes[0].children ?? [];
-    expectEqual(children.length, 8, '1 redirect + 5 D1 + 2 D2 children');
-    // 最后 2 个是 D2 路由
+    expectEqual(children.length, 12, '1 redirect + 5 D1 + 2 D2 + 4 D3 children');
+    // M5-2-D3 追加 4 路由（grade-actions / payout-config / payouts / payouts/:id）导致本用例更新：
+    // children 顺序 = 1 redirect + 5 D1 (idx 1-5) + 2 D2 (idx 6-7: records / records/:id) + 4 D3 (idx 8-11)
+    // D2 两条路由位置不变（仍为 idx 6/7）
+    const d2Two = children.slice(6, 8);
+    expectEqual(d2Two[0].path, 'records', 'idx 6 path=records');
+    expectEqual(d2Two[1].path, 'records/:id', 'idx 7 path=records/:id');
+    // 最后 2 个是 D3 路由（payouts / payouts/:id）
     const lastTwo = children.slice(-2);
-    expectEqual(lastTwo[0].path, 'records', '倒数第 2 path=records');
-    expectEqual(lastTwo[1].path, 'records/:id', '倒数第 1 path=records/:id');
+    expectEqual(lastTwo[0].path, 'payouts', '倒数第 2 path=payouts');
+    expectEqual(lastTwo[1].path, 'payouts/:id', '倒数第 1 path=payouts/:id');
     // 6 菜单 to（含 records）
     const allMenuItems = filterPerformanceMenu(
       mockUser(
