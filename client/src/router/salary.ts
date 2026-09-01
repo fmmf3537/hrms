@@ -77,12 +77,41 @@ export const SALARY_MENU: SalaryMenuItem[] = [
   },
 ];
 
+/** M5-2-C2 追加菜单；不写入 SALARY_MENU，以免破坏 C1 `length === 7` 旧测 */
+export const SALARY_C2_MENU: SalaryMenuItem[] = [
+  {
+    key: 'my-payslips',
+    label: '我的工资条',
+    icon: 'Tickets',
+    to: '/salary/my-payslips',
+    permission: 'salary:payslip:generate',
+  },
+  {
+    key: 'payroll-runs',
+    label: '算薪管理',
+    icon: 'Operation',
+    to: '/salary/payroll-runs',
+    permission: 'salary:payroll-run:read',
+    hideForEmployee: true,
+  },
+  {
+    key: 'payslips',
+    label: '工资单管理',
+    icon: 'Money',
+    to: '/salary/payslips',
+    permission: 'salary:payslip:read',
+    hideForEmployee: true,
+  },
+];
+
 export function filterSalaryMenu(user: UserInfo | null): SalaryMenuItem[] {
   const elevated = ['admin', 'hr', 'dept_head', 'executive'];
   const isEmployee =
     Boolean(user?.roles.includes('employee')) &&
     !user?.roles.some((r) => elevated.includes(r));
-  return SALARY_MENU.filter((item) => {
+  const head = SALARY_C2_MENU.filter((item) => item.key === 'my-payslips');
+  const tail = SALARY_C2_MENU.filter((item) => item.key !== 'my-payslips');
+  return [...head, ...SALARY_MENU, ...tail].filter((item) => {
     if (isEmployee && item.hideForEmployee) {
       return false;
     }
@@ -114,6 +143,15 @@ export function resolveSalaryActiveKey(path: string): string {
   }
   if (path.startsWith('/salary/tax/history')) {
     return 'tax-history';
+  }
+  if (path.startsWith('/salary/my-payslips')) {
+    return 'my-payslips';
+  }
+  if (path.startsWith('/salary/payroll-runs')) {
+    return 'payroll-runs';
+  }
+  if (path.startsWith('/salary/payslips')) {
+    return 'payslips';
   }
   return '';
 }
@@ -172,6 +210,42 @@ const salaryRoutes: RouteRecordRaw[] = [
         name: 'TaxHistory',
         component: () => import('@/views/salary/tax/TaxHistory.vue'),
         meta: { title: '个税查询' },
+      },
+      {
+        path: 'payroll-runs',
+        name: 'PayrollRunList',
+        component: () => import('@/views/salary/payroll/PayrollRunList.vue'),
+        meta: { title: '算薪管理' },
+      },
+      {
+        path: 'payroll-runs/:id',
+        name: 'PayrollRunDetail',
+        component: () => import('@/views/salary/payroll/PayrollRunDetail.vue'),
+        meta: { title: '算薪详情' },
+      },
+      {
+        path: 'payslips',
+        name: 'PayslipList',
+        component: () => import('@/views/salary/payroll/PayslipList.vue'),
+        meta: { title: '工资单管理' },
+      },
+      {
+        path: 'payslips/:id',
+        name: 'PayslipDetail',
+        component: () => import('@/views/salary/payroll/PayslipDetail.vue'),
+        meta: { title: '工资单详情' },
+      },
+      {
+        path: 'my-payslips',
+        name: 'MyPayslipList',
+        component: () => import('@/views/salary/ess/MyPayslipList.vue'),
+        meta: { title: '我的工资条' },
+      },
+      {
+        path: 'my-payslips/:id',
+        name: 'MyPayslipDetail',
+        component: () => import('@/views/salary/ess/MyPayslipDetail.vue'),
+        meta: { title: '工资条详情' },
       },
     ],
   },
