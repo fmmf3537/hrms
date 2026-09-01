@@ -104,6 +104,42 @@ export const SALARY_C2_MENU: SalaryMenuItem[] = [
   },
 ];
 
+/** M5-2-C3 追加菜单；不写入 SALARY_MENU，以免破坏 C1 `length === 7` 旧测 */
+export const SALARY_C3_MENU: SalaryMenuItem[] = [
+  {
+    key: 'commission',
+    label: '提成查询',
+    employeeLabel: '我的提成',
+    icon: 'Coin',
+    to: '/salary/commissions',
+    permission: 'salary:commission:read',
+  },
+  {
+    key: 'settlements',
+    label: '提成结算',
+    icon: 'Tickets',
+    to: '/salary/commission-settlements',
+    permission: 'salary:commission:read',
+    hideForEmployee: true,
+  },
+  {
+    key: 'cost-alerts',
+    label: '成本预警',
+    icon: 'Operation',
+    to: '/salary/cost-alerts',
+    permission: 'salary:cost-alert:read',
+    hideForEmployee: true,
+  },
+  {
+    key: 'adjustments',
+    label: '调薪管理',
+    employeeLabel: '我的调薪',
+    icon: 'Money',
+    to: '/salary/adjustments',
+    permission: 'salary:adjustment:read',
+  },
+];
+
 export function filterSalaryMenu(user: UserInfo | null): SalaryMenuItem[] {
   const elevated = ['admin', 'hr', 'dept_head', 'executive'];
   const isEmployee =
@@ -111,9 +147,15 @@ export function filterSalaryMenu(user: UserInfo | null): SalaryMenuItem[] {
     !user?.roles.some((r) => elevated.includes(r));
   const head = SALARY_C2_MENU.filter((item) => item.key === 'my-payslips');
   const tail = SALARY_C2_MENU.filter((item) => item.key !== 'my-payslips');
-  return [...head, ...SALARY_MENU, ...tail].filter((item) => {
+  return [...head, ...SALARY_MENU, ...tail, ...SALARY_C3_MENU].filter((item) => {
     if (isEmployee && item.hideForEmployee) {
       return false;
+    }
+    if (item.key === 'adjustments') {
+      return (
+        hasPermission(user, 'salary:adjustment:read') ||
+        hasPermission(user, 'salary:adjustment:read-self')
+      );
     }
     return hasPermission(user, item.permission);
   }).map((item) => ({
@@ -152,6 +194,18 @@ export function resolveSalaryActiveKey(path: string): string {
   }
   if (path.startsWith('/salary/payslips')) {
     return 'payslips';
+  }
+  if (path.startsWith('/salary/commissions')) {
+    return 'commission';
+  }
+  if (path.startsWith('/salary/commission-settlements')) {
+    return 'settlements';
+  }
+  if (path.startsWith('/salary/cost-alerts')) {
+    return 'cost-alerts';
+  }
+  if (path.startsWith('/salary/adjustments')) {
+    return 'adjustments';
   }
   return '';
 }
@@ -246,6 +300,48 @@ const salaryRoutes: RouteRecordRaw[] = [
         name: 'MyPayslipDetail',
         component: () => import('@/views/salary/ess/MyPayslipDetail.vue'),
         meta: { title: '工资条详情' },
+      },
+      {
+        path: 'commissions',
+        name: 'CommissionSummary',
+        component: () => import('@/views/salary/commission/CommissionSummary.vue'),
+        meta: { title: '提成查询' },
+      },
+      {
+        path: 'commission-settlements',
+        name: 'SettlementList',
+        component: () => import('@/views/salary/commission/SettlementList.vue'),
+        meta: { title: '提成结算' },
+      },
+      {
+        path: 'commission-settlements/:id',
+        name: 'SettlementDetail',
+        component: () => import('@/views/salary/commission/SettlementDetail.vue'),
+        meta: { title: '结算单详情' },
+      },
+      {
+        path: 'cost-alerts',
+        name: 'CostAlertList',
+        component: () => import('@/views/salary/cost-alert/CostAlertList.vue'),
+        meta: { title: '成本预警' },
+      },
+      {
+        path: 'cost-alerts/:id',
+        name: 'CostAlertDetail',
+        component: () => import('@/views/salary/cost-alert/CostAlertDetail.vue'),
+        meta: { title: '预警详情' },
+      },
+      {
+        path: 'adjustments',
+        name: 'AdjustmentList',
+        component: () => import('@/views/salary/adjustment/AdjustmentList.vue'),
+        meta: { title: '调薪管理' },
+      },
+      {
+        path: 'adjustments/:id',
+        name: 'AdjustmentDetail',
+        component: () => import('@/views/salary/adjustment/AdjustmentDetail.vue'),
+        meta: { title: '调薪详情' },
       },
     ],
   },
