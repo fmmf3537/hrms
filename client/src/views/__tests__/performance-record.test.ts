@@ -12,6 +12,9 @@
  *  - PERFORMANCE_D2_MENU + filterPerformanceMenu records 可见性
  *  - resolvePerformanceActiveKey records 路径分支
  *  - 路由表追加 2 children（records + records/:id）
+ *  - **M5-2-D4 调整**：
+ *    - 路由总 children 12 → 15（D4 追加 3 条于末尾 idx 12/13/14）
+ *    - 「最后 2 条」断言：D3 末 2 条（payouts / payouts/:id）已被 D4 末 2 条（sales-payments / sales-commissions）取代
  */
 import performanceRoutes, {
   PERFORMANCE_D2_MENU,
@@ -286,19 +289,20 @@ describe('views/__tests__/performance-record.test.ts', () => {
     expectEqual(resolvePerformanceActiveKey('/performance/cycles'), 'cycles', 'cycles');
   });
 
-  it('路由表 children 12 条（1 redirect + 5 D1 + 2 D2 + 4 D3） + 菜单 to 路径', () => {
+  it('路由表 children 15 条（1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4） + 菜单 to 路径', () => {
     const children = performanceRoutes[0].children ?? [];
-    expectEqual(children.length, 12, '1 redirect + 5 D1 + 2 D2 + 4 D3 children');
-    // M5-2-D3 追加 4 路由（grade-actions / payout-config / payouts / payouts/:id）导致本用例更新：
-    // children 顺序 = 1 redirect + 5 D1 (idx 1-5) + 2 D2 (idx 6-7: records / records/:id) + 4 D3 (idx 8-11)
+    expectEqual(children.length, 15, '1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 children');
+    // M5-2-D3 追加 4 路由（grade-actions / payout-config / payouts / payouts/:id）后是 idx 8-11
+    // M5-2-D4 追加 3 路由于末尾（sales-products / sales-payments / sales-commissions）→ idx 12-14
+    // children 顺序 = 1 redirect + 5 D1 (idx 1-5) + 2 D2 (idx 6-7) + 4 D3 (idx 8-11) + 3 D4 (idx 12-14)
     // D2 两条路由位置不变（仍为 idx 6/7）
     const d2Two = children.slice(6, 8);
     expectEqual(d2Two[0].path, 'records', 'idx 6 path=records');
     expectEqual(d2Two[1].path, 'records/:id', 'idx 7 path=records/:id');
-    // 最后 2 个是 D3 路由（payouts / payouts/:id）
+    // 最后 2 个是 D4 路由（sales-payments / sales-commissions），已取代 D3 的 payouts / payouts/:id
     const lastTwo = children.slice(-2);
-    expectEqual(lastTwo[0].path, 'payouts', '倒数第 2 path=payouts');
-    expectEqual(lastTwo[1].path, 'payouts/:id', '倒数第 1 path=payouts/:id');
+    expectEqual(lastTwo[0].path, 'sales-payments', '倒数第 2 path=sales-payments');
+    expectEqual(lastTwo[1].path, 'sales-commissions', '倒数第 1 path=sales-commissions');
     // 6 菜单 to（含 records）
     const allMenuItems = filterPerformanceMenu(
       mockUser(

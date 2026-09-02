@@ -17,6 +17,8 @@ git diff --stat package.json */package.json   # 依赖红线：必须 0 行
 
 ## 2. 亲手重跑全部验收命令
 
+**一次性跑完全部命令，把发现的所有错误攒成一轮 fix**——禁止「跑一条修一轮」，拆分修订轮会制造多余的中断窗口（真实事故教训）。
+
 以 HRMS 项目为例（换成目标项目自己的验收集）：
 
 ```bash
@@ -42,7 +44,7 @@ pnpm --filter hrms-client build
 
 ## 4. 修订闭环
 
-发现问题 → 按 `references/prompt-template.md` 的 fix 模板写 `<切片ID>-fixN.md` → 同一 runner 换 SliceId 再跑 → 重跑验收。实测修订轮 4-5 分钟、1-2 轮收敛。修订轮也要查 BOM（agent 可能再次整文件重写）。
+发现问题 → 按 `references/prompt-template.md` 的 fix 模板写 `<切片ID>-fixN.md` → **同一回合内** commit + 同一 runner 换 SliceId 启动 + 更新 `logs/<ID>.state.md`（原子动作，不得以「提示词写完」结束回合）→ 重跑验收。实测修订轮 4-5 分钟、1-2 轮收敛。修订轮也要查 BOM（agent 可能再次整文件重写）。
 
 ## 5. 通过后收尾
 

@@ -9,6 +9,7 @@
  *  - 5 角色 RBAC 无 finance
  *
  * **M5-2-D3 调整**：children 计数 8 → 12（追加 4 路由：grade-actions / payout-config / payouts / payouts/:id）
+ * **M5-2-D4 调整**：children 计数 12 → 15（追加 3 路由：sales-products / sales-payments / sales-commissions）
  */
 import performanceRoutes, {
   PERFORMANCE_MENU,
@@ -147,12 +148,13 @@ describe('views/__tests__/performance.test.ts', () => {
     );
   });
 
-  it('路由表 children 计数 + resolveActiveKey 前缀匹配（D3 追加 4 路由 → 12 children）', () => {
+  it('路由表 children 计数 + resolveActiveKey 前缀匹配（D4 追加 3 路由 → 15 children）', () => {
     const children = performanceRoutes[0].children ?? [];
     // M5-2-D1：1 redirect + 5 D1 = 6
     // M5-2-D2 追加 2 路由（records + records/:id）→ 8 children
-    // M5-2-D3 追加 4 路由（grade-actions + payout-config + payouts + payouts/:id）→ **12 children**
-    expectEqual(children.length, 12, '1 redirect + 5 D1 + 2 D2 + 4 D3 = 12 children');
+    // M5-2-D3 追加 4 路由（grade-actions + payout-config + payouts + payouts/:id）→ 12 children
+    // M5-2-D4 追加 3 路由（sales-products + sales-payments + sales-commissions）→ **15 children**
+    expectEqual(children.length, 15, '1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 = 15 children');
     expectEqual(children[0].path ?? '', '', 'redirect path');
     expectEqual(resolvePerformanceActiveKey('/performance/cycles'), 'cycles', 'cycles active');
     expectEqual(resolvePerformanceActiveKey('/performance/indicators'), 'indicators', 'indicators active');

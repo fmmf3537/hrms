@@ -21,6 +21,10 @@
  *   - performance:payout:write       admin/hr（payout-config 菜单以此为权限）
  *   - performance:payout:calculate   admin/hr/executive
  *   - performance:payout:settle      admin/hr/executive（prepay + settle 共用）
+ * - **D4 新增（M5-2-D4）**销售提成 3 菜单：
+ *   - performance:sales:product:read       admin/hr/dept_head/executive/employee（**5 角色全开**）
+ *   - performance:sales:payment:read       admin/hr/dept_head/executive（**employee 不可读**）
+ *   - performance:sales:commission:read    admin/hr/dept_head/executive（**employee 不可读**）
  *
  * @auth meta.requiresAuth + PerformanceLayout 菜单按实际权限点过滤
  */
@@ -121,6 +125,34 @@ export const PERFORMANCE_D3_MENU: PerformanceMenuItem[] = [
   },
 ];
 
+// ============ M5-2-D4 销售提成 3 菜单 ============
+// product:read 5 角色全开（含 employee 可看产品字典只读），payment:read / commission:read employee 不可见
+// 图标复用 PerformanceLayout 已注册 5 图标（Calendar/Aim/Files/SetUp/Medal）
+
+export const PERFORMANCE_D4_MENU: PerformanceMenuItem[] = [
+  {
+    key: 'sales-products',
+    label: '产品字典',
+    icon: 'Calendar',
+    to: '/performance/sales-products',
+    permission: 'performance:sales:product:read',
+  },
+  {
+    key: 'sales-payments',
+    label: '回款管理',
+    icon: 'Files',
+    to: '/performance/sales-payments',
+    permission: 'performance:sales:payment:read',
+  },
+  {
+    key: 'sales-commissions',
+    label: '销售提成',
+    icon: 'Medal',
+    to: '/performance/sales-commissions',
+    permission: 'performance:sales:commission:read',
+  },
+];
+
 /**
  * 5 角色 RBAC，? + 1 菜单按权限点过滤
  * 反直觉点：
@@ -131,9 +163,12 @@ export const PERFORMANCE_D3_MENU: PerformanceMenuItem[] = [
  *  - D3 等级计算菜单 dept_head/employee 不可见 → calibrate-ratios 区块随之不可达（可接受取舍）
  */
 export function filterPerformanceMenu(user: UserInfo | null): PerformanceMenuItem[] {
-  const all = [...PERFORMANCE_MENU, ...PERFORMANCE_D2_MENU, ...PERFORMANCE_D3_MENU].filter((item) =>
-    hasPermission(user, item.permission),
-  );
+  const all = [
+    ...PERFORMANCE_MENU,
+    ...PERFORMANCE_D2_MENU,
+    ...PERFORMANCE_D3_MENU,
+    ...PERFORMANCE_D4_MENU,
+  ].filter((item) => hasPermission(user, item.permission));
   // employee 角色展示 employeeLabel（仅当存在时）
   const isEmployee = (user?.roles ?? []).includes('employee');
   if (isEmployee) {
@@ -176,6 +211,16 @@ export function resolvePerformanceActiveKey(path: string): string {
   }
   if (path.startsWith('/performance/payouts')) {
     return 'payouts';
+  }
+  // D4：sales-products / sales-payments / sales-commissions（顺序安全，互不前缀）
+  if (path.startsWith('/performance/sales-products')) {
+    return 'sales-products';
+  }
+  if (path.startsWith('/performance/sales-payments')) {
+    return 'sales-payments';
+  }
+  if (path.startsWith('/performance/sales-commissions')) {
+    return 'sales-commissions';
   }
   return '';
 }
@@ -254,6 +299,25 @@ const performanceRoutes: RouteRecordRaw[] = [
         name: 'PayoutDetail',
         component: () => import('@/views/performance/payout/PayoutDetail.vue'),
         meta: { title: '奖金单详情' },
+      },
+      // ============ M5-2-D4 销售提成 3 路由追加 ============
+      {
+        path: 'sales-products',
+        name: 'SalesProductList',
+        component: () => import('@/views/performance/sales/ProductList.vue'),
+        meta: { title: '产品字典' },
+      },
+      {
+        path: 'sales-payments',
+        name: 'SalesPaymentList',
+        component: () => import('@/views/performance/sales/PaymentList.vue'),
+        meta: { title: '回款管理' },
+      },
+      {
+        path: 'sales-commissions',
+        name: 'SalesCommissionList',
+        component: () => import('@/views/performance/sales/CommissionList.vue'),
+        meta: { title: '销售提成' },
       },
     ],
   },
