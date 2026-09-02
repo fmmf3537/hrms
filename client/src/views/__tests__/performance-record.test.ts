@@ -14,7 +14,8 @@
  *  - 路由表追加 2 children（records + records/:id）
  *  - **M5-2-D4 调整**：
  *    - 路由总 children 12 → 15（D4 追加 3 条于末尾 idx 12/13/14）
- *    - 「最后 2 条」断言：D3 末 2 条（payouts / payouts/:id）已被 D4 末 2 条（sales-payments / sales-commissions）取代
+ *    - **M5-2-D5 调整**：路由总 children 15 → 18（D5 追加 3 条于末尾 idx 15/16/17）
+ *    - 「最后 2 条」断言：D5 末 2 条（applications-promotions / applications-pips）已追加到 D4 路由之后
  */
 import performanceRoutes, {
   PERFORMANCE_D2_MENU,
@@ -243,7 +244,7 @@ describe('views/__tests__/performance-record.test.ts', () => {
     expectEqual(canRecordAiRead(hr), true, 'hr 有 ai:read');
   });
 
-  it('PERFORMANCE_D2_MENU 1 项 · filterPerformanceMenu 拼接 employee 可见', () => {
+  it('PERFORMANCE_D2_MENU 1 项 · filterPerformanceMenu 拼接 D5 read 菜单与 employee 本人范围', () => {
     expectEqual(PERFORMANCE_D2_MENU.length, 1, 'D2 1 菜单');
     expectEqual(PERFORMANCE_D2_MENU[0].key, 'records', 'records key');
     expectEqual(PERFORMANCE_D2_MENU[0].permission, 'performance:record:read', 'record:read 权限');
@@ -258,20 +259,33 @@ describe('views/__tests__/performance-record.test.ts', () => {
       'performance:coefficient:read',
       'performance:grade:threshold:read',
       'performance:record:read',
+      'performance:salary-adjustment:read',
+      'performance:promotion:read',
+      'performance:pip:read',
     ]);
     const items = filterPerformanceMenu(hr);
-    expectEqual(items.length, 6, 'hr 6 菜单 = 5 + records');
+    expectEqual(items.length, 9, 'hr 9 菜单 = 5 + records + 3 D5 read');
     expectEqual(
       items.some((m) => m.key === 'records'),
       true,
       'hr 可见 records',
     );
+    expectEqual(items.filter((m) => m.key.startsWith('applications-')).length, 3, 'hr 可见 3 个 D5 菜单');
 
-    // employee 仅有 record:read → 菜单只剩 records
-    const employee = mockUser(['employee'], ['performance:record:read']);
+    // employee 仅有 record:read → records + 3 个 D5 read
+    const employee = mockUser(
+      ['employee'],
+      [
+        'performance:record:read',
+        'performance:salary-adjustment:read',
+        'performance:promotion:read',
+        'performance:pip:read',
+      ],
+    );
     const empItems = filterPerformanceMenu(employee);
-    expectEqual(empItems.length, 1, 'employee 仅 1 项');
+    expectEqual(empItems.length, 4, 'employee 4 项 = records + 3 D5 read');
     expectEqual(empItems[0].key, 'records', 'employee → records');
+    expectEqual(empItems.filter((m) => m.key.startsWith('applications-')).length, 3, 'employee 可见 3 个 D5 菜单');
 
     // 无权限用户
     const noPerm = mockUser(['guest'], []);
@@ -289,21 +303,22 @@ describe('views/__tests__/performance-record.test.ts', () => {
     expectEqual(resolvePerformanceActiveKey('/performance/cycles'), 'cycles', 'cycles');
   });
 
-  it('路由表 children 15 条（1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4） + 菜单 to 路径', () => {
+  it('路由表 children 18 条（1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 + 3 D5） + 菜单 to 路径', () => {
     const children = performanceRoutes[0].children ?? [];
-    expectEqual(children.length, 15, '1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 children');
+    expectEqual(children.length, 18, '1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 + 3 D5 children');
     // M5-2-D3 追加 4 路由（grade-actions / payout-config / payouts / payouts/:id）后是 idx 8-11
     // M5-2-D4 追加 3 路由于末尾（sales-products / sales-payments / sales-commissions）→ idx 12-14
-    // children 顺序 = 1 redirect + 5 D1 (idx 1-5) + 2 D2 (idx 6-7) + 4 D3 (idx 8-11) + 3 D4 (idx 12-14)
+    // M5-2-D5 追加 3 路由于末尾（applications-adjustments / applications-promotions / applications-pips）→ idx 15-17
+    // children 顺序 = 1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 + 3 D5
     // D2 两条路由位置不变（仍为 idx 6/7）
     const d2Two = children.slice(6, 8);
     expectEqual(d2Two[0].path, 'records', 'idx 6 path=records');
     expectEqual(d2Two[1].path, 'records/:id', 'idx 7 path=records/:id');
-    // 最后 2 个是 D4 路由（sales-payments / sales-commissions），已取代 D3 的 payouts / payouts/:id
-    const lastTwo = children.slice(-2);
-    expectEqual(lastTwo[0].path, 'sales-payments', '倒数第 2 path=sales-payments');
-    expectEqual(lastTwo[1].path, 'sales-commissions', '倒数第 1 path=sales-commissions');
-    // 6 菜单 to（含 records）
+    const lastThree = children.slice(-3);
+    expectEqual(lastThree[0].path, 'applications-adjustments', 'idx 15 path=applications-adjustments');
+    expectEqual(lastThree[1].path, 'applications-promotions', 'idx 16 path=applications-promotions');
+    expectEqual(lastThree[2].path, 'applications-pips', 'idx 17 path=applications-pips');
+    // 9 菜单 to（含 records 与 3 D5）
     const allMenuItems = filterPerformanceMenu(
       mockUser(
         ['admin'],
@@ -314,6 +329,9 @@ describe('views/__tests__/performance-record.test.ts', () => {
           'performance:coefficient:read',
           'performance:grade:threshold:read',
           'performance:record:read',
+          'performance:salary-adjustment:read',
+          'performance:promotion:read',
+          'performance:pip:read',
         ],
       ),
     );
@@ -326,8 +344,11 @@ describe('views/__tests__/performance-record.test.ts', () => {
         '/performance/coefficients',
         '/performance/grade-thresholds',
         '/performance/records',
+        '/performance/applications-adjustments',
+        '/performance/applications-promotions',
+        '/performance/applications-pips',
       ].join(','),
-      '6 菜单 to 路径顺序',
+      '9 菜单 to 路径顺序',
     );
   });
 

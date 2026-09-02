@@ -153,6 +153,32 @@ export const PERFORMANCE_D4_MENU: PerformanceMenuItem[] = [
   },
 ];
 
+// ============ M5-2-D5 结果应用 3 菜单 ============
+
+export const PERFORMANCE_D5_MENU: PerformanceMenuItem[] = [
+  {
+    key: 'applications-adjustments',
+    label: '调薪联动',
+    icon: 'Calendar',
+    to: '/performance/applications-adjustments',
+    permission: 'performance:salary-adjustment:read',
+  },
+  {
+    key: 'applications-promotions',
+    label: '晋升提名',
+    icon: 'Medal',
+    to: '/performance/applications-promotions',
+    permission: 'performance:promotion:read',
+  },
+  {
+    key: 'applications-pips',
+    label: 'PIP 管理',
+    icon: 'Aim',
+    to: '/performance/applications-pips',
+    permission: 'performance:pip:read',
+  },
+];
+
 /**
  * 5 角色 RBAC，? + 1 菜单按权限点过滤
  * 反直觉点：
@@ -168,6 +194,7 @@ export function filterPerformanceMenu(user: UserInfo | null): PerformanceMenuIte
     ...PERFORMANCE_D2_MENU,
     ...PERFORMANCE_D3_MENU,
     ...PERFORMANCE_D4_MENU,
+    ...PERFORMANCE_D5_MENU,
   ].filter((item) => hasPermission(user, item.permission));
   // employee 角色展示 employeeLabel（仅当存在时）
   const isEmployee = (user?.roles ?? []).includes('employee');
@@ -221,6 +248,16 @@ export function resolvePerformanceActiveKey(path: string): string {
   }
   if (path.startsWith('/performance/sales-commissions')) {
     return 'sales-commissions';
+  }
+  // D5：applications-adjustments / applications-promotions / applications-pips
+  if (path.startsWith('/performance/applications-adjustments')) {
+    return 'applications-adjustments';
+  }
+  if (path.startsWith('/performance/applications-promotions')) {
+    return 'applications-promotions';
+  }
+  if (path.startsWith('/performance/applications-pips')) {
+    return 'applications-pips';
   }
   return '';
 }
@@ -318,6 +355,25 @@ const performanceRoutes: RouteRecordRaw[] = [
         name: 'SalesCommissionList',
         component: () => import('@/views/performance/sales/CommissionList.vue'),
         meta: { title: '销售提成' },
+      },
+      // ============ M5-2-D5 结果应用 3 路由追加 ============
+      {
+        path: 'applications-adjustments',
+        name: 'PerformanceAdjustmentList',
+        component: () => import('@/views/performance/application/AdjustmentList.vue'),
+        meta: { title: '调薪联动' },
+      },
+      {
+        path: 'applications-promotions',
+        name: 'PerformancePromotionList',
+        component: () => import('@/views/performance/application/PromotionList.vue'),
+        meta: { title: '晋升提名' },
+      },
+      {
+        path: 'applications-pips',
+        name: 'PerformancePipList',
+        component: () => import('@/views/performance/application/PipList.vue'),
+        meta: { title: 'PIP 管理' },
       },
     ],
   },

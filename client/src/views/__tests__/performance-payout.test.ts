@@ -12,6 +12,7 @@
  *      dept_head → 4 D1 + 0 D2 + 0 D3（无 grade:calculate / payout:read）
  *      employee → 0（除非带 record:read + payout:read → D2 records + D3 payouts 共 2 项）
  *  - **M5-2-D4 调整**：路由总 children 12 → 15（children 计数断言已更新）
+ *  - **M5-2-D5 调整**：D5 追加 3 个只读菜单，路由总 children 15 → 18
  */
 import performanceRoutes, {
   PERFORMANCE_D3_MENU,
@@ -108,13 +109,16 @@ describe('views/__tests__/performance-payout.test.ts', () => {
     );
   });
 
-  it('filterPerformanceMenu 5 角色 RBAC：admin/hr 全开 12 项 / executive 10 / dept_head 7 / employee 2（M5-2-D4 追加 3 菜单导致计数更新）', () => {
+  it('filterPerformanceMenu 5 角色 RBAC：admin/hr 15 项 / executive 13 / dept_head 10 / employee 5（M5-2-D5 追加 3 菜单）', () => {
     const admin = filterPerformanceMenu(mockUser(['admin'], ['*']));
-    expectEqual(admin.length, 12, 'admin 12 项（含 D4 三件套）');
+    expectEqual(admin.length, 15, 'admin 15 项（含 D5 三件套）');
     const adminKeys = admin.map((m) => m.key).join(',');
     expectTrue(adminKeys.includes('grade-actions'), 'admin 含 grade-actions');
     expectTrue(adminKeys.includes('payouts'), 'admin 含 payouts');
     expectTrue(adminKeys.includes('payout-config'), 'admin 含 payout-config');
+    expectTrue(adminKeys.includes('applications-adjustments'), 'admin 含调薪联动');
+    expectTrue(adminKeys.includes('applications-promotions'), 'admin 含晋升提名');
+    expectTrue(adminKeys.includes('applications-pips'), 'admin 含 PIP 管理');
 
     const hr = filterPerformanceMenu(
       mockUser(['hr'], [
@@ -135,12 +139,18 @@ describe('views/__tests__/performance-payout.test.ts', () => {
         'performance:sales:product:read',
         'performance:sales:payment:read',
         'performance:sales:commission:read',
+        'performance:salary-adjustment:read',
+        'performance:promotion:read',
+        'performance:pip:read',
       ]),
     );
-    expectEqual(hr.length, 12, 'hr 12 项（含 D3 + D4 三件套）');
+    expectEqual(hr.length, 15, 'hr 15 项（含 D3 + D4 + D5 三件套）');
     expectTrue(hr.map((m) => m.key).includes('payout-config'), 'hr 含 payout-config');
+    expectTrue(hr.map((m) => m.key).includes('applications-adjustments'), 'hr 含调薪联动');
+    expectTrue(hr.map((m) => m.key).includes('applications-promotions'), 'hr 含晋升提名');
+    expectTrue(hr.map((m) => m.key).includes('applications-pips'), 'hr 含 PIP 管理');
 
-    // executive：mock 含 D1（5） + 0 D2（无 record:read，见文件头注释 executive「0 D2」）+ D3 三件套中 2 项（无 payout:write）+ D4 三件套 = 7 → 10
+    // executive：mock 含 D1（5） + 0 D2（无 record:read）+ D3 两项（无 payout:write）+ D4 三件套 + D5 三件套 = 13
     const executive = filterPerformanceMenu(
       mockUser(
         ['executive'],
@@ -159,13 +169,19 @@ describe('views/__tests__/performance-payout.test.ts', () => {
           'performance:sales:product:read',
           'performance:sales:payment:read',
           'performance:sales:commission:read',
+          'performance:salary-adjustment:read',
+          'performance:promotion:read',
+          'performance:pip:read',
         ],
       ),
     );
-    expectEqual(executive.length, 10, 'executive 10 项（含 grade-actions + payouts + D4 三件套，**不含 records / payout-config**）');
+    expectEqual(executive.length, 13, 'executive 13 项（含 D4 + D5 三件套，**不含 records / payout-config**）');
     const execKeys = executive.map((m) => m.key);
     expectTrue(execKeys.includes('grade-actions'), 'exec 含 grade-actions');
     expectTrue(execKeys.includes('payouts'), 'exec 含 payouts');
+    expectTrue(execKeys.includes('applications-adjustments'), 'exec 含调薪联动');
+    expectTrue(execKeys.includes('applications-promotions'), 'exec 含晋升提名');
+    expectTrue(execKeys.includes('applications-pips'), 'exec 含 PIP 管理');
     expectTrue(!execKeys.includes('payout-config'), 'exec **不含** payout-config（payout:write 仅 admin/hr）');
 
     const deptHead = filterPerformanceMenu(
@@ -180,21 +196,39 @@ describe('views/__tests__/performance-payout.test.ts', () => {
           'performance:sales:product:read',
           'performance:sales:payment:read',
           'performance:sales:commission:read',
+          'performance:salary-adjustment:read',
+          'performance:promotion:read',
+          'performance:pip:read',
         ],
       ),
     );
-    expectEqual(deptHead.length, 7, 'dept_head 7 项（含 D4 三件套，无 D2/D3）');
+    expectEqual(deptHead.length, 10, 'dept_head 10 项（含 D4 + D5 三件套，无 D2/D3）');
     const headKeys = deptHead.map((m) => m.key).join(',');
+    expectTrue(headKeys.includes('applications-adjustments'), 'dept_head 含调薪联动');
+    expectTrue(headKeys.includes('applications-promotions'), 'dept_head 含晋升提名');
+    expectTrue(headKeys.includes('applications-pips'), 'dept_head 含 PIP 管理');
     expectTrue(!headKeys.includes('grade-actions'), 'dept_head 不含 grade-actions');
     expectTrue(!headKeys.includes('payouts'), 'dept_head 不含 payouts');
 
-    // employee 带 payout:read + sales:product:read → 见 payouts（我的奖金）+ sales-products = 2 项
+    // employee 带 payout:read + sales:product:read + D5 三件套 → 见 payouts（我的奖金）+ sales-products + D5
     const employee = filterPerformanceMenu(
-      mockUser(['employee'], ['performance:payout:read', 'performance:sales:product:read']),
+      mockUser(
+        ['employee'],
+        [
+          'performance:payout:read',
+          'performance:sales:product:read',
+          'performance:salary-adjustment:read',
+          'performance:promotion:read',
+          'performance:pip:read',
+        ],
+      ),
     );
-    expectEqual(employee.length, 2, 'employee 2 项（payouts「我的奖金」+ sales-products）');
+    expectEqual(employee.length, 5, 'employee 5 项（payouts「我的奖金」+ sales-products + D5 三件套）');
     expectEqual(employee[0].label, '我的奖金', 'employee 显示「我的奖金」');
     expectEqual(employee[0].key, 'payouts', 'payouts');
+    expectTrue(employee.some((item) => item.key === 'applications-adjustments'), 'employee 含调薪联动');
+    expectTrue(employee.some((item) => item.key === 'applications-promotions'), 'employee 含晋升提名');
+    expectTrue(employee.some((item) => item.key === 'applications-pips'), 'employee 含 PIP 管理');
 
     const employeeNone = filterPerformanceMenu(mockUser(['employee'], []));
     expectEqual(employeeNone.length, 0, 'employee 无权限 → 0 项');
@@ -225,9 +259,9 @@ describe('views/__tests__/performance-payout.test.ts', () => {
     expectEqual(resolvePerformanceActiveKey('/performance/records'), 'records', 'records 不变');
   });
 
-  it('路由表 children 计数：1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 = 15', () => {
+  it('路由表 children 计数：1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 + 3 D5 = 18', () => {
     const children = performanceRoutes[0].children ?? [];
-    expectEqual(children.length, 15, '1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 = 15 children');
+    expectEqual(children.length, 18, '1 redirect + 5 D1 + 2 D2 + 4 D3 + 3 D4 + 3 D5 = 18 children');
     const paths = children.map((c) => c.path ?? '').join(',');
     expectTrue(paths.includes('grade-actions'), 'children 含 grade-actions');
     expectTrue(paths.includes('payout-config'), 'children 含 payout-config');
@@ -237,6 +271,10 @@ describe('views/__tests__/performance-payout.test.ts', () => {
     expectTrue(paths.includes('sales-products'), 'children 含 sales-products');
     expectTrue(paths.includes('sales-payments'), 'children 含 sales-payments');
     expectTrue(paths.includes('sales-commissions'), 'children 含 sales-commissions');
+    // M5-2-D5 新增 3 路由
+    expectTrue(paths.includes('applications-adjustments'), 'children 含 applications-adjustments');
+    expectTrue(paths.includes('applications-promotions'), 'children 含 applications-promotions');
+    expectTrue(paths.includes('applications-pips'), 'children 含 applications-pips');
   });
 });
 
