@@ -13,3 +13,7 @@ coverage/
 *.tsbuildinfo
 .prisma/
 logs/
+# M5-02 Playwright E2E 产物（M5-02 切片）
+test-results/
+playwright-report/
+e2e/.auth/
