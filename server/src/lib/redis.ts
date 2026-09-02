@@ -14,6 +14,14 @@ export const redis = new Redis(env.REDIS_URL, {
   },
 });
 
+/** BullMQ 专用连接：Worker 阻塞命令强制 maxRetriesPerRequest=null（与共享缓存客户端隔离） */
+export function createBullMqRedis(): Redis {
+  return new Redis(env.REDIS_URL, {
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+  });
+}
+
 redis.on('connect', () => {
   console.log('✅ Redis connected');
 });

@@ -5,7 +5,7 @@ import type { Prisma } from '@prisma/client';
 import { Queue, Worker, type Job } from 'bullmq';
 
 import prisma from '../lib/prisma';
-import { connectRedis, redis } from '../lib/redis';
+import { connectRedis, createBullMqRedis } from '../lib/redis';
 import * as integrationService from '../services/integration.service';
 
 // ============== 类型定义 ==============
@@ -38,7 +38,7 @@ export async function getNotificationQueue(): Promise<Queue<SendNotificationJobD
   if (queueInstance) return queueInstance;
   await connectRedis();
   queueInstance = new Queue<SendNotificationJobData>(NOTIFICATION_QUEUE_NAME, {
-    connection: redis,
+    connection: createBullMqRedis(),
     defaultJobOptions: {
       attempts: NOTIFICATION_MAX_RETRIES,
       backoff: { type: 'exponential', delay: NOTIFICATION_BACKOFF_MS },
@@ -157,7 +157,7 @@ export async function startNotificationWorker(): Promise<void> {
   workerInstance = new Worker<SendNotificationJobData>(
     NOTIFICATION_QUEUE_NAME,
     processNotificationJob,
-    { connection: redis, concurrency: 5 },
+    { connection: createBullMqRedis(), concurrency: 5 },
   );
   workerInstance.on('failed', async (job) => {
     if (job && job.attemptsMade >= NOTIFICATION_MAX_RETRIES) {

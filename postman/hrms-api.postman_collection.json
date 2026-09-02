@@ -1,0 +1,4669 @@
+{
+  "info": {
+    "name": "HRMS API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "健康检查",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ],
+              "variable": []
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "用户登录",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ],
+              "variable": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response && response.data) {",
+                  "  if (response.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                  "  }",
+                  "  if (response.data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "登出（吊销 refreshToken）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "获取当前登录用户信息",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "联调演示（需 salary:read 权限）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/permission-demo",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "permission-demo"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "刷新 accessToken（rotation + reuse 检测）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ],
+              "variable": []
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response && response.data) {",
+                  "  if (response.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                  "  }",
+                  "  if (response.data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Audit",
+      "item": [
+        {
+          "name": "分页查询审计日志",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "申请查看某条审计的明文（V1.2 角色化脱敏）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/audit-logs/:id/reveal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-logs",
+                ":id",
+                "reveal"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ApprovalFlow",
+      "item": [
+        {
+          "name": "创建审批流模板",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approval-flows",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "approval-flows"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "删除模板（软删除）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approval-flows/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "approval-flows",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "ApprovalInstance",
+      "item": [
+        {
+          "name": "提交审批",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approval-instances",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "approval-instances"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "审批通过",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approval-instances/:id/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "approval-instances",
+                ":id",
+                "approve"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "审批驳回",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approval-instances/:id/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "approval-instances",
+                ":id",
+                "reject"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "转交他人",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approval-instances/:id/transfer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "approval-instances",
+                ":id",
+                "transfer"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "发起人撤回",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/approval-instances/:id/withdraw",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "approval-instances",
+                ":id",
+                "withdraw"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notification",
+      "item": [
+        {
+          "name": "我的通知列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "全部已读",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "主动发通知（admin/HR）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/send",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "send"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "未读通知数",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "unread-count"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "标记已读",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/:id/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                ":id",
+                "read"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "EncryptedField",
+      "item": [
+        {
+          "name": "注册加密字段（admin）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encrypted-fields",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encrypted-fields"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "触发密钥轮转（admin）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encrypted-fields/rotate-key",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encrypted-fields",
+                "rotate-key"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "解密单个字段",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/encrypted-fields/:id/decrypt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "encrypted-fields",
+                ":id",
+                "decrypt"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Integration",
+      "item": [
+        {
+          "name": "列出所有集成（admin）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/integrations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "注销集成",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/integrations/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "手动触发同步",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/integrations/:id/sync",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                ":id",
+                "sync"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "测试连通性",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/integrations/:id/test",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "integrations",
+                ":id",
+                "test"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI",
+      "item": [
+        {
+          "name": "OCR 识别（身份证/银行卡/证书）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/ocr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "ocr"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "智能问答（HR Q&A）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/qa",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "qa"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "绩效评分建议",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/score-suggest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "score-suggest"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "文本摘要（算薪异常摘要等）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/ai/summarize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "summarize"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Company",
+      "item": [
+        {
+          "name": "创建法人",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "软删除法人",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "编制预警",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/:id/headcount-warning",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                ":id",
+                "headcount-warning"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "法人统计",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/companies/:id/statistics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "companies",
+                ":id",
+                "statistics"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Department",
+      "item": [
+        {
+          "name": "创建部门",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/departments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "部门树",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/departments/tree",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                "tree"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "软删除部门",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/departments/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "部门编制",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/departments/:id/headcount",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                ":id",
+                "headcount"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "移动部门",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/departments/:id/move",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "departments",
+                ":id",
+                "move"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Employee",
+      "item": [
+        {
+          "name": "创建员工",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "合同即将到期",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/contract-expiring",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "contract-expiring"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "OCR 银行卡",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/parse-bank-card",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "parse-bank-card"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "OCR 资质证书",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/parse-certificate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "parse-certificate"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "OCR 身份证",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/parse-id-card",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "parse-id-card"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "员工统计",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/statistics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                "statistics"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "软删除员工",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/employees/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "employees",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Onboarding",
+      "item": [
+        {
+          "name": "发起入职登记（草稿）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/onboarding",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "onboarding"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "入职详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/onboarding/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "onboarding",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "提交审批或审批回调确认/驳回",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/onboarding/:id/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "onboarding",
+                ":id",
+                "confirm"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "OCR 三合一",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/onboarding/:id/parse-ocr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "onboarding",
+                ":id",
+                "parse-ocr"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Regularization",
+      "item": [
+        {
+          "name": "创建转正草稿",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/regularizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "regularizations"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "转正详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/regularizations/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "regularizations",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "撤回/取消转正",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/regularizations/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "regularizations",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Offboarding",
+      "item": [
+        {
+          "name": "提交离职申请",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "离职详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "撤回/取消离职",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "确认工作交接并提交审批",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/:id/confirm-handover",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                ":id",
+                "confirm-handover"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "签发离职证明（mock HTML）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/offboarding/:id/issue-certificate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offboarding",
+                ":id",
+                "issue-certificate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transfer",
+      "item": [
+        {
+          "name": "提交调动申请（draft）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transfers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "调动详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "撤回/取消调动",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "更新调动草稿",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transfers/:id/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "transfers",
+                ":id",
+                "update"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contract",
+      "item": [
+        {
+          "name": "创建合同草稿",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contracts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contracts"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "e-签宝 webhook 回调",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contracts/webhook/e-sign",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contracts",
+                "webhook",
+                "e-sign"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "合同详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contracts/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contracts",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "取消合同",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contracts/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contracts",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "更新合同草稿（submit=true 发起电子签）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/contracts/:id/update",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "contracts",
+                ":id",
+                "update"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shift",
+      "item": [
+        {
+          "name": "创建班次模板",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shifts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shifts"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "批量排班",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shifts/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shifts",
+                "assignments"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "更新班次模板",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/shifts/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "shifts",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "item": [
+        {
+          "name": "打卡（WiFi / GPS）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/clock-in",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "clock-in"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "考勤数据导入（得力 e+ base64）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/import",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "import"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "补卡申请",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/manual",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "manual"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "打卡记录列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/records",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "records"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "打卡记录详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/attendance/records/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "attendance",
+                "records",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Leave",
+      "item": [
+        {
+          "name": "假期余额查询",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/balance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "balance"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "提交请假申请",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "requests"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "请假详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/requests/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "requests",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "撤回请假",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/leaves/requests/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "leaves",
+                "requests",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Overtime",
+      "item": [
+        {
+          "name": "提交加班申请",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/overtime/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "overtime",
+                "requests"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "撤回加班申请",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/overtime/requests/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "overtime",
+                "requests",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BusinessTrip",
+      "item": [
+        {
+          "name": "提交出差申请",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/business-trips/requests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "business-trips",
+                "requests"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "撤回出差申请",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/business-trips/requests/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "business-trips",
+                "requests",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "MonthlySummary",
+      "item": [
+        {
+          "name": "查询月度考勤汇总",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monthly-summaries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monthly-summaries"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "生成月度考勤汇总（HR）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monthly-summaries/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monthly-summaries",
+                "generate"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "员工确认月度汇总",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monthly-summaries/:id/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monthly-summaries",
+                ":id",
+                "confirm"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "HR 锁定月度汇总",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/monthly-summaries/:id/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "monthly-summaries",
+                ":id",
+                "lock"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Performance",
+      "item": [
+        {
+          "name": "PIP 列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/applications/pips",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "applications",
+                "pips"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "PIP 月度评审",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/applications/pips/:id/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "applications",
+                "pips",
+                ":id",
+                "reviews"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "晋升提议列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/applications/promotions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "applications",
+                "promotions"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "调薪提议列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/applications/salary-adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "applications",
+                "salary-adjustments"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "executive 审批或拒绝调薪",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/applications/salary-adjustments/:id/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "applications",
+                "salary-adjustments",
+                ":id",
+                "approve"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "更新等级系数",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/coefficients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "coefficients"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "创建考核周期",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/cycles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "cycles"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "更新考核周期",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/cycles/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "cycles",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "单条等级判定",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/grade/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "grade",
+                "calculate"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "批量等级判定",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/grade/calculate-batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "grade",
+                "calculate-batch"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "部门比例校准软警告",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/grade/calibrate-ratios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "grade",
+                "calibrate-ratios"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "写等级阈值",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/grade/thresholds",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "grade",
+                "thresholds"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "创建绩效指标",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/indicators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "indicators"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "兑现记录列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/payouts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "payouts"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "直乘/部门池计算",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/payouts/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "payouts",
+                "calculate"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "单部门池计算",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/payouts/calculate-pool",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "payouts",
+                "calculate-pool"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "切换兑现模式",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/payouts/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "payouts",
+                "config"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "季度前预支",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/payouts/prepay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "payouts",
+                "prepay"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "季度末清算",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/payouts/settle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "payouts",
+                "settle"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "兑现记录详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/payouts/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "payouts",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "批量创建考核记录",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "考核记录详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "请求 AI 评分建议",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/ai-suggest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "ai-suggest"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "AI 建议历史",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/ai-suggestions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "ai-suggestions"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "归档考核记录",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/archive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "archive"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "保存部门校准",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/calibrate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "calibrate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "总经理审批",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/ceo-approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "ceo-approve"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "保存 HR 汇总",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/hr-summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "hr-summary"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "保存上级评分",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/manager-score",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "manager-score"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "拒绝考核记录",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "reject"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "保存员工自评",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/self",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "self"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "提交部门校准",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/submit-calibrate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "submit-calibrate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "提交 HR 汇总",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/submit-hr",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "submit-hr"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "提交上级评分",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/submit-manager",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "submit-manager"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "提交员工自评",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/records/:id/submit-self",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "records",
+                ":id",
+                "submit-self"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "提成记录列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/sales/commissions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "sales",
+                "commissions"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "手动触发提成计算",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/sales/commissions/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "sales",
+                "commissions",
+                "calculate"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "回款列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/sales/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "sales",
+                "payments"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "财务确认回款并触发提成",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/sales/payments/:id/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "sales",
+                "payments",
+                ":id",
+                "confirm"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "销售产品字典列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/sales/products",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "sales",
+                "products"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "更新销售产品",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/sales/products/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "sales",
+                "products",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "创建考核方案",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/schemes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "schemes"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "复制考核方案",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/performance/schemes/:id/clone",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "performance",
+                "schemes",
+                ":id",
+                "clone"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Salary",
+      "item": [
+        {
+          "name": "调薪申请列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/adjustments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "adjustments"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "批量执行已到期调薪",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/adjustments/execute-pending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "adjustments",
+                "execute-pending"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "调薪详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/adjustments/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "adjustments",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "审批调薪",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/adjustments/:id/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "adjustments",
+                ":id",
+                "approve"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "取消调薪",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/adjustments/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "adjustments",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "执行单条调薪",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/adjustments/:id/execute",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "adjustments",
+                ":id",
+                "execute"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "提交调薪审批",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/adjustments/:id/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "adjustments",
+                ":id",
+                "submit"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "部门提成汇总",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/commissions/departments/:departmentId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "commissions",
+                "departments",
+                ":departmentId"
+              ],
+              "variable": [
+                {
+                  "key": "departmentId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "员工提成汇总",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/commissions/employees/:employeeId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "commissions",
+                "employees",
+                ":employeeId"
+              ],
+              "variable": [
+                {
+                  "key": "employeeId",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "季度结算单列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/commissions/settlements",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "commissions",
+                "settlements"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "季度结算单详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/commissions/settlements/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "commissions",
+                "settlements",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "取消季度结算单",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/commissions/settlements/:id/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "commissions",
+                "settlements",
+                ":id",
+                "cancel"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "财务确认季度结算单（hr 兼任，mock）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/commissions/settlements/:id/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "commissions",
+                "settlements",
+                ":id",
+                "confirm"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "销售提成 4 维度汇总",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/commissions/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "commissions",
+                "summary"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "人力成本预警列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/cost-alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "cost-alerts"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "手动触发人力成本预警扫描",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/cost-alerts/scan",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "cost-alerts",
+                "scan"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "人力成本预警统计",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/cost-alerts/summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "cost-alerts",
+                "summary"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "人力成本预警详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/cost-alerts/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "cost-alerts",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "确认预警",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/cost-alerts/:id/acknowledge",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "cost-alerts",
+                ":id",
+                "acknowledge"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "关闭预警",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/cost-alerts/:id/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "cost-alerts",
+                ":id",
+                "close"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "薪档列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/grade-levels",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "grade-levels"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "薪级列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/grades",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "grades"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "员工登记列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/insurances/employees",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "insurances",
+                "employees"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "更新员工社保登记",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/insurances/employees/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "insurances",
+                "employees",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "公积金方案列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/insurances/housing-fund",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "insurances",
+                "housing-fund"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "更新公积金方案",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/insurances/housing-fund/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "insurances",
+                "housing-fund",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "社保方案列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/insurances/social",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "insurances",
+                "social"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "更新社保方案",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/insurances/social/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "insurances",
+                "social",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "工资单列表",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/payslips",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "payslips"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "工资单详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/payslips/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "payslips",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "手动重算工资单",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/payslips/:id/recalculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "payslips",
+                ":id",
+                "recalculate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "算薪批次列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "算薪批次详情",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "AI 算薪校验摘要",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/ai-summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "ai-summary"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "CEO 审批",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "approve"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "银企代发文件（mock）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/banking-export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "banking-export"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "锁定算薪批次",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/lock",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "lock"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "复核拒绝",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/reject",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "reject"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "工资表导出 Excel/PDF（mock）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/report-export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "report-export"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "财务复核（hr 兼任）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "review"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "HR 提交财务复核",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/submit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "submit"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "个税申报台账（mock）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payrolls/runs/:id/tax-declare",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payrolls",
+                "runs",
+                ":id",
+                "tax-declare"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "发放工资条（邮件 + 系统通知）",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payslips/:id/deliver",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payslips",
+                ":id",
+                "deliver"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "生成工资条 HTML + mock PDF",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payslips/:id/payslip/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payslips",
+                ":id",
+                "payslip",
+                "generate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "读取 HTML 工资条",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payslips/:id/payslip/html",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payslips",
+                ":id",
+                "payslip",
+                "html"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "读取 mock PDF 工资条",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/payslips/:id/payslip/pdf",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "payslips",
+                ":id",
+                "payslip",
+                "pdf"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "薪酬方案列表",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "plans"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "失效薪酬方案",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/plans/:id/deactivate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "plans",
+                ":id",
+                "deactivate"
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "年度个税汇总",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/tax/annual-summary",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "tax",
+                "annual-summary"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "单员工单月个税计算",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/tax/calculate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "tax",
+                "calculate"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "批量月度个税计算",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/tax/calculate-batch",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "tax",
+                "calculate-batch"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "个税历史（audit_logs）",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/tax/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "tax",
+                "history"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "劳务报酬个税",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/tax/labor-income",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "tax",
+                "labor-income"
+              ],
+              "variable": []
+            }
+          }
+        },
+        {
+          "name": "年终奖单独计税",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/salary/tax/year-end-bonus",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "salary",
+                "tax",
+                "year-end-bonus"
+              ],
+              "variable": []
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    }
+  ]
+}
