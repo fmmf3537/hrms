@@ -19,7 +19,9 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "migration:template": "tsx scripts/migration/generate-template.ts",
+    "migration:employees": "tsx scripts/migration/import-employees.ts"
   },
   "dependencies": {
     "@prisma/client": "5.22.0",
@@ -58,7 +60,8 @@
     "prisma": "^5.7.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "xlsx": "0.18.5"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
