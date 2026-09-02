@@ -20,3 +20,7 @@ e2e/.auth/
 # M5-03 员工数据迁移脚本产物（M5-03 切片）
 server/scripts/migration/output/
 server/scripts/migration/tmp/
+# M5-05 并发压测产物（M5-05 切片）
+loadtest/reports/
+loadtest/.auth/
+loadtest/tmp/

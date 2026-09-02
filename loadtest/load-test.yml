@@ -1,0 +1,112 @@
+# M5-05: 并发压测 | HRMS | 2026-09-02
+# load-test.yml — Artillery 压测场景定义（5 个核心 GET 端点 + 100 VU 混合压测）
+#
+# 端点清单（实读 server/src/routes/ 确认）：
+#   1. GET /api/employees             → EMPLOYEE_READ          （员工列表）
+#   2. GET /api/attendance/records    → ATTENDANCE_READ        （考勤记录）
+#   3. GET /api/leaves/requests       → LEAVE_READ             （请假列表）
+#   4. GET /api/salary/payrolls/runs  → SALARY_PAYROLL_RUN_READ（算薪 Run）
+#   5. GET /api/performance/cycles    → PERFORMANCE_CYCLE_READ （绩效周期）
+#
+# 权重大致 30/20/20/15/15，反映 HRMS 真实高频列表：
+#   - 员工列表（HR 日常最高频）30%
+#   - 考勤 + 请假（日常并列）各 20%
+#   - 算薪 + 绩效（月末/季末/年末峰值）各 15%
+
+config:
+  target: http://localhost:3000
+  processor: ./processor.mjs
+  phases:
+    # 1. 预热：30s / 5 VU，避免冷启动影响后续指标
+    - duration: 30
+      arrivalRate: 5
+      name: "warm-up"
+    # 2. 爬坡：60s / 5→100 VU 平滑过渡
+    - duration: 60
+      arrivalRate: 5
+      rampTo: 100
+      name: "ramp-up"
+    # 3. 保持：120s / 100 VU —— 达标线判定阶段
+    - duration: 120
+      arrivalRate: 100
+      name: "sustain-100VU"
+    # 4. 冷却：30s / 100→0 平滑收尾
+    - duration: 30
+      arrivalRate: 100
+      rampTo: 0
+      name: "cool-down"
+  defaults:
+    headers:
+      Authorization: "Bearer {{ token }}"
+      Accept: "application/json"
+
+scenarios:
+  # 1. 员工列表 — 30%
+  - name: "list-employees"
+    weight: 30
+    flow:
+      - get:
+          url: "/api/employees?page=1&pageSize=20"
+          name: "GET employees"
+          expect:
+            - statusCode: 200
+            - hasProperty: "success"
+            - equals:
+                json: "$.success"
+                value: true
+
+  # 2. 考勤记录 — 20%
+  - name: "list-attendance"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/attendance/records?page=1&pageSize=20"
+          name: "GET attendance"
+          expect:
+            - statusCode: 200
+            - hasProperty: "success"
+            - equals:
+                json: "$.success"
+                value: true
+
+  # 3. 请假列表 — 20%
+  - name: "list-leaves"
+    weight: 20
+    flow:
+      - get:
+          url: "/api/leaves/requests?page=1&pageSize=20"
+          name: "GET leaves"
+          expect:
+            - statusCode: 200
+            - hasProperty: "success"
+            - equals:
+                json: "$.success"
+                value: true
+
+  # 4. 算薪 Run 列表 — 15%
+  - name: "list-payrolls"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/salary/payrolls/runs?page=1&pageSize=20"
+          name: "GET payrolls"
+          expect:
+            - statusCode: 200
+            - hasProperty: "success"
+            - equals:
+                json: "$.success"
+                value: true
+
+  # 5. 绩效周期列表 — 15%
+  - name: "list-performance-cycles"
+    weight: 15
+    flow:
+      - get:
+          url: "/api/performance/cycles?page=1&pageSize=20"
+          name: "GET performance cycles"
+          expect:
+            - statusCode: 200
+            - hasProperty: "success"
+            - equals:
+                json: "$.success"
+                value: true
