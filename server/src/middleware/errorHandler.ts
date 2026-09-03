@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 
+import { logger } from '../lib/logger';
+
 // 自定义应用错误类
 export class AppError extends Error {
   public statusCode: number;
@@ -81,7 +83,7 @@ export const errorHandler = (
     }
 
     if (process.env.NODE_ENV === 'development') {
-      console.error('[Prisma Error]', prismaError);
+      logger.error({ err: prismaError }, '[Prisma Error]');
     }
   } else if (err.name === 'JsonWebTokenError') {
     // 处理 JWT 错误
@@ -92,9 +94,9 @@ export const errorHandler = (
     statusCode = 401;
   }
 
-  // 开发环境输出详细错误
+  // 开发环境输出详细错误（结构化日志）
   if (process.env.NODE_ENV === 'development') {
-    console.error('[Error]', err);
+    logger.error({ err }, '[Error]');
   }
 
   res.status(statusCode).json({

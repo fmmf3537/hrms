@@ -2,9 +2,10 @@ import compression from 'compression';
 import cors from 'cors';
 import express, { type Application } from 'express';
 import helmet from 'helmet';
-import morgan from 'morgan';
+import { pinoHttp } from 'pino-http';
 
 import { env } from './lib/env';
+import { logger } from './lib/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { ipLimiter } from './middleware/rate-limit';
 import routes from './routes';
@@ -25,12 +26,13 @@ app.use(cors({
   credentials: true,
 }));
 
-// 日志中间件
-if (env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
+// M5-11: 结构化请求日志（pino-http）；健康检查轮询不打日志
+app.use(pinoHttp({
+  logger,
+  autoLogging: {
+    ignore: (req) => req.url === '/api/health',
+  },
+}));
 
 // 解析 JSON 请求体
 app.use(express.json({ limit: '10mb' }));
