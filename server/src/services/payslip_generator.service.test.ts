@@ -100,6 +100,25 @@ describe('payslip_generator.service generatePayslip', () => {
     const r = await gen.generatePayslip(ACTOR, 'ps-1');
     expect(r.fileName.endsWith('.pdf')).toBe(true);
   });
+
+  it('M5-04 XSS: 员工姓名/工资项名含 HTML 片段被转义（防存储型 XSS）', async () => {
+    const evil = '<img src=x onerror=alert(1)>';
+    mocks.payslipFindUnique.mockResolvedValue({
+      ...approvedSlip(),
+      employee: { name: evil, employeeNo: 'CH001' },
+      items: [
+        { itemName: `<script>${evil}</script>`, amount: 100 },
+        { itemName: '基本工资', amount: 10000 },
+      ],
+    });
+    const r = await gen.generatePayslip(ACTOR, 'ps-1');
+    // 原始标签不得原样出现在 HTML 中
+    expect(r.html).not.toContain('<img');
+    expect(r.html).not.toContain('<script>');
+    // 转义后的实体应存在
+    expect(r.html).toContain('&lt;img');
+    expect(r.html).toContain('&lt;script&gt;');
+  });
 });
 
 describe('payslip_generator.service getPayslipHtml / getPayslipPdf', () => {

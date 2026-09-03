@@ -8,6 +8,7 @@ import path from 'path';
 
 import type { Prisma } from '@prisma/client';
 
+import { escapeHtml } from '../lib/escapeHtml';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 
@@ -628,9 +629,10 @@ export async function issueCertificate(id: string, operatorId: string) {
   const companyName = company?.name ?? '西安辰航卓越科技有限公司';
   const lastDay = existing.lastWorkingDate.toISOString().slice(0, 10);
 
+  // M5-04: 员工姓名/公司名/编号/离职日全部 HTML 转义，防证书 HTML 注入（uploads 同源可访问）
   const html = `<!DOCTYPE html>
 <html lang="zh-CN">
-<head><meta charset="utf-8"/><title>离职证明 ${certificateNumber}</title>
+<head><meta charset="utf-8"/><title>离职证明 ${escapeHtml(certificateNumber)}</title>
 <style>
 body{font-family:serif;padding:48px;position:relative;color:#222}
 .watermark{position:fixed;top:40%;left:10%;font-size:42px;color:rgba(0,0,0,.08);
@@ -640,12 +642,12 @@ h1{text-align:center;letter-spacing:.3em}
 .seal{margin-top:64px;text-align:right}
 </style></head>
 <body>
-<div class="watermark">${companyName}</div>
+<div class="watermark">${escapeHtml(companyName)}</div>
 <h1>离 职 证 明</h1>
-<p class="meta">编号：${certificateNumber}</p>
-<p class="meta">兹证明 <strong>${employee.name}</strong>（工号 ${employee.employeeNo}）
-曾在本公司任职，于 <strong>${lastDay}</strong> 正式离职。特此证明。</p>
-<p class="seal">${companyName}<br/>签发日期：${new Date().toISOString().slice(0, 10)}</p>
+<p class="meta">编号：${escapeHtml(certificateNumber)}</p>
+<p class="meta">兹证明 <strong>${escapeHtml(employee.name)}</strong>（工号 ${escapeHtml(employee.employeeNo)}）
+曾在本公司任职，于 <strong>${escapeHtml(lastDay)}</strong> 正式离职。特此证明。</p>
+<p class="seal">${escapeHtml(companyName)}<br/>签发日期：${new Date().toISOString().slice(0, 10)}</p>
 </body></html>`;
 
   const dir = path.join(process.cwd(), 'uploads', 'offboarding-certificates');

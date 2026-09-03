@@ -1,6 +1,7 @@
 // M4-C5: 工资条 HTML / PDF 生成（mock PDF，不接真实 PDF 库）| HRMS
 // 复用 C4 payslips + payslip_items；0 新表
 
+import { escapeHtml } from '../lib/escapeHtml';
 import prisma from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 
@@ -46,13 +47,14 @@ function buildHtml(input: {
   tax: number;
   items: Array<{ itemName: string; amount: number }>;
 }): string {
+  // M5-04: 用户可控字段全部 HTML 转义（员工姓名/工号/期间/模板/工资项名），防存储型 XSS
   const rows = input.items
-    .map((it) => `<tr><td>${it.itemName}</td><td>${it.amount.toFixed(2)}</td></tr>`)
+    .map((it) => `<tr><td>${escapeHtml(it.itemName)}</td><td>${it.amount.toFixed(2)}</td></tr>`)
     .join('');
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${input.period} 工资条</title></head>
-<body data-template="${input.template}">
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${escapeHtml(input.period)} 工资条</title></head>
+<body data-template="${escapeHtml(input.template)}">
 <h1>电子工资条</h1>
-<p>员工：${input.employeeName}（${input.employeeNo}） 期间：${input.period}</p>
+<p>员工：${escapeHtml(input.employeeName)}（${escapeHtml(input.employeeNo)}） 期间：${escapeHtml(input.period)}</p>
 <table>
 <tr><th>项目</th><th>金额</th></tr>
 ${rows}

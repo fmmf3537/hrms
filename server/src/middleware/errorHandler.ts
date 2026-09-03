@@ -57,6 +57,17 @@ export const errorHandler = (
       path: e.path.join('.'),
       message: e.message,
     }));
+  } else if ((err as Error & { type?: string }).type === 'entity.parse.failed') {
+    // M5-04: body-parser 坏 JSON → 应 400（原落入通用 500）
+    message = '请求体 JSON 解析失败';
+    statusCode = 400;
+  } else if ((err as Error & { type?: string }).type === 'entity.too.large') {
+    // M5-04: body-parser 超限（limit 10mb）→ 应 413（原落入通用 500）
+    message = '请求体超过大小限制';
+    statusCode = 413;
+  } else if ((err as Error & { type?: string }).type === 'charset.unsupported') {
+    message = '不支持的字符集';
+    statusCode = 415;
   } else if (err.name === 'PrismaClientKnownRequestError') {
     // 处理 Prisma 错误
     const prismaError = err as Error & { code: string };
