@@ -206,6 +206,12 @@ POST /api/audit-logs/:id/reveal
 - 不在数据库层做脱敏（性能开销大）
 - 在应用层 audit.service 入口处脱敏（统一拦截）
 
+> **M5-04 实现注记（2026-09-03 生效）**：写入侧升级为**加密而非纯脱敏**——`audit.service.protectAuditValue`
+> 对命中 §2.1 规则的字段自动 AES-256-GCM 加密为 `{"__enc":"<密文>"}`（数据库物理泄露亦安全）；
+> `GET /audit-logs` 返回前 `maskAuditValue` 解密并打码展示（绝不回传明文）；
+> `POST /audit-logs/:id/reveal` 由 admin/hr/executive 二次授权还原明文并写 `AUDIT_REVEAL` 审计。
+> 历史明文行不回改（按 §7.1 从生效日起执行）。
+
 ### 4.4 API 返回值脱敏
 
 `GET /api/audit-logs` 返回前再过一次脱敏（防止 service 漏写）：

@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { PERMISSIONS } from '../constants/permissions';
 import * as authController from '../controllers/auth.controller';
 import { authenticate, requirePermission, requireRole } from '../middleware/auth';
-import { loginLimiter, refreshLimiter } from '../middleware/rate-limit';
+import {
+  loginLimiter, refreshLimiter, request2faLimiter, verify2faLimiter,
+} from '../middleware/rate-limit';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
@@ -69,6 +71,7 @@ router.post(
 router.post(
   '/request-2fa',
   authenticate,
+  request2faLimiter,
   validate(twoFaSchema),
   authController.request2fa,
 );
@@ -76,6 +79,7 @@ router.post(
 router.post(
   '/verify-2fa',
   authenticate,
+  verify2faLimiter,
   validate(verify2faSchema),
   authController.verify2fa,
 );

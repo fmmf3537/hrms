@@ -1,3 +1,5 @@
+import { randomInt } from 'crypto';
+
 import type { Prisma } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -14,6 +16,11 @@ import * as auditService from './audit.service';
 
 // Refresh Token 在 Redis 中的 TTL（7 天，与 JWT_REFRESH_EXPIRES_IN 保持一致）
 const REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60;
+
+// M5-04: 登录 timing oracle 防御——用户不存在时也执行一次 bcrypt.compare（cost 12，~100-300ms），
+// 抹平"用户不存在/停用"与"密码错误"的响应时间差，防止侧信道枚举账号。
+// 该 hash 属于一次性生成的合法 bcrypt cost=12 哈希，明文不可知、无任何账号使用。
+const DUMMY_TIMING_HASH = '$2a$12$pj495GdnQfuPgal5ncA//.1HyatDnPr2rhi6f.rQJfqADomTTQHJK';
 
 interface RefreshTokenPayload {
   userId: string;
@@ -179,6 +186,12 @@ export async function login(
 
   // 失败：用户不存在 / 已停用 / 密码错 → 统一 401
   if (!user) {
+    // M5-04: timing oracle 抹平——跑一次假 bcrypt 比对，使耗时与"密码错误"路径一致
+    try {
+      await bcrypt.compare(password, DUMMY_TIMING_HASH);
+    } catch {
+      /* 仅用于耗时抹平，失败忽略 */
+    }
     auditService.auditLog({
       userId: null,
       action: auditService.AUDIT_ACTIONS.LOGIN,
@@ -454,6 +467,9 @@ export async function forceChangePassword(
 }
 
 const TWO_FA_TTL_SEC = 5 * 60;
+// M5-04: 2FA 错误尝试锁定（5 次错 → 锁 30 分钟，需重新获取验证码）
+const TWO_FA_MAX_ATTEMPTS = 5;
+const TWO_FA_LOCK_SEC = 30 * 60;
 
 /**
  * 发起二次验证：向用户手机/邮箱发 6 位验证码（经 integration sms/email）
@@ -469,7 +485,8 @@ export async function request2fa(
     throw new AppError('用户不存在或已被禁用', 403, 10111);
   }
 
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  // M5-04: 验证码用 CSPRNG（crypto.randomInt），取代原 Math.random（值域可暴力）
+  const code = String(randomInt(100000, 1000000));
   await connectRedis();
   await redis.set(`2fa:${userId}:${channel}`, code, 'EX', TWO_FA_TTL_SEC);
 
@@ -503,6 +520,7 @@ export async function request2fa(
 
 /**
  * 校验二次验证码
+ * M5-04: 失败计数（Redis INCR，5 次错锁 30min）——防暴力猜测（原无任何限制）
  */
 export async function verify2fa(
   userId: string,
@@ -511,11 +529,25 @@ export async function verify2fa(
 ): Promise<{ verified: true }> {
   await connectRedis();
   const key = `2fa:${userId}:${channel}`;
+  const attemptsKey = `2fa_attempts:${userId}:${channel}`;
   const stored = await redis.get(key);
   if (!stored || stored !== code) {
+    const attempts = await redis.incr(attemptsKey);
+    if (attempts === 1) {
+      await redis.expire(attemptsKey, TWO_FA_LOCK_SEC);
+    }
+    if (attempts >= TWO_FA_MAX_ATTEMPTS) {
+      await redis.del(key); // 清掉验证码，强制重新获取
+      throw new AppError(
+        `验证码错误次数过多，请 ${TWO_FA_LOCK_SEC / 60} 分钟后再试`,
+        401,
+        10131,
+      );
+    }
     throw new AppError('验证码错误或已过期', 401, 10103);
   }
   await redis.del(key);
+  await redis.del(attemptsKey);
   // 短期放行标记（敏感操作中间件可查）
   await redis.set(`2fa_ok:${userId}`, '1', 'EX', 15 * 60);
   return { verified: true };

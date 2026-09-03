@@ -4,13 +4,15 @@ import {
 } from 'vitest';
 
 import {
-  AUDIT_ACTIONS, AUDIT_STATUS, auditLog, listAuditLogs,
+  AUDIT_ACTIONS, AUDIT_STATUS, auditLog, listAuditLogs, maskAuditValue, protectAuditValue,
+  revealAuditValue,
 } from './audit.service';
 
 const mocks = vi.hoisted(() => ({
   create: vi.fn(),
   findMany: vi.fn(),
   count: vi.fn(),
+  findUnique: vi.fn(),
 }));
 
 vi.mock('../lib/prisma', () => ({
@@ -119,5 +121,57 @@ describe('listAuditLogs', () => {
       take: 20,
     });
     expect(result.total).toBe(0);
+  });
+});
+
+// M5-04: 敏感字段保护 / 打码 / reveal 还原
+describe('protectAuditValue / maskAuditValue / revealAuditValue', () => {
+  it('protect：idCard/baseSalary/phone 加密为 {__enc}，普通字段保留', () => {
+    const out = protectAuditValue({
+      employeeId: 'e1',
+      idCard: '110101199003078812',
+      phone: '13800138000',
+      baseSalary: 15000,
+      description: '正常文本',
+    }) as Record<string, unknown>;
+    expect(out.employeeId).toBe('e1');
+    expect(out.description).toBe('正常文本');
+    expect(typeof (out.idCard as { __enc: string }).__enc).toBe('string');
+    expect(typeof (out.baseSalary as { __enc: string }).__enc).toBe('string');
+    expect((out.phone as { __enc: string }).__enc).toBeTruthy();
+  });
+
+  it('protect：已打码值（含 *）不再重复加密；嵌套数组递归处理', () => {
+    const out = protectAuditValue({
+      list: [{ idCard: '110101********0023' }, { note: 'x' }],
+    }) as Record<string, unknown>;
+    expect((out.list as Array<{ idCard: string }>)[0].idCard).toBe('110101********0023');
+    expect((out.list as Array<{ note: string }>)[1].note).toBe('x');
+  });
+
+  it('mask：加密值解密后打码，绝不回传明文', () => {
+    const enc = protectAuditValue({ idCard: '110101199003078812', baseSalary: 15080 });
+    const masked = maskAuditValue(enc) as Record<string, string>;
+    expect(masked.idCard).toBe('110101********8812');
+    expect(masked.idCard).not.toContain('19900307');
+    expect(masked.baseSalary).toBe('15000-15099'); // 整百区间
+  });
+
+  it('reveal：after.baseSalary 与 idCard 还原明文', () => {
+    const enc = protectAuditValue({ baseSalary: 15000, idCard: '110101199003078812' });
+    const log = { oldValue: null, newValue: enc };
+    expect(revealAuditValue(log, 'after.baseSalary')).toBe('15000');
+    expect(revealAuditValue(log, 'newValue.idCard')).toBe('110101199003078812');
+    expect(revealAuditValue(log, 'baseSalary')).toBe('15000');
+  });
+
+  it('reveal：字段不存在或非敏感 → 抛 40110', () => {
+    const log = { oldValue: null, newValue: { name: '张三' } };
+    expect(() => revealAuditValue(log, 'after.nonexistent')).toThrowError(
+      expect.objectContaining({ code: 40110 }),
+    );
+    expect(() => revealAuditValue(log, 'after.name')).toThrowError(
+      expect.objectContaining({ code: 40110 }),
+    );
   });
 });

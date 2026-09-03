@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 import { env } from '../lib/env';
+import prisma from '../lib/prisma';
 
 import { AppError } from './errorHandler';
 import { userLimiter } from './rate-limit';
@@ -43,20 +44,23 @@ function extractTokenFromHeader(req: Request): string | undefined {
  * JWT 认证中间件（强制 HS256，防算法混淆）
  * M5-09 fix2: verify 成功后串联 userLimiter（300/min，按 userId 取桶），
  *   保证用户级限流真正按人隔离——避免单用户占满 IP 配额拖累全公司。
+ * M5-04 fix: verify 后再与 DB 对齐 tokenVersion / status / deletedAt，
+ *   实现「改密 / 强制改密 / 停用即全端下线」（原仅 refresh 生效，access 有 15min 真空期）。
  */
-export const authenticate = (
+export const authenticate = async (
   req: Request,
   res: Response,
   next: NextFunction,
-): void => {
+): Promise<void> => {
   try {
     const token = extractTokenFromHeader(req);
     if (!token) {
       throw new AppError('未提供认证令牌', 401, 10101);
     }
 
+    let payload: JwtPayload;
     try {
-      req.user = jwt.verify(token, env.JWT_SECRET, {
+      payload = jwt.verify(token, env.JWT_SECRET, {
         algorithms: ['HS256'],
       }) as JwtPayload;
     } catch (error) {
@@ -65,6 +69,23 @@ export const authenticate = (
       }
       throw new AppError('无效的认证令牌', 401, 10103);
     }
+
+    // M5-04: tokenVersion / status / deletedAt 与 DB 对齐（每请求 1 次 PK 查询 <1ms）
+    const dbUser = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { status: true, deletedAt: true, tokenVersion: true },
+    });
+    if (
+      !dbUser
+      || dbUser.status !== 'active'
+      || dbUser.deletedAt
+      || dbUser.tokenVersion !== payload.tokenVersion
+    ) {
+      // 改密/强制改密/停用后旧 access token 立即失效
+      throw new AppError('登录状态已失效，请重新登录', 401, 10113);
+    }
+
+    req.user = payload;
     // 认证成功 → 用户级限流（按 userId），超限由 limiter 直接 429
     userLimiter(req, res, (err?: unknown) => {
       if (err) return next(err as Error);

@@ -4,7 +4,9 @@ import { z } from 'zod';
 
 import { PERMISSIONS } from '../constants/permissions';
 import * as auditController from '../controllers/audit.controller';
-import { authenticate, rejectIfMustChangePassword, requirePermission } from '../middleware/auth';
+import {
+  authenticate, rejectIfMustChangePassword, requirePermission, requireRole,
+} from '../middleware/auth';
 import { validate } from '../middleware/validate';
 
 const router: RouterType = Router();
@@ -41,6 +43,26 @@ router.get(
   requirePermission(PERMISSIONS.AUDIT_READ),
   validate(listQuerySchema, 'query'),
   auditController.list,
+);
+
+// M5-04: reveal 请求体校验
+const revealSchema = z.object({
+  fields: z.array(z.string().min(1)).min(1).max(20),
+  reason: z.string().min(5, '必须填写查看明文的原因（至少 5 字）').max(500),
+});
+
+/**
+ * POST /api/audit-logs/:id/reveal
+ * 二次授权查看审计明文：仅 admin/hr/executive（dept_head / employee 无 AUDIT_READ 且被 requireRole 双拦）
+ */
+router.post(
+  '/:id/reveal',
+  authenticate,
+  rejectIfMustChangePassword,
+  requirePermission(PERMISSIONS.AUDIT_READ),
+  requireRole('admin', 'hr', 'executive'),
+  validate(revealSchema),
+  auditController.reveal,
 );
 
 export default router;

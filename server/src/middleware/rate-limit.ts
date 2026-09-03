@@ -49,6 +49,32 @@ export const refreshLimiter = rateLimit({
 //   100 个压测用户各自低频操作（≤5 次/分钟）→ 单用户远低于 300/min ✅；
 //   全公司共享同一出口 IP 的总流量（≤3000/min）留足 10 倍以上余量 ✅。
 
+/** 2FA 请求验证码：5 分钟内最多 5 次（防短信/邮件轰炸） */
+export const request2faLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: '验证码发送过于频繁，请 5 分钟后再试',
+    code: 429,
+  },
+});
+
+/** 2FA 校验验证码：5 分钟内最多 10 次（配合 service 端 5 次锁定） */
+export const verify2faLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: '验证码校验过于频繁，请稍后再试',
+    code: 429,
+  },
+});
+
 /** 已认证用户级限流：300 次/分钟，key=userId（挂在 authenticate 之后） */
 export const userLimiter = rateLimit({
   windowMs: 60 * 1000,
