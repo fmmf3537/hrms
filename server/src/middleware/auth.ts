@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { env } from '../lib/env';
 
 import { AppError } from './errorHandler';
+import { userLimiter } from './rate-limit';
 
 // JWT Payload 类型
 export interface JwtPayload {
@@ -40,10 +41,12 @@ function extractTokenFromHeader(req: Request): string | undefined {
 
 /**
  * JWT 认证中间件（强制 HS256，防算法混淆）
+ * M5-09 fix2: verify 成功后串联 userLimiter（300/min，按 userId 取桶），
+ *   保证用户级限流真正按人隔离——避免单用户占满 IP 配额拖累全公司。
  */
 export const authenticate = (
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction,
 ): void => {
   try {
@@ -62,7 +65,11 @@ export const authenticate = (
       }
       throw new AppError('无效的认证令牌', 401, 10103);
     }
-    next();
+    // 认证成功 → 用户级限流（按 userId），超限由 limiter 直接 429
+    userLimiter(req, res, (err?: unknown) => {
+      if (err) return next(err as Error);
+      next();
+    });
   } catch (error) {
     next(error);
   }

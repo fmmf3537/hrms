@@ -6,7 +6,7 @@ import morgan from 'morgan';
 
 import { env } from './lib/env';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { apiLimiter } from './middleware/rate-limit';
+import { ipLimiter } from './middleware/rate-limit';
 import routes from './routes';
 import { handleHealth } from './routes/health';
 
@@ -48,8 +48,9 @@ app.set('trust proxy', 1);
 // M5-1: 运维健康检查（公开、不限流，供 Docker healthcheck）
 app.get('/api/health', handleHealth);
 
-// 全局限流：1 分钟内最多 100 次请求
-app.use(apiLimiter);
+// M5-09 fix2: 全局 IP 级兜底限流 3000/min（防未认证 flood / 共享出口挤兑）。
+// 已认证用户的 300/min 限流由 authenticate 内部串联 userLimiter 生效（按 userId 取桶）。
+app.use(ipLimiter);
 
 // 挂载 API 路由
 app.use('/api', routes);

@@ -1,5 +1,5 @@
-# M5-05: 并发压测 | HRMS | 2026-09-02
-# load-test.yml — Artillery 压测场景定义（5 个核心 GET 端点 + 100 VU 混合压测）
+# M5-05/M5-09: 并发压测 | HRMS | 2026-09-02
+# load-test.yml — Artillery 压测场景（5 个核心 GET 端点 + 100 并发用户低频操作）
 #
 # 端点清单（实读 server/src/routes/ 确认）：
 #   1. GET /api/employees             → EMPLOYEE_READ          （员工列表）
@@ -8,105 +8,131 @@
 #   4. GET /api/salary/payrolls/runs  → SALARY_PAYROLL_RUN_READ（算薪 Run）
 #   5. GET /api/performance/cycles    → PERFORMANCE_CYCLE_READ （绩效周期）
 #
-# 权重大致 30/20/20/15/15，反映 HRMS 真实高频列表：
-#   - 员工列表（HR 日常最高频）30%
-#   - 考勤 + 请假（日常并列）各 20%
-#   - 算薪 + 绩效（月末/季末/年末峰值）各 15%
+# 权重大致 30/20/20/15/15，反映 HRMS 真实高频列表。
+
+# ─── M5-09-fix2 压测模型修正（缺陷 5 收口）────────────────────────────
+# 旧模型：sustain arrivalRate=100/s = 每秒 100 个一次性 VU = 100 req/s 洪峰
+#   （6000 req/min），远超 user 300/min 与 IP 3000/min 配额 → 必 429。
+# 新模型：对齐 PRD §8.1「并发能力 ≥100 用户」的人类操作节奏 ——
+#   ramp 阶段 30s 内进入 100 个 VU（arrivalRate≈3.33/s），每个 VU 以
+#   loop [GET + think 6s] 持续操作 ~120s（同一 VU 全程同一 token，
+#   模拟 100 个独立用户）。sustain 阶段 arrivalRate 0.6/s 补位退出的 VU。
+#
+# 预期负载（配额定：user 300/min、IP 3000/min）：
+#   请求率 ≈ 活跃 VU(≈100) / 6s ≈ 17 req/s ≈ 1000 req/min
+#   单用户 ≈ 10 req/min << 300 ✅；共享 IP 总量 1000/min << 3000 ✅ → 0 个 429
 
 config:
   target: http://localhost:3000
   processor: ./processor.mjs
   phases:
-    # 1. 预热：30s / 5 VU，避免冷启动影响后续指标
-    - duration: 30
+    # 1. 爬坡：20s 内进入 100 个 VU（arrivalRate 必须为整数，artillery 断言约束）
+    - duration: 20
       arrivalRate: 5
-      name: "warm-up"
-    # 2. 爬坡：60s / 5→100 VU 平滑过渡
-    - duration: 60
-      arrivalRate: 5
-      rampTo: 100
-      name: "ramp-up"
-    # 3. 保持：120s / 100 VU —— 达标线判定阶段
-    - duration: 120
-      arrivalRate: 100
-      name: "sustain-100VU"
-    # 4. 冷却：30s / 100→0 平滑收尾
-    - duration: 30
-      arrivalRate: 100
-      rampTo: 0
-      name: "cool-down"
+      name: "ramp-to-100-users"
+    # 2. 保持：100s 以 1/s 补位退出 VU，活跃并发维持在 ~100
+    - duration: 100
+      arrivalRate: 1
+      name: "sustain-100-users"
   defaults:
     headers:
-      Authorization: "Bearer {{ token }}"
       Accept: "application/json"
+      # 注：Authorization 由 processor.beforeRequest 按 VU 身份注入（artillery 模板渲染不可靠，
+      #     见 processor.mjs M5-09-fix1 说明），不再放 defaults 里
 
 scenarios:
   # 1. 员工列表 — 30%
   - name: "list-employees"
     weight: 30
+    beforeScenario: "beforeScenario"
+    beforeRequest: "beforeRequest"
+    afterResponse: "afterResponse"
     flow:
-      - get:
-          url: "/api/employees?page=1&pageSize=20"
-          name: "GET employees"
-          expect:
-            - statusCode: 200
-            - hasProperty: "success"
-            - equals:
-                json: "$.success"
-                value: true
+      - loop:
+          - get:
+              url: "/api/employees?page=1&pageSize=20"
+              name: "GET employees"
+              expect:
+                - statusCode: 200
+                - hasProperty: "success"
+                - equals:
+                    json: "$.success"
+                    value: true
+          - think: 6
+        count: 20
 
   # 2. 考勤记录 — 20%
   - name: "list-attendance"
     weight: 20
+    beforeScenario: "beforeScenario"
+    beforeRequest: "beforeRequest"
     flow:
-      - get:
-          url: "/api/attendance/records?page=1&pageSize=20"
-          name: "GET attendance"
-          expect:
-            - statusCode: 200
-            - hasProperty: "success"
-            - equals:
-                json: "$.success"
-                value: true
+      - loop:
+          - get:
+              url: "/api/attendance/records?page=1&pageSize=20"
+              name: "GET attendance"
+              expect:
+                - statusCode: 200
+                - hasProperty: "success"
+                - equals:
+                    json: "$.success"
+                    value: true
+          - think: 6
+        count: 20
 
   # 3. 请假列表 — 20%
   - name: "list-leaves"
     weight: 20
+    beforeScenario: "beforeScenario"
+    beforeRequest: "beforeRequest"
     flow:
-      - get:
-          url: "/api/leaves/requests?page=1&pageSize=20"
-          name: "GET leaves"
-          expect:
-            - statusCode: 200
-            - hasProperty: "success"
-            - equals:
-                json: "$.success"
-                value: true
+      - loop:
+          - get:
+              url: "/api/leaves/requests?page=1&pageSize=20"
+              name: "GET leaves"
+              expect:
+                - statusCode: 200
+                - hasProperty: "success"
+                - equals:
+                    json: "$.success"
+                    value: true
+          - think: 6
+        count: 20
 
   # 4. 算薪 Run 列表 — 15%
   - name: "list-payrolls"
     weight: 15
+    beforeScenario: "beforeScenario"
+    beforeRequest: "beforeRequest"
     flow:
-      - get:
-          url: "/api/salary/payrolls/runs?page=1&pageSize=20"
-          name: "GET payrolls"
-          expect:
-            - statusCode: 200
-            - hasProperty: "success"
-            - equals:
-                json: "$.success"
-                value: true
+      - loop:
+          - get:
+              url: "/api/salary/payrolls/runs?page=1&pageSize=20"
+              name: "GET payrolls"
+              expect:
+                - statusCode: 200
+                - hasProperty: "success"
+                - equals:
+                    json: "$.success"
+                    value: true
+          - think: 6
+        count: 20
 
   # 5. 绩效周期列表 — 15%
   - name: "list-performance-cycles"
     weight: 15
+    beforeScenario: "beforeScenario"
+    beforeRequest: "beforeRequest"
     flow:
-      - get:
-          url: "/api/performance/cycles?page=1&pageSize=20"
-          name: "GET performance cycles"
-          expect:
-            - statusCode: 200
-            - hasProperty: "success"
-            - equals:
-                json: "$.success"
-                value: true
+      - loop:
+          - get:
+              url: "/api/performance/cycles?page=1&pageSize=20"
+              name: "GET performance cycles"
+              expect:
+                - statusCode: 200
+                - hasProperty: "success"
+                - equals:
+                    json: "$.success"
+                    value: true
+          - think: 6
+        count: 20
