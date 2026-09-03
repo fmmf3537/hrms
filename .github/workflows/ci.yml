@@ -1,0 +1,100 @@
+# HRMS CI（M5-11）| GitHub Actions
+# 质量闸门：lint + type-check + 单测（无需外部服务）；E2E 单独 job（含 postgres/redis services）
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  quality:
+    name: Lint / Type / Unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Server lint + type-check
+        run: |
+          pnpm --filter hrms-server lint
+          pnpm --filter hrms-server type-check
+      - name: Client lint + type-check
+        run: |
+          pnpm --filter hrms-client lint
+          pnpm --filter hrms-client type-check
+      - name: Server unit tests
+        run: pnpm --filter hrms-server test
+      - name: Client unit tests
+        run: pnpm --filter hrms-client test
+
+  e2e:
+    name: Playwright E2E
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hrms
+        ports: ["5501:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hrms"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6401:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare server env
+        working-directory: server
+        run: |
+          cat > .env <<'EOF'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5501/hrms?schema=public
+          REDIS_URL=redis://localhost:6401
+          JWT_SECRET=ci-jwt-secret-0123456789abcdef0123456789abcdef
+          JWT_REFRESH_SECRET=ci-refresh-secret-0123456789abcdef0123456789abcdef
+          ENCRYPTION_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          PORT=3000
+          NODE_ENV=development
+          CORS_ORIGIN=http://localhost:5173
+          LLM_PROVIDER=mock
+          OCR_PROVIDER=mock
+          SMS_PROVIDER=mock
+          EOF
+      - name: Migrate + seed
+        working-directory: server
+        run: |
+          pnpm exec prisma migrate deploy
+          pnpm --filter hrms-server db:seed
+      - name: Install Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Run E2E
+        run: pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: test-results/
+          retention-days: 7
