@@ -1,4 +1,7 @@
 import app from './app';
+import {
+  registerBusinessSchedules, startBusinessWorkers, stopBusinessWorkers,
+} from './jobs/business.jobs';
 import { startNotificationWorker, stopNotificationWorker } from './jobs/notification.queue';
 import { env } from './lib/env';
 import prisma from './lib/prisma';
@@ -10,6 +13,9 @@ const { PORT } = env;
 const server = app.listen(PORT, async () => {
   await connectRedis();
   await startNotificationWorker();
+  // M5-10: 业务定时任务（月结 / AI 摘要 / 季度结算 / 成本预警 / 调薪执行）
+  await registerBusinessSchedules();
+  await startBusinessWorkers();
   startCacheRefresh();
 
   console.log(`
@@ -35,6 +41,7 @@ function shutdown(signal: string) {
     console.log('Server closed');
     stopCacheRefresh();
     await stopNotificationWorker();
+    await stopBusinessWorkers();
     await prisma.$disconnect();
     redis.disconnect();
     process.exit(0);

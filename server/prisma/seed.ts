@@ -1227,6 +1227,37 @@ const DEFAULT_CONFIGS: Array<{
     value: true,
     remark: 'C8 晋升调薪是否联动岗位历史',
   },
+  // M5-10 BullMQ 调度开关（定时任务运行前检查；缺省视为启用）
+  {
+    category: 'salary',
+    key: 'scheduler.payroll.auto_generate_enabled',
+    value: true,
+    remark: 'M5-10 每月 25 日自动生成下月算薪批次开关',
+  },
+  {
+    category: 'salary',
+    key: 'scheduler.payroll.ai_summary_auto_enabled',
+    value: true,
+    remark: 'M5-10 每日 02:10 对已定稿批次自动生成 AI 算薪摘要开关',
+  },
+  {
+    category: 'salary',
+    key: 'scheduler.commission.auto_settle_enabled',
+    value: true,
+    remark: 'M5-10 季度末自动创建销售提成结算单开关（1/4/7/10 月 1 日结算上一季度）',
+  },
+  {
+    category: 'salary',
+    key: 'scheduler.cost_alert.auto_scan_enabled',
+    value: true,
+    remark: 'M5-10 每日 02:00 成本预警扫描开关（加班费占比 + 离职率）',
+  },
+  {
+    category: 'salary',
+    key: 'scheduler.adjustment.auto_execute_enabled',
+    value: true,
+    remark: 'M5-10 每日 02:05 到期调薪自动执行开关',
+  },
 ];
 
 async function main() {
@@ -1334,6 +1365,26 @@ async function main() {
     },
   });
   console.log(`   ✓ admin user (id=${admin.id})`);
+
+  // M5-10 BullMQ 调度接线：system 服务账号（承载 C4 月结 / C6 季度结算等需 FK 的定时任务操作人）
+  // 密码为启动时随机生成的一次性值，任何人不持有明文，不可登录使用（仅作 createdBy FK 操作人）
+  const systemPassword = `sys-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+  const systemHash = await bcrypt.hash(systemPassword, 12);
+  const systemUser = await prisma.user.upsert({
+    where: { username: 'system' },
+    update: {}, // 已存在则保持（不重置密码/状态）
+    create: {
+      username: 'system',
+      passwordHash: systemHash,
+      email: 'system@hrms.local',
+      status: 'active',
+      mustChangePassword: true,
+      userRoles: {
+        create: { roleId: adminRole.id },
+      },
+    },
+  });
+  console.log(`   ✓ system user (id=${systemUser.id}, 调度任务操作人)`);
 
   console.log('==> Seeding default approval flow templates (M0.5-1)...');
 
