@@ -24,3 +24,5 @@ server/scripts/migration/tmp/
 loadtest/reports/
 loadtest/.auth/
 loadtest/tmp/
+# M5-09 订正脚本临时产物（M5-09 切片）
+server/scripts/fixes/tmp/

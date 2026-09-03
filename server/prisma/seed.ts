@@ -323,6 +323,18 @@ const DEFAULT_CONFIGS: Array<{
   },
   {
     category: 'attendance',
+    key: 'office_lat',
+    value: 34.3416,
+    remark: 'GPS 打卡中心纬度（M5-09 西安办公区近似值，需行政确认真实坐标；本期 service 暂用内置常量）',
+  },
+  {
+    category: 'attendance',
+    key: 'office_lng',
+    value: 108.9398,
+    remark: 'GPS 打卡中心经度（M5-09 西安办公区近似值，需行政确认真实坐标；本期 service 暂用内置常量）',
+  },
+  {
+    category: 'attendance',
     key: 'late_threshold',
     value: 30,
     remark: '迟到阈值（分钟）',
@@ -378,8 +390,8 @@ const DEFAULT_CONFIGS: Array<{
   {
     category: 'leave',
     key: 'approval_flow_short',
-    value: 'leave:leave_short',
-    remark: '≤3 天审批流',
+    value: 'leave:leave_default',
+    remark: '≤3 天审批流（M5-09 订正：原 leave:leave_short 不存在，对齐 seed 创建的 leave_default 流程）',
   },
   {
     category: 'leave',
@@ -3091,6 +3103,64 @@ async function main() {
     console.log('   ✓ C1 salary demo already exists (skip)');
   }
 
+  // M5-09 缺陷 4 兜底：确保 5 名 seed 员工各有 1 条 active EmployeeSalaryPlan（算薪前置）
+  // 演示数据（千位整数）——非真实薪资，仅供算薪链路验证
+  const c1PlanDefaults: Array<{ employeeNo: string; gradeCode: 'T3' | 'A3' | 'M1'; level: number; base: number; perf: number }> = [
+    { employeeNo: `XACH${year}0001`, gradeCode: 'T3', level: 3, base: 10000, perf: 2100 }, // admin（已有则跳过）
+    { employeeNo: `XACH${year}0002`, gradeCode: 'A3', level: 2, base: 8000, perf: 1200 },  // HR 专员（已有则跳过）
+    { employeeNo: `XACH${year}0003`, gradeCode: 'M1', level: 1, base: 20000, perf: 8000 }, // 部门负责人（已有则跳过）
+    { employeeNo: `XACH${year}0004`, gradeCode: 'M1', level: 1, base: 20000, perf: 8000 }, // 高管（兜底新增）
+    { employeeNo: `XACH${year}0005`, gradeCode: 'T3', level: 2, base: 9000, perf: 1800 },  // 普通员工（兜底新增）
+  ];
+  const c1GradeRows = await prisma.salaryGrade.findMany({
+    where: { gradeCode: { in: ['T3', 'A3', 'M1'] } },
+    select: { id: true, gradeCode: true },
+  });
+  const c1GradeIdByCode = Object.fromEntries(c1GradeRows.map((g) => [g.gradeCode, g.id]));
+  const c1LevelRows = await prisma.salaryGradeLevel.findMany({
+    where: { gradeId: { in: c1GradeRows.map((g) => g.id) } },
+    orderBy: { level: 'asc' },
+    select: { id: true, gradeId: true, level: true },
+  });
+  const c1LevelIdByKey: Record<string, string> = {};
+  c1LevelRows.forEach((lv) => {
+    const grade = c1GradeRows.find((g) => g.id === lv.gradeId);
+    if (grade) c1LevelIdByKey[`${grade.gradeCode}-${lv.level}`] = lv.id;
+  });
+  let c1PlansEnsured = 0;
+  for (const pd of c1PlanDefaults) {
+    const emp = await prisma.employee.findUnique({ where: { employeeNo: pd.employeeNo } });
+    if (!emp) continue;
+    const existingPlan = await prisma.employeeSalaryPlan.findFirst({
+      where: { employeeId: emp.id, status: 'active' },
+    });
+    if (existingPlan) continue;
+    const gradeId = c1GradeIdByCode[pd.gradeCode];
+    const levelId = c1LevelIdByKey[`${pd.gradeCode}-${pd.level}`];
+    if (!gradeId || !levelId) continue;
+    await prisma.employeeSalaryPlan.create({
+      data: {
+        employeeId: emp.id,
+        gradeId,
+        levelId,
+        baseSalary: pd.base,
+        performanceBase: pd.perf,
+        allowance: 0,
+        welfare: 'demo',
+        effectiveFrom: new Date(year, 0, 1),
+        effectiveTo: null,
+        status: 'active',
+        createdById: admin.id,
+      },
+    });
+    c1PlansEnsured += 1;
+  }
+  if (c1PlansEnsured > 0) {
+    console.log(`   ✓ M5-09 缺陷 4: 补建 ${c1PlansEnsured} 条 active EmployeeSalaryPlan（覆盖第 4/5 名员工）`);
+  } else {
+    console.log('   ✓ M5-09 缺陷 4: 5 名 seed 员工已有 active plan（跳过）');
+  }
+
   console.log('==> Seeding insurance schemes/registrations (M4-C2)...');
   const existingC2 = await prisma.socialInsuranceScheme.findFirst({
     where: { city: 'xi_an', insuranceType: 'pension' },
@@ -3181,6 +3251,60 @@ async function main() {
     console.log('   ✓ 15 demo social schemes + 3 housing funds + 3 registrations');
   } else {
     console.log('   ✓ C2 insurance demo already exists (skip)');
+  }
+
+  // M5-09 缺陷 4 兜底：确保 5 名 seed 员工各有 1 条 active EmployeeInsuranceRegistration
+  // 演示数据（千位整数）——非真实薪资，仅供算薪链路验证
+  const c2RegDefaults: Array<{
+    employeeNo: string;
+    city: 'xi_an' | 'bei_jing' | 'si_chuan';
+    base: number;
+  }> = [
+    { employeeNo: `XACH${year}0001`, city: 'xi_an', base: 10000 },     // admin（已有则跳过）
+    { employeeNo: `XACH${year}0002`, city: 'bei_jing', base: 12000 },  // HR 专员（已有则跳过）
+    { employeeNo: `XACH${year}0003`, city: 'si_chuan', base: 8000 },   // 部门负责人（已有则跳过）
+    { employeeNo: `XACH${year}0004`, city: 'xi_an', base: 20000 },     // 高管（兜底新增）
+    { employeeNo: `XACH${year}0005`, city: 'xi_an', base: 9000 },      // 普通员工（兜底新增）
+  ];
+  const c2SocialRows = await prisma.socialInsuranceScheme.findMany({
+    where: { insuranceType: 'pension' },
+    select: { id: true, city: true },
+  });
+  const c2FundRows = await prisma.housingFundScheme.findMany({
+    select: { id: true, city: true },
+  });
+  const c2SocialIdByCity = Object.fromEntries(c2SocialRows.map((s) => [s.city, s.id]));
+  const c2FundIdByCity = Object.fromEntries(c2FundRows.map((f) => [f.city, f.id]));
+  let c2RegsEnsured = 0;
+  for (const rd of c2RegDefaults) {
+    const emp = await prisma.employee.findUnique({ where: { employeeNo: rd.employeeNo } });
+    if (!emp) continue;
+    const existingReg = await prisma.employeeInsuranceRegistration.findFirst({
+      where: { employeeId: emp.id, status: 'active' },
+    });
+    if (existingReg) continue;
+    const socialId = c2SocialIdByCity[rd.city];
+    const fundId = c2FundIdByCity[rd.city];
+    if (!socialId || !fundId) continue;
+    await prisma.employeeInsuranceRegistration.create({
+      data: {
+        employeeId: emp.id,
+        city: rd.city,
+        socialInsuranceSchemeId: socialId,
+        housingFundSchemeId: fundId,
+        baseSalary: rd.base,
+        effectiveFrom: new Date(year, 0, 1),
+        effectiveTo: null,
+        status: 'active',
+        createdById: admin.id,
+      },
+    });
+    c2RegsEnsured += 1;
+  }
+  if (c2RegsEnsured > 0) {
+    console.log(`   ✓ M5-09 缺陷 4: 补建 ${c2RegsEnsured} 条 active EmployeeInsuranceRegistration（覆盖第 4/5 名员工）`);
+  } else {
+    console.log('   ✓ M5-09 缺陷 4: 5 名 seed 员工已有 active insurance registration（跳过）');
   }
 
   console.log('==> Seeding payroll runs/payslips (M4-C4)...');

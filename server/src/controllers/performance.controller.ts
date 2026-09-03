@@ -37,7 +37,8 @@ export const listCycles = asyncHandler(async (req: Request, res: Response) => {
     page: req.query.page ? Number(req.query.page) : 1,
     pageSize: req.query.pageSize ? Number(req.query.pageSize) : 20,
   });
-  res.json({ success: true, ...result });
+  // M5-09: 信封对齐项目约定（与 client unwrapPerformancePage 对齐）
+  res.json({ success: true, data: result });
 });
 
 export const updateCycle = asyncHandler(async (req: Request, res: Response) => {
@@ -65,7 +66,8 @@ export const listIndicators = asyncHandler(async (req: Request, res: Response) =
     page: req.query.page ? Number(req.query.page) : 1,
     pageSize: req.query.pageSize ? Number(req.query.pageSize) : 20,
   });
-  res.json({ success: true, ...result });
+  // M5-09: 信封对齐项目约定（与 client unwrapPerformancePage 对齐）
+  res.json({ success: true, data: result });
 });
 
 export const createScheme = asyncHandler(async (req: Request, res: Response) => {
@@ -85,7 +87,8 @@ export const listSchemes = asyncHandler(async (req: Request, res: Response) => {
     page: req.query.page ? Number(req.query.page) : 1,
     pageSize: req.query.pageSize ? Number(req.query.pageSize) : 20,
   });
-  res.json({ success: true, ...result });
+  // M5-09: 信封对齐项目约定（与 client unwrapPerformancePage 对齐）
+  res.json({ success: true, data: result });
 });
 
 export const cloneScheme = asyncHandler(async (req: Request, res: Response) => {

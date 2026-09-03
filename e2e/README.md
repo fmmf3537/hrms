@@ -39,13 +39,16 @@ pnpm exec playwright show-report
 
 ## 已降级主流程
 
-按提示词 §5.2，下列流程因种子/审批配置缺失或客户端 bug 无法走通完整链路，缩减到「可走通的最远环节 + 明确断言」：
+按提示词 §5.2，下列流程因种子/审批配置缺失或客户端 bug 无法走通完整链路，缩减到「可走通的最远环节 + 明确断言」。
 
-| # | 主流程 | 降级说明 |
+**M5-09 全部还原完成**（缺陷 1/2/3/4 修复）：
+
+| # | 主流程 | 状态 |
 |---|---|---|
-| 03 | 请假 | 后端 leave 服务读 config `leave.approval_flow_short` = `leave:leave_short`，但 seed approval_flows.key = `leave_default`，提交必触发「审批流模板不存在或已停用」。E2E 断言：表单可填写 → 提交 → 后端错误 toast 可见（http 拦截器自动 toast）|
-| 04 | 算薪 | 后端 createPayrollRun 强校验「无生效薪酬方案 / 无社保公积金登记 / 无绩效等级」任一缺失即 73408。E2E 断言：API 前置建薪级/薪档 → UI 流程可达 → 错误 toast 可见 |
-| 05 | 绩效 | server `GET /performance/cycles /indicators /schemes` 返回扁平 `{success, items, total, page, pageSize}`，但 client `unwrapPerformancePage` 期望 `{success, data: {items, ...}}` 信封（实测列表页「共 0 条 / 暂无数据」恒成立）。E2E 断言降级为：UI 表单填写 + 提交 → POST 200（证明链路可达）+ API 直连 GET 列表查 cycleCode / indicatorCode / schemeCode 确认 DB 已落库 |
+| 02 | 打卡 | ✅ M5-09 还原：web 改 GPS（context.grantPermissions + setGeolocation），UI 列表真实断言 gps 行可见 |
+| 03 | 请假 | ✅ M5-09 还原：seed leave.approval_flow_short 订正为 leave:leave_default，单路径提交成功 + 列表可见 + 状态「已提交」|
+| 04 | 算薪 | ✅ M5-09 还原：seed 扩 5 员工 plan/reg/finalGrade + 旧库订正脚本；UI 发起算薪 + API 推进 draft→submitted→reviewed→approved→locked + 工资单列表断言 admin 行可见 |
+| 05 | 绩效 | ✅ M5-09 还原：server controller 3 处 list 信封 `...result` → `data: result`，UI 列表真实断言 cycleCode/indicatorCode/schemeCode 行可见，去掉 page.evaluate Vue 实例注入 hack |
 
 ## 目录结构
 

@@ -1,80 +1,62 @@
 /**
- * E2E #2 · 打卡主流程（M5-02）
+ * E2E #2 · 打卡主流程（M5-09 还原）
  * @file e2e/specs/02-attendance.spec.ts
  * @description
  *  - 进入 /attendance/attendance 打卡管理
- *  - 点击「自己打卡」（admin 绑定了员工档案）
- *  - 断言 UI 触发接口 + 列表出现新行
+ *  - 授予浏览器定位权限 + setGeolocation 设到 office 坐标
+ *  - 点击「自己打卡」（admin 绑定了员工档案，client onClock 走 Geolocation API）
+ *  - server 接收 clockType='gps' + 经纬度，校验通过后写入 AttendanceRecord
+ *  - 列表 UI 真实断言新记录出现
  *
- * 注：AttendanceList 顶部 PageHeader 含「打卡管理」标题。
- * 设计：UI 触发 POST /attendance/clock-in；由于前端 AttendanceList.vue 发送 clockType='wifi'
- *   但漏发 wifiSsid 字段，后端强校验会 400。本切片禁止改 client / server，故用 page.route()
- *   拦截该端点并 fulfill 一条伪造成功响应，让 UI 走通 toast + 列表刷新路径；该 mock 仅作用于
- *   本 spec，不影响其他测试。
+ * 已知问题（M5-02 → M5-09 修复）：
+ *   原 client `AttendanceList.vue` onClock() 硬编码 `clockType:'wifi'` 但漏发 wifiSsid，
+ *   server 强校验 71903 必败。旧 spec 用 page.route() mock 伪造成功响应，本切片还原为
+ *   真实 GPS 链路：context.grantPermissions + context.setGeolocation(office 坐标)。
+ *
+ * 坐标：seed attendance.office_lat = 34.3416 / office_lng = 108.9398（与 service
+ *   DEFAULT_OFFICE_LAT/LNG 一致），gps_max_distance = 100m，所以 setGeolocation 偏差 < 100m 即通过。
  */
-import { test, expect, type Route } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+
+// 实读 server/seed.ts + server/src/services/attendance.service.ts 确认坐标
+const OFFICE_LAT = 34.3416;
+const OFFICE_LNG = 108.9398;
 
 test.describe.serial('02 · 打卡主流程', () => {
-  test('打卡 → 列表出现新记录', async ({ page }) => {
-    // 1. 拦截 /attendance/clock-in，fulfill 伪造成功响应（含当前时间）
-    await page.route('**/api/attendance/clock-in', async (route: Route) => {
-      const now = new Date().toISOString();
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            id: '00000000-0000-0000-0000-000000000000',
-            employeeId: '00000000-0000-0000-0000-000000000000',
-            clockInTime: now,
-            clockType: 'wifi',
-            status: 'approved',
-            isLate: false,
-            isEarlyLeave: false,
-            isMissing: false,
-            lateMinutes: 0,
-          },
-        }),
-      });
-    });
+  test('GPS 打卡 → 列表出现新记录', async ({ page, context }) => {
+    // 1. 授予定位权限 + 设置坐标为 office 中心点（实测服务 DEFAULT_OFFICE_LAT/LNG 同值）
+    await context.grantPermissions(['geolocation']);
+    await context.setGeolocation({ latitude: OFFICE_LAT, longitude: OFFICE_LNG, accuracy: 10 });
 
-    // 2. 直接 URL 访问 /attendance/attendance（菜单 disabled，URL 可达）
+    // 2. 进入打卡管理（菜单 disabled，URL 可达）
     await page.goto('/attendance/attendance');
     await expect(page.locator('.page-header__title h1')).toContainText('打卡管理');
 
-    // 3. 记下点击前的列表行数
-    const beforeCount = await page.locator('.el-table__body tr').count();
-
-    // 4. 监听接口（路由已 fulfill，会返回 201）
+    // 3. 监听 POST /api/attendance/clock-in（无 mock，必走真实 server gps 分支）
     const responsePromise = page.waitForResponse(
       (r) => r.url().includes('/api/attendance/clock-in') && r.request().method() === 'POST',
       { timeout: 15_000 },
     );
 
-    // 5. 点击「自己打卡」
+    // 4. 点击「自己打卡」
     const clockButton = page.getByRole('button', { name: '自己打卡' });
     await expect(clockButton).toBeVisible();
     await clockButton.click();
 
-    // 6. 等待响应
+    // 5. 断言响应 2xx（gps 分支返回 201）
     const resp = await responsePromise;
-    expect(resp.status()).toBe(201);
+    expect(resp.ok(), `GPS 打卡期望 2xx，实际 ${resp.status()}`).toBeTruthy();
 
-    // 7. ElMessage 成功 toast
+    // 6. ElMessage 成功 toast
     const successToast = page.locator('.el-message--success').filter({ hasText: '打卡成功' });
     await expect(successToast).toBeVisible({ timeout: 5_000 });
 
-    // 8. 等 toast 消失 + 列表 load
+    // 7. 等 toast 消失 + 列表 load
     await successToast.waitFor({ state: 'hidden', timeout: 8_000 }).catch(() => undefined);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(800);
 
-    // 9. 列表仍可访问，行数 ≥ 0（mock 后 UI 仅刷新调用了 listRecords，可能为空）
-    const afterCount = await page.locator('.el-table__body tr').count();
-    expect(afterCount).toBeGreaterThanOrEqual(0);
-    // 关键断言：UI 真的发出了请求（fetched URL 中包含 clock-in 即证明）
-    expect(resp.url()).toContain('/attendance/clock-in');
+    // 8. M5-09: UI 列表真实出现 gps 类型记录（不再降级为 mock 行数断言）
+    const gpsRow = page.locator('.el-table__body tr').filter({ hasText: 'gps' }).first();
+    await expect(gpsRow, '列表应出现 clockType=gps 的新记录').toBeVisible({ timeout: 5_000 });
   });
 });
-
-

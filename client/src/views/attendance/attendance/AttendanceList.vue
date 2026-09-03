@@ -93,12 +93,39 @@ async function onClock(): Promise<void> {
     ElMessage.warning('当前账号未绑定员工档案，无法打卡');
     return;
   }
+  // M5-09: web 端打卡改 GPS（浏览器无 WiFi SSID 取值能力，原 wifi 路径必败）
+  // 用 Geolocation API 取办公坐标，提交 clockType='gps' + 经纬度
+  // server attendance.service.ts gps 分支用 configs.attendance.gps_max_distance + 内置 DEFAULT_OFFICE_LAT/LNG
+  let coords: { lat: number; lng: number; accuracy?: number };
+  try {
+    coords = await new Promise<{ lat: number; lng: number; accuracy?: number }>((resolve, reject) => {
+      if (!('geolocation' in navigator)) {
+        reject(new Error('浏览器不支持定位'));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        }),
+        (err) => reject(err),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 },
+      );
+    });
+  } catch (err) {
+    ElMessage.warning('请允许浏览器定位后打卡');
+    return;
+  }
   clocking.value = true;
   try {
     await clockIn({
       employeeId,
-      clockType: 'wifi',
+      clockType: 'gps',
       clockInTime: new Date().toISOString(),
+      gpsLat: coords.lat,
+      gpsLng: coords.lng,
+      gpsAccuracy: coords.accuracy,
     });
     ElMessage.success('打卡成功');
     await load();
