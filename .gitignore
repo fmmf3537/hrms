@@ -26,3 +26,7 @@ loadtest/.auth/
 loadtest/tmp/
 # M5-09 订正脚本临时产物（M5-09 切片）
 server/scripts/fixes/tmp/
+# M5-11 备份脚本临时产物（含真实数据库备份，严禁提交）
+server/scripts/backup/tmp/
+# 开发工具 skill 二进制包（非项目代码）
+skills/
