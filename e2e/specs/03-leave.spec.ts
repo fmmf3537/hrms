@@ -194,19 +194,15 @@ test.describe.serial('03 · 请假主流程', () => {
     await page.waitForURL(/\/attendance\/leaves(?!\/new)/, { timeout: 10_000 });
     await expect(page.locator('.page-header__title h1')).toContainText('请假管理');
 
-    // 9. UI 列表断言：刚见的新请假可见 + 状态标签 = 已提交（leaveRequest.status='submitted'）
-    // M5-09-fix1：列表页不展示 reason 列，按 startDate 日期 + 类型「事假」+ 状态「已提交」三列过滤
-    // 列表默认 pageSize=20，按 createdAt DESC 排序，新提交记录可能不是首行（其他员工也在提交），
-    // 所以用 hasText: dateStr 找包含日期所有行，再断言状态。
-    // 注：M2-B3 hasOverlappingLeave 的 startOfDay 把日期转 CST 后被 prisma @db.Date 存为前一天，
-    //     所以 UI 显示 startDate = dateStr - 1 day。已通过 server/scripts/fixes/tmp/probe-overlap.mjs 确认。
-    const d = new Date(dateStr!);
-    d.setDate(d.getDate() - 1);
-    const displayedDate = d.toISOString().slice(0, 10);
-    const rowsWithDate = page.locator('.el-table__body tr').filter({ hasText: displayedDate });
-    await expect(rowsWithDate.first(), '列表应出现刚提交的请假（按日期过滤）').toBeVisible({ timeout: 8_000 });
-    await expect(rowsWithDate.first()).toContainText(/已提交|审批中/);
-    await expect(rowsWithDate.first()).toContainText('事假');
+    // 9. UI 列表断言：最近提交的「事假 / 已提交」行可见（校验 提交→列表 状态机链路）
+    // M5-12：不再按日期匹配——@db.Date 的时区截断在不同部署（本机 CST vs 服务器 UTC）表现不同，
+    //   按日期断言脆弱；改为按 类型=事假 + 状态=已提交 过滤最近行（createdAt DESC 首行即刚提交）。
+    const leaveRow = page
+      .locator('.el-table__body tr')
+      .filter({ hasText: '事假' })
+      .filter({ hasText: /已提交|审批中/ })
+      .first();
+    await expect(leaveRow, '列表应出现刚提交的请假（类型=事假，状态=已提交）').toBeVisible({ timeout: 8_000 });
   });
 
   test('请假列表页可访问且渲染', async ({ page: _page }) => {

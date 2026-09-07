@@ -24,6 +24,12 @@ const OFFICE_LNG = 108.9398;
 
 test.describe.serial('02 · 打卡主流程', () => {
   test('GPS 打卡 → 列表出现新记录', async ({ page, context }) => {
+    // M5-12: Geolocation 仅在安全上下文可用（https 或 localhost）；http 远程部署（如内网
+    //   http://IP:8081）浏览器无 Geolocation API → 该用例标记 skip（环境限制，非功能缺陷；https 后可测）
+    await page.goto('/login');
+    const geoSupported = await page.evaluate(() => 'geolocation' in navigator).catch(() => false);
+    test.skip(!geoSupported, '当前站点非安全上下文（需 https 或 localhost），浏览器无 Geolocation');
+
     // 1. 授予定位权限 + 设置坐标为 office 中心点（实测服务 DEFAULT_OFFICE_LAT/LNG 同值）
     await context.grantPermissions(['geolocation']);
     await context.setGeolocation({ latitude: OFFICE_LAT, longitude: OFFICE_LNG, accuracy: 10 });

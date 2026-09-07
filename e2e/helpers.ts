@@ -5,11 +5,12 @@
  */
 import { type APIRequestContext, request as pwRequest } from '@playwright/test';
 
-export const API_BASE = 'http://localhost:3000';
+// M5-12: 支持远程实例回归——E2E_API_BASE / E2E_CLIENT_BASE / E2E_ADMIN_PASSWORD 可覆盖
+export const API_BASE = process.env.E2E_API_BASE ?? 'http://localhost:3000';
 export const API_PREFIX = '/api';
-export const CLIENT_BASE = 'http://localhost:5173';
-export const ADMIN_USERNAME = 'admin';
-export const ADMIN_PASSWORD = 'Admin@2026';
+export const CLIENT_BASE = process.env.E2E_CLIENT_BASE ?? 'http://localhost:5173';
+export const ADMIN_USERNAME = process.env.E2E_ADMIN_USER ?? 'admin';
+export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'Admin@2026';
 export const STORAGE_STATE = 'e2e/.auth/admin.json';
 
 export interface LoginResponse {

@@ -8,6 +8,7 @@
  *  - 退出登录回到登录页
  */
 import { test, expect } from '@playwright/test';
+import { ADMIN_PASSWORD, ADMIN_USERNAME } from '../helpers';
 
 test.describe.serial('01 · 登录主流程', () => {
   // 01 用例必须从「未登录」开始；覆盖项目级 storageState（项目级已注入 admin token，
@@ -19,12 +20,12 @@ test.describe.serial('01 · 登录主流程', () => {
     await page.goto('/login');
     await expect(page).toHaveTitle(/登录/);
 
-    // 2. 输入 admin / Admin@2026
+    // 2. 输入账号密码（支持 E2E_ADMIN_* 覆盖，便于远程实例回归）
     const usernameInput = page.getByPlaceholder('请输入用户名');
     const passwordInput = page.getByPlaceholder('请输入密码');
     await expect(usernameInput).toBeVisible();
-    await usernameInput.fill('admin');
-    await passwordInput.fill('Admin@2026');
+    await usernameInput.fill(ADMIN_USERNAME);
+    await passwordInput.fill(ADMIN_PASSWORD);
 
     // 3. 点击登录按钮
     const submitButton = page.getByRole('button', { name: '登录' });
