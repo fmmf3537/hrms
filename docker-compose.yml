@@ -77,6 +77,8 @@ services:
       SMS_PROVIDER: ${SMS_PROVIDER:-mock}
       SMS_ACCESS_KEY: ${SMS_ACCESS_KEY:-}
       SMS_ACCESS_SECRET: ${SMS_ACCESS_SECRET:-}
+      # S-FIX2: 与 postgres 时区对齐（北京时间）——算薪/考勤/审计日期边界依赖容器本地时区
+      TZ: Asia/Shanghai
     depends_on:
       postgres:
         condition: service_healthy
