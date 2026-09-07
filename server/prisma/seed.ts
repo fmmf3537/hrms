@@ -2739,19 +2739,31 @@ async function main() {
   }
 
   console.log('==> Seeding performance grade demo (M3-D3)...');
+  // S-FIX1: 按 (employeeId, cycleId) 逐员工 ensure，避免与 D2 demo 撞唯一约束 P2002
   if (monthlyCycleForRecords && peduScheme && sampleEmployees.length >= 3) {
-    const d3Exists = await prisma.performanceRecord.findFirst({
-      where: {
-        cycleId: monthlyCycleForRecords.id,
-        status: 'archived',
-        finalScore: 95,
-      },
-    });
-    if (!d3Exists) {
-      const d3Scores = [95, 85, 55];
-      await Promise.all(d3Scores.map((score, idx) => prisma.performanceRecord.create({
+    const d3Scores = [95, 85, 55];
+    let created = 0;
+    let skipped = 0;
+    for (let idx = 0; idx < d3Scores.length; idx++) {
+      const emp = sampleEmployees[idx];
+      if (!emp) {
+        skipped += 1;
+        continue;
+      }
+      const score = d3Scores[idx];
+      const existing = await prisma.performanceRecord.findFirst({
+        where: {
+          employeeId: emp.id,
+          cycleId: monthlyCycleForRecords.id,
+        },
+      });
+      if (existing) {
+        skipped += 1;
+        continue;
+      }
+      await prisma.performanceRecord.create({
         data: {
-          employeeId: sampleEmployees[idx].id,
+          employeeId: emp.id,
           cycleId: monthlyCycleForRecords.id,
           schemeId: peduScheme.id,
           status: 'archived',
@@ -2760,11 +2772,10 @@ async function main() {
           archivedAt: new Date(),
           createdBy: admin.id,
         },
-      })));
-      console.log('   ✓ 3 archived performance records for D3 grade demo');
-    } else {
-      console.log('   ✓ D3 grade demo already exists (skip)');
+      });
+      created += 1;
     }
+    console.log(`   ✓ D3 grade demo: created ${created}, skipped ${skipped}（occupied by D2/既有记录）`);
   }
 
   console.log('==> Seeding performance payout demo (M3-D4)...');
