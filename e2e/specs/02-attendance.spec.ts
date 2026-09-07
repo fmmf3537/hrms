@@ -17,6 +17,7 @@
  *   DEFAULT_OFFICE_LAT/LNG 一致），gps_max_distance = 100m，所以 setGeolocation 偏差 < 100m 即通过。
  */
 import { test, expect } from '@playwright/test';
+import { CLIENT_BASE } from '../helpers';
 
 // 实读 server/seed.ts + server/src/services/attendance.service.ts 确认坐标
 const OFFICE_LAT = 34.3416;
@@ -24,11 +25,13 @@ const OFFICE_LNG = 108.9398;
 
 test.describe.serial('02 · 打卡主流程', () => {
   test('GPS 打卡 → 列表出现新记录', async ({ page, context }) => {
-    // M5-12: Geolocation 仅在安全上下文可用（https 或 localhost）；http 远程部署（如内网
-    //   http://IP:8081）浏览器无 Geolocation API → 该用例标记 skip（环境限制，非功能缺陷；https 后可测）
-    await page.goto('/login');
-    const geoSupported = await page.evaluate(() => 'geolocation' in navigator).catch(() => false);
-    test.skip(!geoSupported, '当前站点非安全上下文（需 https 或 localhost），浏览器无 Geolocation');
+    // M5-12: Geolocation 仅在安全上下文可用（https 或 localhost）。http 远程部署
+    //   （如内网 http://IP:8081）浏览器禁用定位 → 本用例 skip（环境限制，非功能缺陷；https 后可测）。
+    // 判定用 URL（比 navigator 探测可靠——Chromium 在非 secure origin 仍暴露对象但调用必失败）
+    const parsedBase = new URL(CLIENT_BASE);
+    const isSecureCtx = parsedBase.protocol === 'https:'
+      || ['localhost', '127.0.0.1', '::1'].includes(parsedBase.hostname);
+    test.skip(!isSecureCtx, 'http 非 localhost（非安全上下文）：浏览器无 Geolocation，GPS 用例仅 https/localhost 可测');
 
     // 1. 授予定位权限 + 设置坐标为 office 中心点（实测服务 DEFAULT_OFFICE_LAT/LNG 同值）
     await context.grantPermissions(['geolocation']);
