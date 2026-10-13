@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /** 登录：5 分钟内最多 10 次 */
 export const loginLimiter = rateLimit({
@@ -87,7 +87,7 @@ export const userLimiter = rateLimit({
     if (userId) {
       return `u:${userId}`;
     }
-    return `ip:${req.ip ?? 'unknown'}`;
+    return `ip:${ipKeyGenerator(req.ip ?? 'unknown')}`;
   },
   message: {
     success: false,
@@ -102,7 +102,7 @@ export const ipLimiter = rateLimit({
   max: 3000,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req: Request) => `ip:${req.ip ?? 'unknown'}`,
+  keyGenerator: (req: Request) => `ip:${ipKeyGenerator(req.ip ?? 'unknown')}`,
   message: {
     success: false,
     error: '请求过于频繁，请稍后再试',

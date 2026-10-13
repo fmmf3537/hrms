@@ -20,7 +20,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/server/node_modules ./server/node_modules
 COPY . .
 RUN cd server && npx prisma generate
-RUN cd server && pnpm build
+RUN cd server && pnpm build && node scripts/fix-esm-dist.mjs
 
 # ===== Stage 3: prod-deps（生产依赖）=====
 FROM node:20-alpine AS prod-deps
@@ -33,11 +33,12 @@ COPY mobile/package.json ./mobile/
 RUN pnpm install --prod --frozen-lockfile --filter=hrms-server...
 
 # ===== Stage 4: runner（生产运行时，非 root 用户）=====
-FROM node:20-alpine AS runner
+# 基底用 alpine3.18：提供 openssl1.1-compat（更高版 Alpine 已移除，prisma 引擎回退加载需要 libssl.so.1.1）
+FROM node:20-alpine3.18 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
-RUN apk add --no-cache wget \
+RUN apk add --no-cache wget openssl1.1-compat \
   && addgroup -g 1001 -S nodejs \
   && adduser -S hrms -u 1001
 COPY --from=builder --chown=hrms:nodejs /app/server/dist ./server/dist
@@ -45,12 +46,22 @@ COPY --from=builder --chown=hrms:nodejs /app/server/prisma ./server/prisma
 COPY --from=builder --chown=hrms:nodejs /app/server/package.json ./server/package.json
 COPY --from=prod-deps --chown=hrms:nodejs /app/server/node_modules ./server/node_modules
 COPY --from=prod-deps --chown=hrms:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=hrms:nodejs /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder --chown=hrms:nodejs /app/server/node_modules/prisma ./server/node_modules/prisma
 COPY --from=builder --chown=hrms:nodejs /app/server/node_modules/@prisma ./server/node_modules/@prisma
+# prisma CLI 是 devDependency（prod-deps 不含），COPY pnpm 符号链接到 runner 会被解引用导致内部依赖断裂；
+# 改用 npm 独立安装一份自包含 prisma CLI（实体目录，保证容器启动时 prisma migrate deploy 可用）
+RUN mkdir -p /opt/prisma && cd /opt/prisma \
+  && npm init -y >/dev/null 2>&1 \
+  && npm install prisma@5.22.0 --omit=dev --no-audit --no-fund --loglevel=error \
+  && /opt/prisma/node_modules/.bin/prisma version >/dev/null 2>&1 || true
+# prisma 引擎首次运行需写入 engines 目录，/opt/prisma 需归 hrms 所有
+RUN chown -R hrms:nodejs /opt/prisma
+# runner 里的 @prisma/client 来自 prod-deps（未生成）：在此补跑 prisma generate（含 .pnpm store 的生成产物）
+RUN cd /app/server && /opt/prisma/node_modules/.bin/prisma generate 2>&1 | tail -3 \
+  && chown -R hrms:nodejs /app/node_modules /app/server/node_modules
+ENV PATH="/opt/prisma/node_modules/.bin:${PATH}"
 RUN mkdir -p /app/server/uploads /app/server/logs && chown -R hrms:nodejs /app/server
 USER hrms
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3001/api/health || exit 1
-CMD ["sh", "-c", "cd server && npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "cd server && /opt/prisma/node_modules/.bin/prisma migrate deploy && node dist/index.js"]

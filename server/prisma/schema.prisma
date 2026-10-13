@@ -2,7 +2,8 @@
 // 一期基础表：User / Role / UserRole / Company / Department / Employee
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
